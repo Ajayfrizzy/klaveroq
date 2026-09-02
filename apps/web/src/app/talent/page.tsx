@@ -11,8 +11,10 @@ import {
 import { JOB_CATEGORIES } from "@veyrivo/domain";
 import Link from "next/link";
 import { MarketplaceHeader } from "@/features/marketplace/components/marketplace-header";
+import { listPreviewTalent } from "@/features/talent/fixtures";
 import { listTalent } from "@/features/talent/server/queries";
 import { talentQuerySchema } from "@/features/talent/server/schemas";
+import { usesPreviewData } from "@/server/deployment";
 
 export const dynamic = "force-dynamic";
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
@@ -29,7 +31,7 @@ export default async function TalentPage({
     ),
   );
   const input = talentQuerySchema.parse(scalar);
-  const records = await listTalent(input);
+  const records = usesPreviewData() ? listPreviewTalent(input) : await listTalent(input);
   return (
     <div className="market-page talent-page">
       <MarketplaceHeader />

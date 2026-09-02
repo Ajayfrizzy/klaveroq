@@ -1,5 +1,6 @@
 import { ArrowRight, BriefcaseBusiness, Compass, Filter, Plus, Search } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -7,7 +8,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { jobs as fixtureJobs } from "@/features/jobs/fixtures";
 import { db } from "@/server/db";
 import { jobListings, profiles, proposals } from "@/server/db/schema";
-import { requireUser } from "@/server/auth/session";
+import { getCurrentUser } from "@/server/auth/session";
+import { usesPreviewData } from "@/server/deployment";
 
 export const dynamic = "force-dynamic";
 const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
@@ -17,23 +19,29 @@ export default async function JobsPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const { view = "agreements" } = await searchParams;
-  const { user } = await requireUser();
+  const preview = usesPreviewData();
+  const current = preview ? null : await getCurrentUser();
+  if (!preview && !current) {
+    const returnTo = view === "agreements" ? "/jobs" : `/jobs?view=${view}`;
+    redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+  }
+  const userId = current?.user.id;
   const listings =
-    view === "listings"
+    view === "listings" && userId
       ? await db
           .select()
           .from(jobListings)
-          .where(eq(jobListings.clientUserId, user.id))
+          .where(eq(jobListings.clientUserId, userId))
           .orderBy(desc(jobListings.updatedAt))
       : [];
   const bids =
-    view === "proposals"
+    view === "proposals" && userId
       ? await db
           .select({ proposal: proposals, listing: jobListings, clientName: profiles.displayName })
           .from(proposals)
           .innerJoin(jobListings, eq(proposals.listingId, jobListings.id))
           .innerJoin(profiles, eq(jobListings.clientUserId, profiles.userId))
-          .where(eq(proposals.workerUserId, user.id))
+          .where(eq(proposals.workerUserId, userId))
           .orderBy(desc(proposals.updatedAt))
       : [];
   return (

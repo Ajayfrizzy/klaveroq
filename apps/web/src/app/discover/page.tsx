@@ -2,8 +2,10 @@ import { JOB_CATEGORIES } from "@veyrivo/domain";
 import { ArrowRight, BriefcaseBusiness, CalendarDays, Search, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { MarketplaceHeader } from "@/features/marketplace/components/marketplace-header";
+import { listPreviewMarketplaceListings } from "@/features/marketplace/fixtures";
 import { listPublicListings } from "@/features/marketplace/server/queries";
 import { listingQuerySchema } from "@/features/marketplace/server/schemas";
+import { usesPreviewData } from "@/server/deployment";
 export const dynamic = "force-dynamic";
 const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
 export default async function DiscoverPage({
@@ -18,7 +20,9 @@ export default async function DiscoverPage({
     ),
   );
   const input = listingQuerySchema.parse(scalar);
-  const result = await listPublicListings(input);
+  const result = usesPreviewData()
+    ? listPreviewMarketplaceListings(input)
+    : await listPublicListings(input);
   return (
     <div className="market-page">
       <MarketplaceHeader />

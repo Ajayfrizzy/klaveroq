@@ -2,6 +2,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { db } from "../db";
 import { profiles, sessions, users } from "../db/schema";
+import { usesPreviewData } from "../deployment";
 import { ApiError } from "../http/errors";
 import { clientIpHash, randomToken, sha256 } from "../http/security";
 
@@ -42,6 +43,8 @@ export async function revokeCurrentSession() {
 }
 
 export async function getCurrentUser() {
+  if (usesPreviewData()) return null;
+
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const [record] = await db

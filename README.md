@@ -63,6 +63,16 @@ Copy `.env.example` to `apps/web/.env`. The example contains safe local defaults
 
 Do not commit `apps/web/.env` or other files containing credentials.
 
+### Vercel visual previews
+
+When Vercel runs the app without `DATABASE_URL`, the public jobs, work-discovery, and talent
+screens automatically use read-only sample data. This keeps visual review deployments navigable
+without presenting preview actions as functional backend operations. Configure `DATABASE_URL` for
+the full database-backed behavior.
+
+Set `VEYRIVO_PREVIEW_MODE=1` to exercise the same fallback locally, or set it to `0` to disable the
+automatic fallback explicitly.
+
 ## Demo accounts
 
 Password: `VeyrivoDemo!2026`

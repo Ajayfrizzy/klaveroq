@@ -17,19 +17,27 @@ import { MarketplaceHeader } from "@/features/marketplace/components/marketplace
 import { ProposalComposer } from "@/features/marketplace/components/proposal-composer";
 import { ClientProposals } from "@/features/marketplace/components/client-proposals";
 import { ProposalThread } from "@/features/marketplace/components/proposal-thread";
+import {
+  getPreviewMarketplaceListing,
+  getPreviewMarketplaceMilestones,
+} from "@/features/marketplace/fixtures";
+import { usesPreviewData } from "@/server/deployment";
 export const dynamic = "force-dynamic";
 const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
 export default async function ListingDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [record, current, listingMilestones] = await Promise.all([
-    getPublicListing(id),
-    getCurrentUser(),
-    db
-      .select()
-      .from(jobListingMilestones)
-      .where(eq(jobListingMilestones.listingId, id))
-      .orderBy(asc(jobListingMilestones.sequence)),
-  ]);
+  const preview = usesPreviewData();
+  const [record, current, listingMilestones] = preview
+    ? [getPreviewMarketplaceListing(id), null, getPreviewMarketplaceMilestones(id)]
+    : await Promise.all([
+        getPublicListing(id),
+        getCurrentUser(),
+        db
+          .select()
+          .from(jobListingMilestones)
+          .where(eq(jobListingMilestones.listingId, id))
+          .orderBy(asc(jobListingMilestones.sequence)),
+      ]);
   if (!record || record.listing.status === "DRAFT" || record.listing.status === "CANCELLED")
     notFound();
   const owner = current?.user.id === record.listing.clientUserId;

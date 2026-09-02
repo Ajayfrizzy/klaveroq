@@ -12,8 +12,10 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MarketplaceHeader } from "@/features/marketplace/components/marketplace-header";
+import { getPreviewTalent } from "@/features/talent/fixtures";
 import { getTalentForViewer } from "@/features/talent/server/queries";
 import { getCurrentUser } from "@/server/auth/session";
+import { usesPreviewData } from "@/server/deployment";
 
 export const dynamic = "force-dynamic";
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
@@ -24,9 +26,12 @@ export default async function PublicTalentProfile({
   params: Promise<{ userId: string }>;
 }) {
   const { userId } = await params;
-  const current = await getCurrentUser();
+  const preview = usesPreviewData();
+  const current = preview ? null : await getCurrentUser();
   const isOwner = current?.user.id === userId;
-  const talent = await getTalentForViewer(userId, current?.user.id);
+  const talent = preview
+    ? getPreviewTalent(userId)
+    : await getTalentForViewer(userId, current?.user.id);
   if (!talent) notFound();
   const { profile, portfolio, reputation } = talent;
   return (

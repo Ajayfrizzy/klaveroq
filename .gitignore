@@ -10,3 +10,4 @@ out/
 .data/
 npm-debug.log*
 
+DEVLOG.md

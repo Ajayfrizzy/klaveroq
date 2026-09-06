@@ -550,6 +550,18 @@ button {
   align-items: start;
   gap: 17px;
 }
+.dashboard-grid.actions-first {
+  grid-template-columns: 310px minmax(0, 1fr);
+}
+
+.metrics-secondary {
+  margin-top: 17px;
+}
+
+.dashboard-empty {
+  border: 1px dashed var(--line);
+  background: var(--surface);
+}
 .panel {
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -5730,6 +5742,27 @@ button {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.clear-filters {
+  align-self: center;
+  color: var(--brand-strong);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.notification-loading {
+  display: grid;
+  gap: 1px;
+  background: var(--soft-line);
+}
+
+.notification-loading i {
+  display: block;
+  height: 76px;
+  background: linear-gradient(90deg, #eef1f4 25%, #f8f9fb 45%, #eef1f4 65%);
+  background-size: 220% 100%;
+  animation: skeleton-pulse 1.35s ease-in-out infinite;
 }
 
 .readiness-strip {

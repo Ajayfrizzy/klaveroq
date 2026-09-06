@@ -32,6 +32,15 @@ export default async function TalentPage({
   );
   const input = talentQuerySchema.parse(scalar);
   const records = usesPreviewData() ? listPreviewTalent(input) : await listTalent(input);
+  const hasAppliedFilters = Boolean(
+    input.query ||
+    input.skill ||
+    input.category ||
+    input.availability ||
+    input.role ||
+    input.minCompletedJobs > 0 ||
+    input.sort !== "reputation",
+  );
   return (
     <div className="market-page talent-page">
       <MarketplaceHeader />
@@ -106,6 +115,11 @@ export default async function TalentPage({
             </div>
           </details>
           <button className="secondary-button">Apply filters</button>
+          {hasAppliedFilters && (
+            <Link className="clear-filters" href="/talent">
+              Clear filters
+            </Link>
+          )}
         </form>
         {records.length ? (
           <section className="talent-grid">

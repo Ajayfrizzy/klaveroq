@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LogoutButton } from "@/components/ui/logout-button";
 
 const primary = [
@@ -41,6 +41,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [account, setAccount] = useState<{ displayName: string; email: string } | null>(null);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+
+  const refreshUnreadNotifications = useCallback(async () => {
+    try {
+      const response = await fetch("/api/notifications/unread", { cache: "no-store" });
+      if (!response.ok) return;
+      const body = await response.json();
+      setHasUnreadNotifications(Boolean(body.data?.hasUnread));
+    } catch {
+      // Keep the indicator unobtrusive if notification state cannot be refreshed.
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -58,6 +70,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refreshUnreadNotifications(), 0);
+    return () => window.clearTimeout(timer);
+  }, [pathname, refreshUnreadNotifications]);
+
+  useEffect(() => {
+    const refresh = () => void refreshUnreadNotifications();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("focus", refresh);
+    window.addEventListener("notifications:changed", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("notifications:changed", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [refreshUnreadNotifications]);
 
   const initials =
     account?.displayName
@@ -158,9 +190,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           )}
           <div className="topbar-actions">
-            <Link className="icon-button" href="/notifications" aria-label="Notifications">
+            <Link
+              className="icon-button"
+              href="/notifications"
+              aria-label={hasUnreadNotifications ? "Notifications, unread items" : "Notifications"}
+            >
               <Bell size={19} />
-              <span className="notification-dot" />
+              {hasUnreadNotifications && <span className="notification-dot" aria-hidden="true" />}
             </Link>
             <Link className="top-avatar" href="/profile" aria-label="Open profile">
               {initials}

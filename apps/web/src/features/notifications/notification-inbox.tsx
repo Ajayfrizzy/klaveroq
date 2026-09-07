@@ -44,6 +44,7 @@ export function NotificationInbox() {
         throw new Error(body.error?.message ?? "Notifications could not be marked as read.");
       }
       await load();
+      window.dispatchEvent(new Event("notifications:changed"));
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Notifications could not be marked as read.",
@@ -61,7 +62,11 @@ export function NotificationInbox() {
         icon={Bell}
         action={
           <div className="header-actions">
-            <button className="secondary-button" onClick={readAll} disabled={busy || !items.length}>
+            <button
+              className="secondary-button"
+              onClick={readAll}
+              disabled={busy || !items.some((item) => !item.readAt)}
+            >
               <CheckCheck size={16} /> {busy ? "Updating..." : "Mark all read"}
             </button>
             <button className="icon-button bordered" aria-label="Notification settings">
@@ -101,7 +106,7 @@ export function NotificationInbox() {
                 <p>{item.body}</p>
                 <small>{new Date(item.createdAt).toLocaleString()}</small>
               </div>
-              {!item.readAt && <span className="unread-dot" />}
+              {!item.readAt && <span className="unread-dot" aria-hidden="true" />}
             </>
           );
           return item.href ? (

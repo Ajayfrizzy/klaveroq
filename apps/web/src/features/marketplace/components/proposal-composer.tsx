@@ -166,7 +166,10 @@ export function ProposalComposer({
     event.preventDefault();
     if (validate()) {
       setPhase("review");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({
+        top: 0,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      });
     }
   };
   const submit = async () => {

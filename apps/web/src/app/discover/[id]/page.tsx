@@ -1,9 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
 import {
   ArrowLeft,
+  BadgeCheck,
   CalendarDays,
   CircleDollarSign,
   LockKeyhole,
+  Star,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -22,8 +24,10 @@ import {
   getPreviewMarketplaceMilestones,
 } from "@/features/marketplace/fixtures";
 import { usesPreviewData } from "@/server/deployment";
+import { getReputationSummary } from "@/features/reputation/server/queries";
 export const dynamic = "force-dynamic";
 const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
+const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
 export default async function ListingDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const preview = usesPreviewData();
@@ -40,6 +44,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       ]);
   if (!record || record.listing.status === "DRAFT" || record.listing.status === "CANCELLED")
     notFound();
+  const clientReputation = preview ? null : await getReputationSummary(record.listing.clientUserId);
   const owner = current?.user.id === record.listing.clientUserId;
   const canSubmit =
     record.listing.status === "OPEN" && record.listing.proposalDeadline > new Date();
@@ -109,6 +114,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
                 {record.listing.status.toLowerCase()}
               </span>
               <h1>{record.listing.title}</h1>
+              <p className="listing-skills-label">Required skills</p>
               <div className="skill-list">
                 {record.listing.skills.map((skill) => (
                   <span key={skill}>{skill}</span>
@@ -129,8 +135,14 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
                       <div>
                         <strong>{milestone.title}</strong>
                         <p>{milestone.deliverable}</p>
-                        <small>Acceptance: {milestone.acceptanceCriteria}</small>
-                        <small>Required proof: {milestone.evidenceRequirements}</small>
+                        <small>
+                          <strong>How success will be confirmed</strong>
+                          {milestone.acceptanceCriteria}
+                        </small>
+                        <small>
+                          <strong>Proof required</strong>
+                          {milestone.evidenceRequirements}
+                        </small>
                       </div>
                       <b>Day {milestone.deliveryDays}</b>
                     </li>
@@ -146,8 +158,27 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
                 <h2>{record.client.displayName}</h2>
                 <p>
                   {record.client.headline || "Veyrivo client"}
-                  {record.client.countryCode ? ` · ${record.client.countryCode}` : ""}
+                  {record.client.countryCode
+                    ? ` · ${countryNames.of(record.client.countryCode) ?? record.client.countryCode}`
+                    : ""}
                 </p>
+                {clientReputation &&
+                  (clientReputation.identityVerified || clientReputation.reviewCount > 0) && (
+                    <div className="client-trust" aria-label="Client trust signals">
+                      {clientReputation.identityVerified && (
+                        <span>
+                          <BadgeCheck size={13} /> Identity verified
+                        </span>
+                      )}
+                      {clientReputation.reviewCount > 0 && (
+                        <span>
+                          <Star size={13} /> {clientReputation.averageRating?.toFixed(1)} from{" "}
+                          {clientReputation.reviewCount} verified{" "}
+                          {clientReputation.reviewCount === 1 ? "review" : "reviews"}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 <small>{record.client.bio}</small>
               </div>
             </section>

@@ -33,8 +33,8 @@
   --green-soft: var(--success-soft);
   --amber: var(--warning);
   --amber-soft: var(--warning-soft);
-  --blue: #4f46e5;
-  --blue-soft: #eef2ff;
+  --blue: var(--brand);
+  --blue-soft: var(--brand-soft);
 }
 
 * {
@@ -3393,12 +3393,14 @@ button {
   margin-top: 15px;
 }
 .skill-list span {
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 4px 8px;
   color: #475467;
   background: #fafafa;
   font-size: 10px;
+  overflow-wrap: anywhere;
 }
 .listing-card dl {
   display: grid;
@@ -3505,6 +3507,13 @@ button {
   font-size: 27px;
   line-height: 1.3;
 }
+.listing-skills-label {
+  margin: 19px 0 -7px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
 .listing-detail > section {
   border-bottom: 1px solid var(--soft-line);
 }
@@ -3525,6 +3534,9 @@ button {
   display: flex;
   gap: 12px;
 }
+.client-public > div {
+  min-width: 0;
+}
 .client-public h2,
 .client-public p {
   margin: 0;
@@ -3535,6 +3547,23 @@ button {
   margin-top: 4px;
   color: var(--muted);
   line-height: 1.5;
+}
+.client-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+.client-trust span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 14px;
+  padding: 4px 8px;
+  color: var(--trust);
+  background: var(--trust-soft);
+  font-size: 9px;
+  font-weight: 750;
 }
 .listing-sidebar {
   position: sticky;
@@ -4854,6 +4883,126 @@ button {
   font-size: 10px;
   line-height: 1.5;
 }
+.listing-outcomes li small strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text);
+  font-size: 9px;
+}
+
+/* Route-specific detail and form loading states */
+.detail-route-skeleton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  align-items: start;
+  gap: 22px;
+  margin-top: 47px;
+}
+.detail-skeleton-main {
+  display: grid;
+  gap: 14px;
+}
+.detail-route-skeleton i,
+.form-route-skeleton i {
+  display: block;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, #eef1f4 25%, #f8f9fb 45%, #eef1f4 65%);
+  background-size: 220% 100%;
+  animation: skeleton-pulse 1.35s ease-in-out infinite;
+}
+.detail-skeleton-hero {
+  height: 190px;
+}
+.detail-skeleton-section {
+  height: 150px;
+}
+.detail-skeleton-aside {
+  height: 320px;
+}
+.form-route-skeleton {
+  display: grid;
+  gap: 20px;
+}
+.form-skeleton-title {
+  width: min(480px, 72%);
+  height: 72px;
+}
+.form-skeleton-steps {
+  height: 38px;
+}
+.form-skeleton-body {
+  height: 480px;
+}
+
+@media (max-width: 980px) {
+  .detail-route-skeleton {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detail-skeleton-aside {
+    height: 220px;
+  }
+}
+
+@media (max-width: 650px) {
+  .detail-route-skeleton {
+    gap: 12px;
+    margin-top: 39px;
+  }
+
+  .detail-skeleton-hero {
+    height: 165px;
+  }
+
+  .detail-skeleton-section {
+    height: 125px;
+  }
+
+  .listing-outcomes li,
+  .proposal-review li,
+  .listing-review-milestones li {
+    min-width: 0;
+  }
+
+  .listing-outcomes li > div,
+  .proposal-review li > div,
+  .listing-review-milestones li > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .proposal-fields fieldset,
+  .proposal-review-body,
+  .proposal-total,
+  .proposal-actions,
+  .client-public {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .proposal-actions {
+    flex-wrap: wrap;
+  }
+
+  .proposal-actions > * {
+    min-height: var(--control-height);
+  }
+}
+
+@media (max-width: 430px) {
+  .client-public {
+    flex-direction: column;
+  }
+
+  .proposal-actions > * {
+    width: 100%;
+  }
+
+  .form-skeleton-title {
+    width: 85%;
+  }
+}
+
 .listing-outcomes li > b {
   font-size: 9px;
   white-space: nowrap;
@@ -5661,6 +5810,32 @@ button {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  .page-skeleton i,
+  .skeleton-market-header i,
+  .notification-loading i,
+  .detail-route-skeleton i,
+  .form-route-skeleton i {
+    animation: none;
+    background-position: 0 0;
+  }
+
+  .sidebar,
+  .job-row,
+  .listing-card,
+  .readiness-progress span {
+    transition: none;
+  }
+
+  .listing-card:hover {
+    transform: none;
+  }
+}
+
 /* Veyrivo refinement phase */
 .market-page {
   background: var(--canvas);
@@ -6033,7 +6208,7 @@ button {
 
 .listing-steps {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   margin: 22px 0;
   padding: 0;
   list-style: none;
@@ -7100,5 +7275,11 @@ button {
   .admin-attention-list .ticket-state,
   .admin-attention-list time {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .readiness-progress span {
+    transition: none;
   }
 }

@@ -93,7 +93,10 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
     if (validate()) {
       setErrors([]);
       setStep((value) => Math.min(3, value + 1));
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({
+        top: 0,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      });
     }
   };
 

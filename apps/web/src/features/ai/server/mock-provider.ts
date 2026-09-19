@@ -93,7 +93,7 @@ export class MockMarketplaceAiProvider implements MarketplaceAiProvider {
     );
     const experience = relevantPortfolio.slice(0, 3).map((item) => item.title);
     const groundedLine = experience.length
-      ? `My Veyrivo portfolio includes ${experience.join(", ")}, which demonstrates relevant delivery experience.`
+      ? `My Klaveroq portfolio includes ${experience.join(", ")}, which demonstrates relevant delivery experience.`
       : matchingSkills.length
         ? `My profile includes relevant skills in ${matchingSkills.join(", ")}.`
         : "I will use a transparent delivery plan and validate each requirement against the job scope.";

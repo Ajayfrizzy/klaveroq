@@ -35,7 +35,7 @@ export const createJobSchema = z
   })
   .refine((value) => Boolean(value.workerUserId) !== Boolean(value.workerEmail), {
     path: ["workerUserId"],
-    message: "Choose either a Veyrivo professional or an email invite.",
+    message: "Choose either a Klaveroq professional or an email invite.",
   });
 export const submitProofSchema = z.object({
   note: z.string().trim().min(10).max(5000),

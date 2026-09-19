@@ -6,11 +6,11 @@ export async function MarketplaceHeader() {
   const current = await getCurrentUser();
   return (
     <header className="market-header">
-      <Link className="brand" href="/" aria-label="Veyrivo dashboard">
+      <Link className="brand" href="/" aria-label="Klaveroq dashboard">
         <span className="brand-mark">
           <ShieldCheck size={20} />
         </span>
-        <span>Veyrivo</span>
+        <span>Klaveroq</span>
       </Link>
       <nav>
         {current && (

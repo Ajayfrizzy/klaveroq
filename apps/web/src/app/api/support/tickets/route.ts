@@ -1,5 +1,4 @@
 import { and, count, desc, eq, gt } from "drizzle-orm";
-import { randomInt } from "node:crypto";
 import { db } from "@/server/db";
 import {
   notifications,
@@ -15,6 +14,7 @@ import { createTicketSchema } from "@/features/support/server/schemas";
 import { serialize } from "@/server/serialize";
 import { audit } from "@/server/audit";
 import { validateOwnedReference } from "@/features/support/server/references";
+import { createSupportReference } from "@/server/references";
 
 export const GET = withApi(async () => {
   const { user } = await requireUser();
@@ -46,7 +46,7 @@ export const POST = withApi(async (request: Request) => {
       "You can create up to five support cases per hour.",
     );
   await validateOwnedReference(input.referenceId, user.id);
-  const reference = `PP-S-${randomInt(100000, 999999)}`;
+  const reference = createSupportReference();
   const ticket = await db.transaction(async (tx) => {
     const [created] = await tx
       .insert(supportTickets)

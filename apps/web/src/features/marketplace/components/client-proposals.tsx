@@ -136,7 +136,7 @@ export function ClientProposals({
                 )}
               </div>
               <p>
-                {record.worker.headline || record.worker.primaryRole || "Veyrivo professional"}
+                {record.worker.headline || record.worker.primaryRole || "Klaveroq professional"}
                 {record.worker.countryCode ? ` · ${record.worker.countryCode}` : ""}
               </p>
             </div>

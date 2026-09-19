@@ -1,8 +1,8 @@
-import type { JobSummary } from "@veyrivo/domain";
+import type { JobSummary } from "@klaveroq/domain";
 
 export const jobs: JobSummary[] = [
   {
-    id: "VY-1048",
+    id: "KQ-1048",
     title: "Checkout experience redesign",
     counterparty: "Northstar Labs",
     role: "WORKER",
@@ -16,7 +16,7 @@ export const jobs: JobSummary[] = [
     updatedAt: "18 min ago",
   },
   {
-    id: "VY-1046",
+    id: "KQ-1046",
     title: "Brand launch photography",
     counterparty: "Mira Okafor",
     role: "CLIENT",
@@ -30,7 +30,7 @@ export const jobs: JobSummary[] = [
     updatedAt: "3 hours ago",
   },
   {
-    id: "VY-1039",
+    id: "KQ-1039",
     title: "July content production",
     counterparty: "Kora Studio",
     role: "CLIENT",
@@ -46,7 +46,7 @@ export const jobs: JobSummary[] = [
 ];
 
 export const jobDetails = {
-  "VY-1048": {
+  "KQ-1048": {
     summary: jobs[0],
     description:
       "Redesign the mobile and desktop checkout journey, improve payment clarity, and deliver an implementation-ready Figma prototype.",
@@ -80,7 +80,7 @@ export const jobDetails = {
       },
     ],
   },
-  "VY-1046": {
+  "KQ-1046": {
     summary: jobs[1],
     description:
       "Produce a cohesive set of launch photographs for the new Kora home collection, including web and social crops.",
@@ -106,7 +106,7 @@ export const jobDetails = {
       },
     ],
   },
-  "VY-1039": {
+  "KQ-1039": {
     summary: jobs[2],
     description:
       "Create twelve editorial posts and accompanying visual assets for the July product education campaign.",

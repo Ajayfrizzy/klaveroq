@@ -1,4 +1,4 @@
-import { JOB_CATEGORIES } from "@veyrivo/domain";
+import { JOB_CATEGORIES } from "@klaveroq/domain";
 import { z } from "zod";
 
 const amount = z.string().regex(/^[1-9][0-9]*$/, "Use a positive integer smallest-unit amount");

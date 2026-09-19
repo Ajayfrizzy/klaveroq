@@ -1,5 +1,4 @@
 import { and, eq, inArray, isNull, ne } from "drizzle-orm";
-import { randomInt } from "node:crypto";
 import { db } from "@/server/db";
 import {
   jobListings,
@@ -17,6 +16,7 @@ import { assertSameOrigin } from "@/server/http/security";
 import { serialize } from "@/server/serialize";
 import { calculateFees } from "@/features/payments/server/fee-engine";
 import { audit } from "@/server/audit";
+import { createJobReference } from "@/server/references";
 
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/marketplace/proposals/[id]/award">) => {
@@ -68,7 +68,7 @@ export const POST = withApi(
       );
     const fees = calculateFees(record.proposal.totalBid);
     const now = new Date();
-    const reference = `PP-${Date.now().toString(36).toUpperCase()}${randomInt(100, 999)}`;
+    const reference = createJobReference();
     const job = await db.transaction(async (tx) => {
       const [claimed] = await tx
         .update(jobListings)

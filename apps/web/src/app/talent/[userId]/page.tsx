@@ -61,7 +61,7 @@ export default async function PublicTalentProfile({
                     </span>
                   )}
                 </div>
-                <p>{profile.headline || profile.primaryRole || "Veyrivo professional"}</p>
+                <p>{profile.headline || profile.primaryRole || "Klaveroq professional"}</p>
                 <div className="talent-meta">
                   {profile.countryCode && (
                     <span>
@@ -183,7 +183,7 @@ export default async function PublicTalentProfile({
               </section>
             )}
             <section className="reputation-public">
-              <p className="eyebrow">Verified Veyrivo work</p>
+              <p className="eyebrow">Verified Klaveroq work</p>
               <div className="reputation-score">
                 <Star size={21} fill={reputation.averageRating ? "currentColor" : "none"} />
                 <strong>{reputation.averageRating?.toFixed(1) ?? "New"}</strong>
@@ -213,7 +213,7 @@ export default async function PublicTalentProfile({
                 </div>
               </dl>
               <p className="verified-work-note">
-                <BadgeCheck size={14} /> Statistics are derived from completed Veyrivo engagements.
+                <BadgeCheck size={14} /> Statistics are derived from completed Klaveroq engagements.
               </p>
             </section>
           </aside>

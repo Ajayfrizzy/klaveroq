@@ -1,6 +1,6 @@
 "use client";
 
-import { JOB_CATEGORIES } from "@veyrivo/domain";
+import { JOB_CATEGORIES } from "@klaveroq/domain";
 import {
   Check,
   Circle,
@@ -421,13 +421,13 @@ export function ProfileEditor({
               <label>
                 Timezone
                 <input
-                  list="veyrivo-timezones"
+                  list="klaveroq-timezones"
                   value={profile.timezone}
                   onChange={(event) => set("timezone", event.target.value)}
                   placeholder="Africa/Lagos"
                   required
                 />
-                <datalist id="veyrivo-timezones">
+                <datalist id="klaveroq-timezones">
                   {commonTimezones.map((timezone) => (
                     <option value={timezone} key={timezone} />
                   ))}
@@ -549,8 +549,8 @@ export function ProfileEditor({
             <strong>{profile.isPublic ? "Public" : "Private"}</strong>
             <p>
               {profile.isPublic
-                ? "Your professional profile, portfolio and Veyrivo reputation can appear in Talent Discovery."
-                : "Your profile is only visible to you and participants in existing Veyrivo engagements where required."}
+                ? "Your professional profile, portfolio and Klaveroq reputation can appear in Talent Discovery."
+                : "Your profile is only visible to you and participants in existing Klaveroq engagements where required."}
             </p>
           </div>
         </div>

@@ -136,7 +136,7 @@ export default async function JobsPage({
             <div className="market-empty account-empty">
               <BriefcaseBusiness size={26} />
               <h2>No jobs yet</h2>
-              <p>Post a job to start comparing proposals from Veyrivo professionals.</p>
+              <p>Post a job to start comparing proposals from Klaveroq professionals.</p>
               <Link className="primary-button" href="/jobs/new/public">
                 <Plus size={16} /> Post a job
               </Link>

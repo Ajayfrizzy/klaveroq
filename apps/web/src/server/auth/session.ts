@@ -6,7 +6,7 @@ import { usesPreviewData } from "../deployment";
 import { ApiError } from "../http/errors";
 import { clientIpHash, randomToken, sha256 } from "../http/security";
 
-export const SESSION_COOKIE = process.env.SESSION_COOKIE_NAME ?? "veyrivo_session";
+export const SESSION_COOKIE = process.env.SESSION_COOKIE_NAME ?? "klaveroq_session";
 
 export async function createSession(userId: string, request: Request) {
   const token = randomToken();

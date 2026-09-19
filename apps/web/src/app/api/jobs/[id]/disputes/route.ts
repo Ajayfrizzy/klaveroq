@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import { randomInt } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { disputes, jobs, milestones } from "@/server/db/schema";
@@ -8,6 +7,7 @@ import { requireJobParticipant } from "@/features/jobs/server/access";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
 import { serialize } from "@/server/serialize";
+import { createDisputeReference } from "@/server/references";
 
 const schema = z.object({
   milestoneId: z.string().uuid().optional(),
@@ -60,7 +60,7 @@ export const POST = withApi(
       const [created] = await tx
         .insert(disputes)
         .values({
-          reference: `PP-D-${randomInt(100000, 999999)}`,
+          reference: createDisputeReference(),
           jobId: id,
           milestoneId: input.milestoneId,
           openedBy: user.id,

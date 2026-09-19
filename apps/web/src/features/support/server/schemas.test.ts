@@ -7,10 +7,10 @@ describe("support schemas", () => {
       createTicketSchema.parse({
         subject: "Funding confirmation delay",
         category: "PAYMENT",
-        referenceId: "PP-DEMO-1048",
+        referenceId: "KQ-DEMO-1048",
         message: "My funding has not appeared after confirmation.",
       }),
-    ).toMatchObject({ category: "PAYMENT", referenceId: "PP-DEMO-1048" });
+    ).toMatchObject({ category: "PAYMENT", referenceId: "KQ-DEMO-1048" });
   });
 
   it("rejects short or oversized customer content", () => {

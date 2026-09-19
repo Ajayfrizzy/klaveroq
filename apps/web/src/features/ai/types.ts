@@ -1,4 +1,4 @@
-import type { JOB_CATEGORIES } from "@veyrivo/domain";
+import type { JOB_CATEGORIES } from "@klaveroq/domain";
 
 export type JobBuilderSuggestion = {
   title: string;

@@ -7,8 +7,8 @@ import { FormEvent, useState } from "react";
 
 export function AdminLoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("support@veyrivo.local");
-  const [password, setPassword] = useState("VeyrivoDemo!2026");
+  const [email, setEmail] = useState("support@klaveroq.local");
+  const [password, setPassword] = useState("KlaveroqDemo!2026");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -43,7 +43,7 @@ export function AdminLoginForm() {
           <span>
             <ShieldCheck size={25} />
           </span>
-          <strong>Veyrivo</strong>
+          <strong>Klaveroq</strong>
           <small>Operations console</small>
         </div>
         <h1>Support administration</h1>

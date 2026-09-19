@@ -27,14 +27,14 @@ export default async function ProfilePage() {
       <PageHeader
         eyebrow="Professional identity"
         title="Profile and portfolio"
-        description="Manage the public experience clients use to evaluate your work on Veyrivo."
+        description="Manage the public experience clients use to evaluate your work on Klaveroq."
         icon={UserRound}
       />
       <div className="profile-layout">
         <ProfileEditor initialProfile={current.profile} initialPortfolio={portfolio} />
         <aside>
           <section className="panel reputation-card">
-            <h2>Verified Veyrivo reputation</h2>
+            <h2>Verified Klaveroq reputation</h2>
             <div className="reputation-score">
               <Star size={22} fill={reputation.averageRating ? "currentColor" : "none"} />
               <strong>{reputation.averageRating?.toFixed(1) ?? "New"}</strong>
@@ -77,7 +77,7 @@ export default async function ProfilePage() {
                 : "Professional marketplace profile"}
             </h2>
             <p>
-              Reputation shown here comes only from completed Veyrivo engagements and released
+              Reputation shown here comes only from completed Klaveroq engagements and released
               milestones.
             </p>
           </section>

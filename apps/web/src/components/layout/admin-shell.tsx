@@ -26,7 +26,7 @@ export async function AdminShell({
             <ShieldCheck size={20} />
           </span>
           <div>
-            <strong>Veyrivo</strong>
+            <strong>Klaveroq</strong>
             <small>Operations</small>
           </div>
         </Link>

@@ -1,6 +1,6 @@
-# Veyrivo
+# Klaveroq
 
-Veyrivo is a trusted work marketplace where clients discover talent, professionals find opportunities, and both sides structure milestone-based work with verifiable delivery and protected payments.
+Klaveroq is a trusted work marketplace where clients discover talent, professionals find opportunities, and both sides structure milestone-based work with verifiable delivery and protected payments.
 
 **Work with trust. Deliver with proof.**
 
@@ -70,19 +70,22 @@ screens automatically use read-only sample data. This keeps visual review deploy
 without presenting preview actions as functional backend operations. Configure `DATABASE_URL` for
 the full database-backed behavior.
 
-Set `VEYRIVO_PREVIEW_MODE=1` to exercise the same fallback locally, or set it to `0` to disable the
+Set `KLAVEROQ_PREVIEW_MODE=1` to exercise the same fallback locally, or set it to `0` to disable the
 automatic fallback explicitly.
+
+The local PostgreSQL database and volume now use Klaveroq identifiers. Developers with the old
+development volume can reset it with `docker compose down -v` before running `docker compose up -d`.
 
 ## Demo accounts
 
-Password: `VeyrivoDemo!2026`
+Password: `KlaveroqDemo!2026`
 
-- `client@veyrivo.local`
-- `worker@veyrivo.local`
-- `designer@veyrivo.local`
-- `writer@veyrivo.local`
-- `admin@veyrivo.local`
-- `support@veyrivo.local`
+- `client@klaveroq.local`
+- `worker@klaveroq.local`
+- `designer@klaveroq.local`
+- `writer@klaveroq.local`
+- `admin@klaveroq.local`
+- `support@klaveroq.local`
 
 ## Code organization rules
 
@@ -91,7 +94,7 @@ Password: `VeyrivoDemo!2026`
 - Put components in `components/ui` only when they are reusable across features.
 - Keep database access and secrets out of client components.
 - Colocate focused tests with the module they cover.
-- Export shared domain types through `@veyrivo/domain`; do not import its internal files from the web app.
+- Export shared domain types through `@klaveroq/domain`; do not import its internal files from the web app.
 - Do not edit files under `drizzle/` manually. Generate migrations with `npm run db:generate`.
 
 Marketplace assistance uses the server-side provider boundary in `features/ai`. Local development

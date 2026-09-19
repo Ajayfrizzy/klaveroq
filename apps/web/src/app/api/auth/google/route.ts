@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { withApi, ApiError } from "@/server/http/errors";
 import { randomToken } from "@/server/http/security";
+import { GOOGLE_OAUTH_COOKIES } from "@/server/auth/google";
 
 export const GET = withApi(async () => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -19,9 +20,9 @@ export const GET = withApi(async () => {
     path: "/api/auth/google",
     maxAge: 600,
   };
-  store.set("veyrivo_google_state", state, options);
-  store.set("veyrivo_google_nonce", nonce, options);
-  store.set("veyrivo_google_verifier", verifier, options);
+  store.set(GOOGLE_OAUTH_COOKIES.state, state, options);
+  store.set(GOOGLE_OAUTH_COOKIES.nonce, nonce, options);
+  store.set(GOOGLE_OAUTH_COOKIES.verifier, verifier, options);
   const callback = `${process.env.APP_URL ?? "http://127.0.0.1:3000"}/api/auth/google/callback`;
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.search = new URLSearchParams({

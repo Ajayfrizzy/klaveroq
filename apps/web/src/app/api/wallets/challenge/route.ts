@@ -15,7 +15,7 @@ export const POST = withApi(async (request: Request) => {
   const issuedAt = new Date();
   const expiresAt = new Date(issuedAt.getTime() + 10 * 60_000);
   const message = [
-    `Veyrivo wallet verification`,
+    `Klaveroq wallet verification`,
     `Address: ${input.address}`,
     `Network: CKB ${input.network}`,
     `Nonce: ${nonce}`,

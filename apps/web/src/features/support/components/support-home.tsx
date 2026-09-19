@@ -119,7 +119,7 @@ export function SupportHome() {
           <div className="section-heading">
             <div>
               <h2>Your cases</h2>
-              <p>Updates from the Veyrivo support team</p>
+              <p>Updates from the Klaveroq support team</p>
             </div>
           </div>
           {loading && <p className="support-empty">Loading cases...</p>}
@@ -182,7 +182,7 @@ export function SupportHome() {
           </label>
           <label>
             Reference ID
-            <input name="referenceId" placeholder="e.g. VY-1048" />
+            <input name="referenceId" placeholder="e.g. KQ-1048" />
           </label>
           <label className="case-message">
             Subject

@@ -157,7 +157,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
               <div>
                 <h2>{record.client.displayName}</h2>
                 <p>
-                  {record.client.headline || "Veyrivo client"}
+                  {record.client.headline || "Klaveroq client"}
                   {record.client.countryCode
                     ? ` · ${countryNames.of(record.client.countryCode) ?? record.client.countryCode}`
                     : ""}

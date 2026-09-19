@@ -18,10 +18,10 @@ import {
 } from "./schema";
 
 async function main() {
-  const passwordHash = await hashPassword("VeyrivoDemo!2026");
+  const passwordHash = await hashPassword("KlaveroqDemo!2026");
   const demoUsers = [
     {
-      email: "client@veyrivo.local",
+      email: "client@klaveroq.local",
       displayName: "Alex Morgan",
       role: "USER" as const,
       headline: "Product leader for digital commerce teams",
@@ -30,7 +30,7 @@ async function main() {
       isPublic: true,
     },
     {
-      email: "worker@veyrivo.local",
+      email: "worker@klaveroq.local",
       displayName: "Maya Chen",
       role: "USER" as const,
       headline: "Frontend engineer building accessible data products",
@@ -39,7 +39,7 @@ async function main() {
       isPublic: true,
     },
     {
-      email: "designer@veyrivo.local",
+      email: "designer@klaveroq.local",
       displayName: "Idris Bello",
       role: "USER" as const,
       headline: "Product designer for complex financial workflows",
@@ -48,7 +48,7 @@ async function main() {
       isPublic: true,
     },
     {
-      email: "writer@veyrivo.local",
+      email: "writer@klaveroq.local",
       displayName: "Sofia Alvarez",
       role: "USER" as const,
       headline: "Content designer focused on clear product guidance",
@@ -57,19 +57,19 @@ async function main() {
       isPublic: true,
     },
     {
-      email: "admin@veyrivo.local",
+      email: "admin@klaveroq.local",
       displayName: "Jordan Okafor",
       role: "DISPUTE_ADMIN" as const,
-      headline: "Veyrivo operations",
+      headline: "Klaveroq operations",
       primaryRole: "Marketplace operations",
       skills: [],
       isPublic: false,
     },
     {
-      email: "support@veyrivo.local",
+      email: "support@klaveroq.local",
       displayName: "Amara Support",
       role: "SUPPORT" as const,
-      headline: "Veyrivo support",
+      headline: "Klaveroq support",
       primaryRole: "Customer support",
       skills: [],
       isPublic: false,
@@ -160,22 +160,22 @@ async function main() {
   const [client] = await db
     .select()
     .from(users)
-    .where(sql`lower(${users.email}) = 'client@veyrivo.local'`)
+    .where(sql`lower(${users.email}) = 'client@klaveroq.local'`)
     .limit(1);
   const [worker] = await db
     .select()
     .from(users)
-    .where(sql`lower(${users.email}) = 'worker@veyrivo.local'`)
+    .where(sql`lower(${users.email}) = 'worker@klaveroq.local'`)
     .limit(1);
   const [designer] = await db
     .select()
     .from(users)
-    .where(sql`lower(${users.email}) = 'designer@veyrivo.local'`)
+    .where(sql`lower(${users.email}) = 'designer@klaveroq.local'`)
     .limit(1);
   const [writer] = await db
     .select()
     .from(users)
-    .where(sql`lower(${users.email}) = 'writer@veyrivo.local'`)
+    .where(sql`lower(${users.email}) = 'writer@klaveroq.local'`)
     .limit(1);
 
   const portfolioSeeds = [
@@ -221,7 +221,7 @@ async function main() {
   const [existingJob] = await db
     .select()
     .from(jobs)
-    .where(eq(jobs.reference, "PP-DEMO-1048"))
+    .where(eq(jobs.reference, "KQ-DEMO-1048"))
     .limit(1);
   if (!existingJob) {
     const [wallet] = await db
@@ -239,7 +239,7 @@ async function main() {
     const [job] = await db
       .insert(jobs)
       .values({
-        reference: "PP-DEMO-1048",
+        reference: "KQ-DEMO-1048",
         clientUserId: client.id,
         workerUserId: worker.id,
         workerEmail: worker.email,
@@ -296,7 +296,7 @@ async function main() {
   const [completedDemoJob] = await db
     .select()
     .from(jobs)
-    .where(eq(jobs.reference, "VY-DEMO-COMPLETE"))
+    .where(eq(jobs.reference, "KQ-DEMO-COMPLETE"))
     .limit(1);
   if (!completedDemoJob) {
     const startedAt = new Date(Date.now() - 35 * 86_400_000);
@@ -304,7 +304,7 @@ async function main() {
     const [job] = await db
       .insert(jobs)
       .values({
-        reference: "VY-DEMO-COMPLETE",
+        reference: "KQ-DEMO-COMPLETE",
         clientUserId: client.id,
         workerUserId: worker.id,
         workerEmail: worker.email,
@@ -509,7 +509,7 @@ async function main() {
     ]);
   }
 
-  console.log("Seed complete. Demo password: VeyrivoDemo!2026");
+  console.log("Seed complete. Demo password: KlaveroqDemo!2026");
 }
 
 main()

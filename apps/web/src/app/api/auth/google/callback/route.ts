@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { GOOGLE_OAUTH_COOKIES } from "@/server/auth/google";
 import { sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { authIdentities, profiles, users } from "@/server/db/schema";
@@ -12,12 +13,12 @@ export const GET = withApi(async (request: Request) => {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const store = await cookies();
-  const expectedState = store.get("veyrivo_google_state")?.value;
-  const nonce = store.get("veyrivo_google_nonce")?.value;
-  const verifier = store.get("veyrivo_google_verifier")?.value;
-  store.delete("veyrivo_google_state");
-  store.delete("veyrivo_google_nonce");
-  store.delete("veyrivo_google_verifier");
+  const expectedState = store.get(GOOGLE_OAUTH_COOKIES.state)?.value;
+  const nonce = store.get(GOOGLE_OAUTH_COOKIES.nonce)?.value;
+  const verifier = store.get(GOOGLE_OAUTH_COOKIES.verifier)?.value;
+  store.delete(GOOGLE_OAUTH_COOKIES.state);
+  store.delete(GOOGLE_OAUTH_COOKIES.nonce);
+  store.delete(GOOGLE_OAUTH_COOKIES.verifier);
   if (!code || !state || state !== expectedState || !nonce || !verifier)
     throw new ApiError(400, "OAUTH_STATE_INVALID", "Google sign-in could not be verified.");
   const clientId = process.env.GOOGLE_CLIENT_ID;

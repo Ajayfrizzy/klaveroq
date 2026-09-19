@@ -7,8 +7,8 @@ import { useState } from "react";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
-  const [email, setEmail] = useState(mode === "login" ? "client@veyrivo.local" : "");
-  const [password, setPassword] = useState(mode === "login" ? "VeyrivoDemo!2026" : "");
+  const [email, setEmail] = useState(mode === "login" ? "client@klaveroq.local" : "");
+  const [password, setPassword] = useState(mode === "login" ? "KlaveroqDemo!2026" : "");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,7 +48,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           <span>
             <ShieldCheck size={21} />
           </span>{" "}
-          Veyrivo
+          Klaveroq
         </Link>
         <p className="eyebrow">Protected work payments</p>
         <h1>{mode === "login" ? "Sign in" : "Create account"}</h1>

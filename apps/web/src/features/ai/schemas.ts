@@ -1,4 +1,4 @@
-import { JOB_CATEGORIES } from "@veyrivo/domain";
+import { JOB_CATEGORIES } from "@klaveroq/domain";
 import { z } from "zod";
 
 export const jobBuilderInputSchema = z.object({

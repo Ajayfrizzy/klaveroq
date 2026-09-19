@@ -36,7 +36,7 @@ export function EngagementReview({
       <div className="section-heading">
         <div>
           <h2>Verified work review</h2>
-          <p>This review is tied to this completed Veyrivo engagement.</p>
+          <p>This review is tied to this completed Klaveroq engagement.</p>
         </div>
       </div>
       <form onSubmit={submit}>

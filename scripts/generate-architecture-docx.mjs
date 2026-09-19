@@ -6,10 +6,10 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(scriptDir, "..");
-const markdownPath = join(root, "docs", "Veyrivo_MVP_and_Future_Architecture.md");
-const outputPath = join(root, "docs", "Veyrivo_MVP_and_Future_Architecture.docx");
+const markdownPath = join(root, "docs", "Klaveroq_MVP_and_Future_Architecture.md");
+const outputPath = join(root, "docs", "Klaveroq_MVP_and_Future_Architecture.docx");
 const templatePath = outputPath;
-const workDir = mkdtempSync(join(tmpdir(), "veyrivo-docx-"));
+const workDir = mkdtempSync(join(tmpdir(), "klaveroq-docx-"));
 
 const escapeXml = (value) =>
   value
@@ -154,30 +154,30 @@ try {
   core = core
     .replace(
       /<dc:title>.*?<\/dc:title>/s,
-      "<dc:title>Veyrivo MVP Architecture, Product Rules, and Future Roadmap</dc:title>",
+      "<dc:title>Klaveroq MVP Architecture, Product Rules, and Future Roadmap</dc:title>",
     )
     .replace(
       /<dc:subject>.*?<\/dc:subject>/s,
-      "<dc:subject>Veyrivo implementation architecture version 1.1</dc:subject>",
+      "<dc:subject>Klaveroq implementation architecture version 1.1</dc:subject>",
     )
-    .replace(/<dc:creator>.*?<\/dc:creator>/s, "<dc:creator>Veyrivo</dc:creator>")
+    .replace(/<dc:creator>.*?<\/dc:creator>/s, "<dc:creator>Klaveroq</dc:creator>")
     .replace(
       /<cp:lastModifiedBy>.*?<\/cp:lastModifiedBy>/s,
-      "<cp:lastModifiedBy>Veyrivo</cp:lastModifiedBy>",
+      "<cp:lastModifiedBy>Klaveroq</cp:lastModifiedBy>",
     );
   writeFileSync(corePath, core);
 
   const headerPath = join(workDir, "word", "header1.xml");
   const header = readFileSync(headerPath, "utf8").replace(
     /<w:t>.*? PRODUCT ARCHITECTURE<\/w:t>/s,
-    "<w:t>VEYRIVO PRODUCT ARCHITECTURE</w:t>",
+    "<w:t>KLAVEROQ PRODUCT ARCHITECTURE</w:t>",
   );
   writeFileSync(headerPath, header);
 
   const footerPath = join(workDir, "word", "footer1.xml");
   const footer = readFileSync(footerPath, "utf8").replace(
     /<w:t>.*?MVP and Future Improvement Roadmap<\/w:t>/s,
-    "<w:t>Veyrivo - MVP and Future Improvement Roadmap</w:t>",
+    "<w:t>Klaveroq - MVP and Future Improvement Roadmap</w:t>",
   );
   writeFileSync(footerPath, footer);
 

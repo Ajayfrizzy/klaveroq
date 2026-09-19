@@ -1,5 +1,5 @@
 {
-  "name": "veyrivo",
+  "name": "klaveroq",
   "private": true,
   "version": "0.1.0",
   "workspaces": [
@@ -7,16 +7,16 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=@veyrivo/web",
-    "build": "npm run build --workspace=@veyrivo/web",
+    "dev": "npm run dev --workspace=@klaveroq/web",
+    "build": "npm run build --workspace=@klaveroq/web",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "npm run lint --workspace=@veyrivo/web",
-    "typecheck": "npm run typecheck --workspace=@veyrivo/web",
-    "test": "npm run test --workspace=@veyrivo/web",
-    "db:generate": "npm run db:generate --workspace=@veyrivo/web",
-    "db:migrate": "npm run db:migrate --workspace=@veyrivo/web",
-    "db:seed": "npm run db:seed --workspace=@veyrivo/web"
+    "lint": "npm run lint --workspace=@klaveroq/web",
+    "typecheck": "npm run typecheck --workspace=@klaveroq/web",
+    "test": "npm run test --workspace=@klaveroq/web",
+    "db:generate": "npm run db:generate --workspace=@klaveroq/web",
+    "db:migrate": "npm run db:migrate --workspace=@klaveroq/web",
+    "db:seed": "npm run db:seed --workspace=@klaveroq/web"
   },
   "engines": {
     "node": ">=22"

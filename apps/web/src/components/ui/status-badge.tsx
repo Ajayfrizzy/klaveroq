@@ -1,4 +1,4 @@
-import type { AgreementStatus, MilestoneStatus } from "@veyrivo/domain";
+import type { AgreementStatus, MilestoneStatus } from "@klaveroq/domain";
 
 const labels: Partial<Record<AgreementStatus | MilestoneStatus, string>> = {
   FUNDED_AWAITING_ACCEPTANCE: "Awaiting acceptance",

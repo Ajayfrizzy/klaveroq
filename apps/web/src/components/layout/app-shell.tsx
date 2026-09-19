@@ -119,11 +119,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
         <div className="brand-row">
-          <Link className="brand" href="/" aria-label="Veyrivo home">
+          <Link className="brand" href="/" aria-label="Klaveroq home">
             <span className="brand-mark">
               <ShieldCheck size={20} strokeWidth={2.2} />
             </span>
-            <span>Veyrivo</span>
+            <span>Klaveroq</span>
           </Link>
           <button
             className="icon-button sidebar-close"
@@ -153,7 +153,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="sidebar-user">
           <span className="avatar">{initials}</span>
           <span>
-            <strong>{account?.displayName || "Veyrivo account"}</strong>
+            <strong>{account?.displayName || "Klaveroq account"}</strong>
             <small>{account?.email || "Signed in"}</small>
           </span>
           <span className="sidebar-user-actions">
@@ -181,7 +181,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="brand-mark">
               <ShieldCheck size={18} />
             </span>
-            Veyrivo
+            Klaveroq
           </Link>
           {pathname !== "/" && (
             <Link className="dashboard-return" href="/">

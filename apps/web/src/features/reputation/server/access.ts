@@ -8,7 +8,7 @@ export function reviewSubjectFor(engagement: Engagement, reviewerUserId: string)
     throw new ApiError(
       409,
       "ENGAGEMENT_NOT_COMPLETED",
-      "Reviews are available after the Veyrivo engagement is completed.",
+      "Reviews are available after the Klaveroq engagement is completed.",
     );
   if (engagement.clientUserId === reviewerUserId && engagement.workerUserId)
     return engagement.workerUserId;

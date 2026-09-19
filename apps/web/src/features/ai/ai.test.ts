@@ -12,7 +12,7 @@ describe("marketplace AI assistance", () => {
     expect(() => proposalAssistantInputSchema.parse({ listingId: "not-a-uuid" })).toThrow();
   });
 
-  it("references only matching Veyrivo portfolio data in proposal suggestions", async () => {
+  it("references only matching Klaveroq portfolio data in proposal suggestions", async () => {
     const suggestion = await new MockMarketplaceAiProvider().buildProposal({
       listing: {
         title: "Build a React dashboard",

@@ -11,7 +11,7 @@ describe("deployment mode", () => {
   });
 
   it("supports an explicit preview override for local verification", () => {
-    expect(usesPreviewData({ VEYRIVO_PREVIEW_MODE: "1" })).toBe(true);
-    expect(usesPreviewData({ VERCEL: "1", VEYRIVO_PREVIEW_MODE: "0" })).toBe(false);
+    expect(usesPreviewData({ KLAVEROQ_PREVIEW_MODE: "1" })).toBe(true);
+    expect(usesPreviewData({ VERCEL: "1", KLAVEROQ_PREVIEW_MODE: "0" })).toBe(false);
   });
 });

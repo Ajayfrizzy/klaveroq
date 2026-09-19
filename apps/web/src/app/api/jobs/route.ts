@@ -1,5 +1,4 @@
 import { and, desc, eq, gt, or } from "drizzle-orm";
-import { randomInt } from "node:crypto";
 import { db } from "@/server/db";
 import { feeQuotes, jobs, milestones, operations, profiles, users } from "@/server/db/schema";
 import { requireUser } from "@/server/auth/session";
@@ -8,6 +7,7 @@ import { assertSameOrigin } from "@/server/http/security";
 import { createJobSchema } from "@/features/jobs/server/schemas";
 import { serialize } from "@/server/serialize";
 import { audit } from "@/server/audit";
+import { createJobReference } from "@/server/references";
 
 export const GET = withApi(async () => {
   const { user } = await requireUser();
@@ -82,7 +82,7 @@ export const POST = withApi(async (request: Request) => {
       "SELF_HIRING_NOT_ALLOWED",
       "Client and worker must be different accounts.",
     );
-  const reference = `PP-${Date.now().toString(36).toUpperCase()}${randomInt(100, 999)}`;
+  const reference = createJobReference();
   const job = await db.transaction(async (tx) => {
     const [created] = await tx
       .insert(jobs)

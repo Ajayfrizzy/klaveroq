@@ -89,7 +89,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   <UserRound size={16} /> Client
                 </span>
                 <strong>{record.clientName}</strong>
-                <small>Veyrivo member</small>
+                <small>Klaveroq member</small>
               </div>
               <div>
                 <span>

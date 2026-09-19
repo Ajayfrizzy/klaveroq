@@ -8,7 +8,7 @@ import {
   Star,
   UsersRound,
 } from "lucide-react";
-import { JOB_CATEGORIES } from "@veyrivo/domain";
+import { JOB_CATEGORIES } from "@klaveroq/domain";
 import Link from "next/link";
 import { MarketplaceHeader } from "@/features/marketplace/components/marketplace-header";
 import { listPreviewTalent } from "@/features/talent/fixtures";
@@ -47,11 +47,11 @@ export default async function TalentPage({
       <main>
         <section className="market-title">
           <div>
-            <p className="eyebrow">Veyrivo talent marketplace</p>
+            <p className="eyebrow">Klaveroq talent marketplace</p>
             <h1>Find professionals with verifiable work history</h1>
             <p>
               Compare skills, portfolios, availability, and reputation earned through completed
-              Veyrivo work.
+              Klaveroq work.
             </p>
           </div>
           <Link className="secondary-button" href="/discover">
@@ -131,7 +131,7 @@ export default async function TalentPage({
                   </span>
                   <div>
                     <h2>{profile.displayName}</h2>
-                    <p>{profile.headline || profile.primaryRole || "Veyrivo professional"}</p>
+                    <p>{profile.headline || profile.primaryRole || "Klaveroq professional"}</p>
                   </div>
                 </div>
                 <div className="skill-list">

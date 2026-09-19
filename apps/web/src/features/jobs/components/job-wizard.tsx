@@ -1,6 +1,6 @@
 "use client";
 
-import type { MilestoneDraft } from "@veyrivo/domain";
+import type { MilestoneDraft } from "@klaveroq/domain";
 import {
   ArrowLeft,
   ArrowRight,
@@ -362,7 +362,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                   <p>
                     {selectedTalent.headline ||
                       selectedTalent.primaryRole ||
-                      "Veyrivo professional"}
+                      "Klaveroq professional"}
                   </p>
                   <Link href="/talent" className="secondary-button">
                     Change professional

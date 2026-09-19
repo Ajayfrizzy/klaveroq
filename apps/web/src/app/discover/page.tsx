@@ -1,4 +1,4 @@
-import { JOB_CATEGORIES } from "@veyrivo/domain";
+import { JOB_CATEGORIES } from "@klaveroq/domain";
 import { ArrowRight, BriefcaseBusiness, CalendarDays, Search, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { MarketplaceHeader } from "@/features/marketplace/components/marketplace-header";
@@ -29,7 +29,7 @@ export default async function DiscoverPage({
       <main>
         <section className="market-title">
           <div>
-            <p className="eyebrow">Veyrivo marketplace</p>
+            <p className="eyebrow">Klaveroq marketplace</p>
             <h1>Find work built around clear, verifiable milestones</h1>
             <p>
               Work with defined deliverables, objective acceptance criteria, required proof, and
@@ -105,7 +105,7 @@ export default async function DiscoverPage({
                   </span>
                   <p>
                     <strong>{client.displayName}</strong>
-                    <small>{client.headline ?? "Veyrivo client"}</small>
+                    <small>{client.headline ?? "Klaveroq client"}</small>
                   </p>
                   <ArrowRight size={17} />
                 </footer>

@@ -136,7 +136,7 @@ export function TicketConversation({
                   {message.senderType === "USER"
                     ? "You"
                     : message.senderType === "SUPPORT"
-                      ? "Veyrivo support"
+                      ? "Klaveroq support"
                       : "Internal note"}
                 </strong>
                 <time>{new Date(message.createdAt).toLocaleString()}</time>

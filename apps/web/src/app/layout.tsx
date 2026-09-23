@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://klaveroq.com"),
   title: { default: "Klaveroq", template: "%s | Klaveroq" },
   description:
-    "Klaveroq is a trusted work marketplace where clients discover talent, professionals find opportunities, and both sides structure milestone-based work with verifiable delivery and protected payments.",
+    "Klaveroq is a work marketplace where clients discover talent, professionals find opportunities, and both sides structure milestone-based work with verifiable delivery.",
   applicationName: "Klaveroq",
   alternates: { canonical: "/" },
   openGraph: {
@@ -15,13 +15,12 @@ export const metadata: Metadata = {
     siteName: "Klaveroq",
     title: "Klaveroq",
     description:
-      "Klaveroq is a trusted work marketplace where clients discover talent, professionals find opportunities, and both sides structure milestone-based work with verifiable delivery and protected payments.",
+      "Klaveroq is a work marketplace where clients discover talent, professionals find opportunities, and both sides structure milestone-based work with verifiable delivery.",
   },
   twitter: {
     card: "summary",
     title: "Klaveroq",
-    description:
-      "Trusted work marketplace for talent discovery, verifiable milestones, and protected payments.",
+    description: "Work marketplace for talent discovery and verifiable milestones.",
   },
 };
 

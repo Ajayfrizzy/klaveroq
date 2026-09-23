@@ -146,9 +146,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="network-card">
           <div>
-            <span className="status-dot" /> Systems operational
+            <span className="status-dot" /> Marketplace available
           </div>
-          <p>CKB Mainnet · PactAgent</p>
+          <p>Payment network not connected</p>
         </div>
         <div className="sidebar-user">
           <span className="avatar">{initials}</span>

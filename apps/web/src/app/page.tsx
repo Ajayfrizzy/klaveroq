@@ -39,7 +39,7 @@ export default async function DashboardPage() {
     : !current.profile?.isPublic
       ? { href: "/profile", label: "Publish profile", icon: <ShieldCheck size={16} /> }
       : { href: "/discover", label: "Find work", icon: <Compass size={16} /> };
-  const allVerified = Object.values(data.verification).every(Boolean);
+  const allChecksRecorded = Object.values(data.verification).every(Boolean);
   const released = presentAssetTotals(data.financials.released, "No confirmed releases this month");
 
   return (
@@ -88,18 +88,18 @@ export default async function DashboardPage() {
         <div className="readiness-copy">
           <div>
             <h2 id="readiness-title">
-              {allVerified ? "Ready for protected payments" : "Complete payment security"}
+              {allChecksRecorded ? "Account checks recorded" : "Account checks incomplete"}
             </h2>
-            {allVerified && (
+            {allChecksRecorded && (
               <span className="verified-label">
-                <Check size={13} /> Verified
+                <Check size={13} /> Recorded
               </span>
             )}
           </div>
           <p>
-            {allVerified
-              ? "Your email, identity, and funding wallet are verified."
-              : "Complete the remaining checks before protected payments are enabled."}
+            {allChecksRecorded
+              ? "Email, identity, and wallet verification records exist. Payment protection is not connected."
+              : "Review the remaining account records. Payment protection is not connected."}
           </p>
         </div>
         <div className="readiness-items">
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
           tone="green"
           label="Secured in jobs"
           value="Unavailable"
-          note="Awaiting reconciled PactAgent balances"
+          note="Payment integration is not connected"
         />
         <Metric
           icon={<Clock3 size={20} />}

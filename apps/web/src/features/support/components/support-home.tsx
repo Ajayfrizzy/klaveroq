@@ -144,22 +144,22 @@ export function SupportHome() {
           ))}
         </section>
         <aside className="panel quick-guides" id="guides">
-          <h2>Popular guides</h2>
-          <a href="#guide-content">
+          <h2>Guide topics</h2>
+          <div>
             <FileQuestion size={16} /> How funding and acceptance work
-          </a>
-          <a href="#guide-content">
+          </div>
+          <div>
             <FileQuestion size={16} /> Reviewing milestone proof
-          </a>
-          <a href="#guide-content">
+          </div>
+          <div>
             <FileQuestion size={16} /> Changing a payout wallet
-          </a>
-          <a href="#guide-content">
+          </div>
+          <div>
             <FileQuestion size={16} /> Opening a dispute
-          </a>
+          </div>
           <p id="guide-content">
-            For urgent payment or security problems, create a support case and include the related
-            reference.
+            Full guides are not published yet. Create a support case for help and include the
+            related reference when available.
           </p>
         </aside>
       </div>

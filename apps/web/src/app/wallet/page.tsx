@@ -1,147 +1,243 @@
 import {
+  AlertCircle,
   Check,
   Clock3,
-  Copy,
   KeyRound,
   LockKeyhole,
-  Plus,
   ShieldCheck,
   Smartphone,
   WalletCards,
 } from "lucide-react";
+import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { getCurrentUser } from "@/server/auth/session";
+import { db } from "@/server/db";
+import { identityVerifications, securityHolds, sessions, wallets } from "@/server/db/schema";
 
-export default function WalletPage() {
+export const dynamic = "force-dynamic";
+
+const label = (value: string) => value.toLowerCase().replaceAll("_", " ");
+
+export default async function WalletPage() {
+  const current = await getCurrentUser();
+  if (!current) redirect("/login?returnTo=%2Fwallet");
+
+  const now = new Date();
+  const [walletRecords, identityRows, sessionRecords, activeHolds] = await Promise.all([
+    db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.userId, current.user.id))
+      .orderBy(desc(wallets.createdAt)),
+    db
+      .select()
+      .from(identityVerifications)
+      .where(eq(identityVerifications.userId, current.user.id))
+      .orderBy(desc(identityVerifications.createdAt))
+      .limit(1),
+    db
+      .select({
+        id: sessions.id,
+        userAgent: sessions.userAgent,
+        lastSeenAt: sessions.lastSeenAt,
+        expiresAt: sessions.expiresAt,
+      })
+      .from(sessions)
+      .where(
+        and(
+          eq(sessions.userId, current.user.id),
+          isNull(sessions.revokedAt),
+          gt(sessions.expiresAt, now),
+        ),
+      )
+      .orderBy(desc(sessions.lastSeenAt))
+      .limit(10),
+    db
+      .select()
+      .from(securityHolds)
+      .where(
+        and(
+          eq(securityHolds.userId, current.user.id),
+          isNull(securityHolds.releasedAt),
+          or(isNull(securityHolds.expiresAt), gt(securityHolds.expiresAt, now)),
+        ),
+      )
+      .orderBy(desc(securityHolds.createdAt)),
+  ]);
+  const identity = identityRows[0];
+  const verifiedWallets = walletRecords.filter((wallet) => wallet.status === "VERIFIED");
+
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Account protection"
+        eyebrow="Account records"
         title="Wallet & security"
-        description="Manage verified payment destinations and account security."
+        description="Review wallet, identity, and active-session records stored for your account."
         icon={WalletCards}
         action={
-          <button className="primary-button">
-            <Plus size={16} /> Connect wallet
+          <button
+            className="primary-button"
+            disabled
+            title="Wallet connection is unavailable until the payment integration is implemented"
+          >
+            <WalletCards size={16} /> Wallet connection unavailable
           </button>
         }
       />
       <div className="security-layout">
         <div>
-          <section className="panel wallet-card">
-            <div className="wallet-card-head">
-              <span>
-                <WalletCards size={21} />
-              </span>
-              <div>
-                <h2>CKB wallet</h2>
-                <p>ckb1qyq2z...w7m2k9</p>
-              </div>
-              <span className="verified-chip">
-                <Check size={13} /> Verified
-              </span>
-            </div>
-            <div className="wallet-purposes">
-              <div>
-                <span>Funding wallet</span>
-                <strong>Default</strong>
-              </div>
-              <div>
-                <span>Payout wallet</span>
-                <strong>Default</strong>
-              </div>
-              <div>
-                <span>Connected</span>
-                <strong>12 Jul 2026</strong>
-              </div>
-            </div>
-            <div className="wallet-actions">
-              <button>
-                <Copy size={15} /> Copy address
-              </button>
-              <button>View on explorer</button>
-              <button className="danger-text">Change payout wallet</button>
-            </div>
-          </section>
+          {walletRecords.length ? (
+            walletRecords.map((wallet) => (
+              <section className="panel wallet-card" key={wallet.id}>
+                <div className="wallet-card-head">
+                  <span>
+                    <WalletCards size={21} />
+                  </span>
+                  <div>
+                    <h2>{wallet.network.toUpperCase()} wallet</h2>
+                    <p>{wallet.address}</p>
+                  </div>
+                  <span
+                    className={wallet.status === "VERIFIED" ? "verified-chip" : "listing-status"}
+                  >
+                    {wallet.status === "VERIFIED" && <Check size={13} />} {label(wallet.status)}
+                  </span>
+                </div>
+                <div className="wallet-purposes">
+                  <div>
+                    <span>Purpose</span>
+                    <strong>{label(wallet.purpose)}</strong>
+                  </div>
+                  <div>
+                    <span>Defaults</span>
+                    <strong>
+                      {[
+                        wallet.isDefaultFunding ? "Funding" : null,
+                        wallet.isDefaultPayout ? "Payout" : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" and ") || "None"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{wallet.verifiedAt ? "Verified" : "Added"}</span>
+                    <strong>{(wallet.verifiedAt ?? wallet.createdAt).toLocaleDateString()}</strong>
+                  </div>
+                </div>
+                <p className="form-feedback">
+                  Wallet changes are unavailable in this interface. No blockchain balance or payment
+                  capability is asserted by this record.
+                </p>
+              </section>
+            ))
+          ) : (
+            <section className="panel market-empty account-empty">
+              <WalletCards size={26} />
+              <h2>No wallet records</h2>
+              <p>No payment destination has been stored for your account.</p>
+            </section>
+          )}
+
           <section className="panel security-history">
             <div className="section-heading">
               <div>
-                <h2>Security activity</h2>
-                <p>Recent account protection events</p>
+                <h2>Active sessions</h2>
+                <p>Current, non-revoked sessions stored for your account</p>
               </div>
             </div>
-            <div>
-              <span>
-                <ShieldCheck size={17} />
-              </span>
-              <p>
-                <strong>Wallet ownership verified</strong>
-                <small>CKB signed-message challenge · 22 Jul 2026</small>
-              </p>
-            </div>
-            <div>
-              <span>
-                <KeyRound size={17} />
-              </span>
-              <p>
-                <strong>Password changed</strong>
-                <small>Chrome on macOS · 03 Jul 2026</small>
-              </p>
-            </div>
-            <div>
-              <span>
-                <Smartphone size={17} />
-              </span>
-              <p>
-                <strong>New session approved</strong>
-                <small>Lagos, Nigeria · 28 Jun 2026</small>
-              </p>
-            </div>
+            {sessionRecords.length ? (
+              sessionRecords.map((session) => (
+                <div key={session.id}>
+                  <span>
+                    <KeyRound size={17} />
+                  </span>
+                  <p>
+                    <strong>{session.userAgent || "Unknown client"}</strong>
+                    <small>
+                      Last recorded {session.lastSeenAt.toLocaleString()} · Expires{" "}
+                      {session.expiresAt.toLocaleString()}
+                    </small>
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="support-empty">No active session records are available.</p>
+            )}
           </section>
         </div>
         <aside>
           <section className="panel security-score">
             <ShieldCheck size={27} />
-            <h2>Security checks complete</h2>
-            <p>Your account meets all requirements for protected payments.</p>
+            <h2>Recorded account checks</h2>
+            <p>These statuses come from your authorized account records.</p>
             <ul>
               <li>
-                <Check size={14} /> Email verified
+                {current.user.emailVerifiedAt ? <Check size={14} /> : <Clock3 size={14} />}
+                Email {current.user.emailVerifiedAt ? "verified" : "pending"}
               </li>
               <li>
-                <Check size={14} /> Identity verified
+                {identity?.status === "VERIFIED" ? <Check size={14} /> : <Clock3 size={14} />}
+                Identity {identity ? label(identity.status) : "not started"}
               </li>
               <li>
-                <Check size={14} /> Wallet verified
+                {verifiedWallets.length ? <Check size={14} /> : <Clock3 size={14} />}
+                {verifiedWallets.length
+                  ? `${verifiedWallets.length} verified wallet record${verifiedWallets.length === 1 ? "" : "s"}`
+                  : "No verified wallet record"}
               </li>
               <li>
-                <Check size={14} /> Login alerts enabled
+                <AlertCircle size={14} /> Payment protection unavailable
               </li>
             </ul>
           </section>
+
+          {activeHolds.length > 0 && (
+            <section className="panel security-settings">
+              <h2>Active security holds</h2>
+              {activeHolds.map((hold) => (
+                <div key={hold.id}>
+                  <LockKeyhole size={16} />
+                  <span>
+                    <strong>{label(hold.type)}</strong>
+                    <small>
+                      {hold.expiresAt
+                        ? `Expires ${hold.expiresAt.toLocaleString()}`
+                        : "No expiry recorded"}
+                    </small>
+                  </span>
+                </div>
+              ))}
+            </section>
+          )}
+
           <section className="panel security-settings">
             <h2>Account security</h2>
-            <a href="#sessions">
+            <div>
               <LockKeyhole size={16} />
               <span>
-                <strong>Password</strong>
-                <small>Changed 20 days ago</small>
+                <strong>Password credential</strong>
+                <small>{current.user.passwordHash ? "Configured" : "Not configured"}</small>
               </span>
-            </a>
-            <a href="#sessions">
+            </div>
+            <div>
               <Smartphone size={16} />
               <span>
                 <strong>Two-factor authentication</strong>
-                <small>Not enabled</small>
+                <small>Unavailable</small>
               </span>
-            </a>
-            <a href="#sessions" id="sessions">
+            </div>
+            <div>
               <Clock3 size={16} />
               <span>
                 <strong>Active sessions</strong>
-                <small>2 devices</small>
+                <small>
+                  {sessionRecords.length} recorded{" "}
+                  {sessionRecords.length === 1 ? "session" : "sessions"}
+                </small>
               </span>
-            </a>
+            </div>
           </section>
         </aside>
       </div>

@@ -2189,6 +2189,10 @@ button {
   margin-top: 5px;
   font-size: 10px;
 }
+.wallet-card > .form-feedback {
+  margin: 0;
+  padding: 13px 18px;
+}
 .wallet-actions {
   display: flex;
   gap: 18px;
@@ -2281,17 +2285,20 @@ button {
 .security-settings {
   padding-bottom: 6px;
 }
-.security-settings a {
+.security-settings a,
+.security-settings > div {
   display: flex;
   align-items: center;
   gap: 9px;
   border-top: 1px solid var(--soft-line);
   padding: 13px 0;
 }
-.security-settings a:first-of-type {
+.security-settings a:first-of-type,
+.security-settings > div:first-of-type {
   margin-top: 11px;
 }
-.security-settings a > svg {
+.security-settings a > svg,
+.security-settings > div > svg {
   color: var(--brand);
 }
 .security-settings span {
@@ -2521,7 +2528,8 @@ button {
   margin: 0 0 10px;
   font-size: 13px;
 }
-.quick-guides a {
+.quick-guides a,
+.quick-guides > div {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -3011,6 +3019,7 @@ button {
 .support-cases p,
 .support-cases time,
 .quick-guides a,
+.quick-guides > div,
 .quick-guides > p,
 .new-case > div > p,
 .new-case label,

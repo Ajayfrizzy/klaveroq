@@ -389,23 +389,23 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                 <div>
                   <span>2</span>
                   <p>
-                    <strong>You fund the agreement</strong>PactAgent confirms secured funds on
-                    Nervos CKB.
+                    <strong>Funding remains pending</strong>Payment funding is unavailable until the
+                    payment integration is connected.
                   </p>
                 </div>
                 <div>
                   <span>3</span>
                   <p>
-                    <strong>Worker accepts</strong>The verified payout address is captured for this
-                    job.
+                    <strong>Worker reviews</strong>The worker can accept the recorded agreement
+                    terms when eligible.
                   </p>
                 </div>
               </div>
               <div className="inline-notice">
                 <Info size={18} />
                 <p>
-                  A funded invitation expires after seven calendar days if the worker does not
-                  accept. Recoverable funds are then returned.
+                  This creates an invitation record only. It does not fund an agreement or move
+                  funds.
                 </p>
               </div>
             </div>
@@ -419,7 +419,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                 </span>
                 <div>
                   <h2>Review agreement</h2>
-                  <p>Confirm these terms before creating the PactAgent funding request.</p>
+                  <p>Confirm these terms before creating the invitation.</p>
                 </div>
               </div>
               <div className="review-block">
@@ -479,7 +479,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
               </button>
             ) : (
               <button className="primary-button" disabled={submitting} onClick={submit}>
-                <ShieldCheck size={17} /> {submitting ? "Creating..." : "Create funding request"}
+                <ShieldCheck size={17} /> {submitting ? "Creating..." : "Create invitation"}
               </button>
             )}
           </div>
@@ -490,7 +490,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
             <CircleDollarSign size={20} />
             <div>
               <h2>Funding summary</h2>
-              <p>Estimated before network confirmation</p>
+              <p>Recorded agreement estimate</p>
             </div>
           </div>
           <dl>
@@ -509,7 +509,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
               <dd>{format(networkReserve)} CKB</dd>
             </div>
             <div className="summary-total">
-              <dt>Total to fund</dt>
+              <dt>Estimated total</dt>
               <dd>{format(subtotal + clientFee + networkReserve)} CKB</dd>
             </div>
           </dl>
@@ -518,8 +518,8 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
             <strong>{format(subtotal * 0.98)} CKB</strong>
           </div>
           <p className="summary-foot">
-            <ShieldCheck size={15} /> Funds are secured through PactAgent on Nervos CKB. Final
-            network cost is shown before wallet signing.
+            <ShieldCheck size={15} /> No funds are secured or transferred by this workflow. Payment
+            integration is not connected.
           </p>
         </aside>
       </div>

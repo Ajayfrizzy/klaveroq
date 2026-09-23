@@ -98,11 +98,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               <span>
                 <ShieldCheck size={16} /> Protection
               </span>
-              <strong>PactAgent escrow</strong>
+              <strong>Payment integration unavailable</strong>
               <small>
                 {record.job.fundedAt
-                  ? `Funding recorded ${record.job.fundedAt.toLocaleDateString()}`
-                  : "Funding not confirmed"}
+                  ? `Legacy funding timestamp recorded ${record.job.fundedAt.toLocaleDateString()}; not independently reconciled`
+                  : "No reconciled funding confirmation"}
               </small>
             </div>
           </section>

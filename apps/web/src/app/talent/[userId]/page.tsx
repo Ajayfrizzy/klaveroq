@@ -168,7 +168,9 @@ export default async function PublicTalentProfile({
               <section className="talent-hire-actions">
                 <p className="eyebrow">Work together</p>
                 <h2>Interested in this professional?</h2>
-                <p>Structure the work with clear milestones and protected payment.</p>
+                <p>
+                  Structure the work with clear milestones. Payment protection is not connected.
+                </p>
                 <Link className="primary-button" href={`/jobs/new/direct?talent=${profile.userId}`}>
                   <Send size={16} /> Invite to a job
                 </Link>

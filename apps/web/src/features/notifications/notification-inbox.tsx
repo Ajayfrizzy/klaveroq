@@ -69,7 +69,12 @@ export function NotificationInbox() {
             >
               <CheckCheck size={16} /> {busy ? "Updating..." : "Mark all read"}
             </button>
-            <button className="icon-button bordered" aria-label="Notification settings">
+            <button
+              className="icon-button bordered"
+              aria-label="Notification settings unavailable"
+              title="Notification preferences are not available yet"
+              disabled
+            >
               <Settings2 size={17} />
             </button>
           </div>

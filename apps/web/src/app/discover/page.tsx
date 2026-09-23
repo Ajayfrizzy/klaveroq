@@ -29,7 +29,7 @@ export default async function DiscoverPage({
             <h1>Find work built around clear, verifiable milestones</h1>
             <p>
               Work with defined deliverables, objective acceptance criteria, required proof, and
-              protected payment.
+              explicit payment status.
             </p>
           </div>
           <Link className="primary-button" href="/jobs/new/public">

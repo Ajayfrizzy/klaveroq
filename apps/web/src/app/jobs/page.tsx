@@ -1,34 +1,64 @@
 import { ArrowRight, BriefcaseBusiness, Compass, Filter, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { db } from "@/server/db";
 import { jobListings, jobs, profiles, proposals } from "@/server/db/schema";
 import { getCurrentUser } from "@/server/auth/session";
+import {
+  agreementStatuses,
+  agreementStatusLabel,
+  jobWorkspaceQuerySchema,
+} from "@/features/jobs/server/filters";
 
 export const dynamic = "force-dynamic";
 const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
 export default async function JobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { view = "agreements" } = await searchParams;
+  const raw = await searchParams;
+  const input = jobWorkspaceQuerySchema.parse(
+    Object.fromEntries(
+      Object.entries(raw).flatMap(([key, value]) =>
+        typeof value === "string" ? [[key, value]] : [],
+      ),
+    ),
+  );
+  const { view, query, status } = input;
   const current = await getCurrentUser();
   if (!current) {
     const returnTo = view === "agreements" ? "/jobs" : `/jobs?view=${view}`;
     redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
   }
   const userId = current?.user.id;
+  const agreementConditions = [or(eq(jobs.clientUserId, userId), eq(jobs.workerUserId, userId))!];
+  if (status) agreementConditions.push(eq(jobs.status, status));
+  if (query) {
+    const pattern = `%${query}%`;
+    agreementConditions.push(
+      or(
+        ilike(jobs.title, pattern),
+        ilike(jobs.reference, pattern),
+        ilike(jobs.workerEmail, pattern),
+        sql`exists (
+          select 1 from ${profiles} participant
+          where participant.user_id in (${jobs.clientUserId}, ${jobs.workerUserId})
+          and participant.display_name ilike ${pattern}
+        )`,
+      )!,
+    );
+  }
   const agreements =
     view === "agreements" && userId
       ? await db
           .select()
           .from(jobs)
-          .where(or(eq(jobs.clientUserId, userId), eq(jobs.workerUserId, userId)))
+          .where(and(...agreementConditions))
           .orderBy(desc(jobs.updatedAt))
       : [];
   const listings =
@@ -75,15 +105,34 @@ export default async function JobsPage({
       </div>
       {view === "agreements" && (
         <>
-          <div className="toolbar">
+          <form className="toolbar">
+            <input type="hidden" name="view" value="agreements" />
             <label className="search-field">
               <Search size={17} />
-              <input aria-label="Search jobs" placeholder="Search jobs or people" />
+              <input
+                name="query"
+                defaultValue={query}
+                aria-label="Search jobs"
+                placeholder="Search jobs or people"
+              />
             </label>
-            <button className="secondary-button">
-              <Filter size={16} /> Filter
+            <select name="status" defaultValue={status ?? ""} aria-label="Filter by status">
+              <option value="">All statuses</option>
+              {agreementStatuses.map((value) => (
+                <option value={value} key={value}>
+                  {agreementStatusLabel(value)}
+                </option>
+              ))}
+            </select>
+            <button className="secondary-button" type="submit">
+              <Filter size={16} /> Apply filters
             </button>
-          </div>
+            {(query || status) && (
+              <Link className="clear-filters" href="/jobs">
+                Clear filters
+              </Link>
+            )}
+          </form>
           <section className="panel data-panel">
             <div className="data-head">
               <span>Job</span>
@@ -120,8 +169,12 @@ export default async function JobsPage({
             ) : (
               <div className="market-empty account-empty">
                 <BriefcaseBusiness size={26} />
-                <h2>No agreements yet</h2>
-                <p>Your client and worker agreements will appear here.</p>
+                <h2>{query || status ? "No matching agreements" : "No agreements yet"}</h2>
+                <p>
+                  {query || status
+                    ? "Adjust or clear the filters to see other authorized agreements."
+                    : "Your client and worker agreements will appear here."}
+                </p>
               </div>
             )}
           </section>

@@ -3,6 +3,8 @@ import { confirmedFinancialSummary, formatAssetAmount, presentAssetTotals } from
 import { isFirstTimeUser, type OnboardingSignals } from "./onboarding";
 
 const base = {
+  jobId: "job-1",
+  milestoneId: "milestone-1",
   status: "CONFIRMED",
   asset: "CKB",
   assetDecimals: 8,
@@ -63,15 +65,117 @@ describe("confirmedFinancialSummary", () => {
     expect(summary.released).toEqual([{ amount: 30n, asset: "CKB", assetDecimals: 8, count: 1 }]);
   });
 
-  it("excludes pending and failed operations and deduplicates settlement references", () => {
+  it("does not merge identical external references from different agreements", () => {
+    const summary = confirmedFinancialSummary([
+      { ...base, id: "one", externalReference: "tx-1", type: "RELEASE", amount: 25n },
+      {
+        ...base,
+        id: "two",
+        jobId: "job-2",
+        milestoneId: "milestone-2",
+        externalReference: "tx-1",
+        type: "MILESTONE_RELEASE",
+        amount: 25n,
+      },
+    ]);
+    expect(summary.released).toEqual([{ amount: 50n, asset: "CKB", assetDecimals: 8, count: 2 }]);
+  });
+
+  it("does not merge identical references across assets or decimal precisions", () => {
+    const summary = confirmedFinancialSummary([
+      { ...base, id: "ckb", externalReference: "tx-1", type: "RELEASE", amount: 25n },
+      {
+        ...base,
+        id: "usdt",
+        externalReference: "tx-1",
+        type: "MILESTONE_RELEASE",
+        amount: 25n,
+        asset: "USDT",
+        assetDecimals: 6,
+      },
+    ]);
+    expect(summary.released).toEqual([
+      { amount: 25n, asset: "CKB", assetDecimals: 8, count: 1 },
+      { amount: 25n, asset: "USDT", assetDecimals: 6, count: 1 },
+    ]);
+  });
+
+  it("does not merge identical references across decimal precisions for one asset", () => {
+    const summary = confirmedFinancialSummary([
+      { ...base, id: "eight", externalReference: "tx-1", type: "RELEASE", amount: 25n },
+      {
+        ...base,
+        id: "six",
+        externalReference: "tx-1",
+        type: "MILESTONE_RELEASE",
+        amount: 25n,
+        assetDecimals: 6,
+      },
+    ]);
+    expect(summary.released).toEqual([
+      { amount: 25n, asset: "CKB", assetDecimals: 8, count: 1 },
+      { amount: 25n, asset: "CKB", assetDecimals: 6, count: 1 },
+    ]);
+  });
+
+  it("retains distinct milestones within one agreement", () => {
+    const summary = confirmedFinancialSummary([
+      { ...base, id: "one", externalReference: "tx-1", type: "RELEASE", amount: 25n },
+      {
+        ...base,
+        id: "two",
+        milestoneId: "milestone-2",
+        externalReference: "tx-1",
+        type: "MILESTONE_RELEASE",
+        amount: 25n,
+      },
+    ]);
+    expect(summary.released[0]).toMatchObject({ amount: 50n, count: 2 });
+  });
+
+  it("deduplicates two representations of one confirmed settlement", () => {
     const summary = confirmedFinancialSummary([
       { ...base, id: "one", externalReference: "tx-1", type: "MILESTONE_RELEASE", amount: 25n },
       { ...base, id: "two", externalReference: "tx-1", type: "RELEASE", amount: 25n },
+    ]);
+    expect(summary.released).toEqual([{ amount: 25n, asset: "CKB", assetDecimals: 8, count: 1 }]);
+  });
+
+  it("retains different settlement references within one agreement", () => {
+    const summary = confirmedFinancialSummary([
+      { ...base, id: "one", externalReference: "tx-1", type: "RELEASE", amount: 25n },
+      { ...base, id: "two", externalReference: "tx-2", type: "RELEASE", amount: 25n },
+    ]);
+    expect(summary.released[0]).toMatchObject({ amount: 50n, count: 2 });
+  });
+
+  it("retains records without a complete external settlement identity", () => {
+    const summary = confirmedFinancialSummary([
+      { ...base, id: "one", externalReference: null, type: "RELEASE", amount: 25n },
+      { ...base, id: "two", externalReference: null, type: "MILESTONE_RELEASE", amount: 25n },
+    ]);
+    expect(summary.released[0]).toMatchObject({ amount: 50n, count: 2 });
+  });
+
+  it("excludes pending and failed operations from confirmed totals", () => {
+    const summary = confirmedFinancialSummary([
+      { ...base, id: "confirmed", externalReference: "tx-1", type: "RELEASE", amount: 25n },
       { ...base, id: "pending", type: "RELEASE", status: "PENDING", amount: 100n },
       { ...base, id: "failed", type: "FUND", status: "FAILED", amount: 200n },
     ]);
     expect(summary.released).toEqual([{ amount: 25n, asset: "CKB", assetDecimals: 8, count: 1 }]);
     expect(summary.funding).toEqual([]);
+  });
+
+  it("produces the same deduplicated total regardless of record order", () => {
+    const records = [
+      { ...base, id: "one", externalReference: "tx-1", type: "MILESTONE_RELEASE", amount: 25n },
+      { ...base, id: "two", externalReference: "tx-1", type: "RELEASE", amount: 25n },
+      { ...base, id: "three", externalReference: "tx-2", type: "RELEASE", amount: 10n },
+    ];
+    expect(confirmedFinancialSummary(records).released).toEqual(
+      confirmedFinancialSummary([...records].reverse()).released,
+    );
   });
 
   it("formats integer asset units without losing bigint precision", () => {

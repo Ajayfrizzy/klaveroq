@@ -13,7 +13,7 @@ import {
 } from "@/server/db/schema";
 import { getUserFinancialSummary } from "@/features/payments/server/queries";
 import { isFirstTimeUser } from "./onboarding";
-import { pendingActionTitle, prioritizePendingActions } from "./pending-actions";
+import { pendingActionSummary, pendingActionTitle } from "./pending-actions";
 
 const activeStatuses = [
   "INVITED",
@@ -111,12 +111,7 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
     db
       .select({ value: count(jobs.id) })
       .from(jobs)
-      .where(
-        and(
-          eq(jobs.workerUserId, userId),
-          eq(jobs.status, "FUNDED_AWAITING_ACCEPTANCE"),
-        ),
-      ),
+      .where(and(eq(jobs.workerUserId, userId), eq(jobs.status, "FUNDED_AWAITING_ACCEPTANCE"))),
     db
       .select({ value: count(milestones.id) })
       .from(milestones)
@@ -129,10 +124,7 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
               eq(jobs.clientUserId, userId),
               inArray(milestones.status, ["PROOF_SUBMITTED", "UNDER_REVIEW"]),
             ),
-            and(
-              eq(jobs.workerUserId, userId),
-              eq(milestones.status, "REVISION_REQUESTED"),
-            ),
+            and(eq(jobs.workerUserId, userId), eq(milestones.status, "REVISION_REQUESTED")),
           ),
         ),
       ),
@@ -145,12 +137,7 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
         createdAt: jobs.updatedAt,
       })
       .from(jobs)
-      .where(
-        and(
-          eq(jobs.workerUserId, userId),
-          eq(jobs.status, "FUNDED_AWAITING_ACCEPTANCE"),
-        ),
-      )
+      .where(and(eq(jobs.workerUserId, userId), eq(jobs.status, "FUNDED_AWAITING_ACCEPTANCE")))
       .orderBy(
         asc(sql`coalesce(${jobs.acceptanceExpiresAt}, ${jobs.updatedAt})`),
         asc(jobs.updatedAt),
@@ -177,10 +164,7 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
               eq(jobs.clientUserId, userId),
               inArray(milestones.status, ["PROOF_SUBMITTED", "UNDER_REVIEW"]),
             ),
-            and(
-              eq(jobs.workerUserId, userId),
-              eq(milestones.status, "REVISION_REQUESTED"),
-            ),
+            and(eq(jobs.workerUserId, userId), eq(milestones.status, "REVISION_REQUESTED")),
           ),
         ),
       )
@@ -212,24 +196,26 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
     current.push(milestone);
     milestonesByJob.set(milestone.jobId, current);
   }
-  const pendingActions = prioritizePendingActions([
-    ...invitationActions.map((action) => ({
-      ...action,
-      id: `job:${action.id}:accept`,
-      title: "Accept funded invitation",
-      note: "Your acceptance is required",
-    })),
-    ...milestoneActions.map((action) => ({
-      ...action,
-      id: `milestone:${action.id}`,
-      title:
-        action.status === "REVISION_REQUESTED"
-          ? "Submit milestone revision"
-          : "Review milestone proof",
-    })),
-  ]);
-  const pendingActionCount =
-    (invitationActionTotals[0]?.value ?? 0) + (milestoneActionTotals[0]?.value ?? 0);
+  const pendingSummary = pendingActionSummary(
+    invitationActionTotals[0]?.value ?? 0,
+    milestoneActionTotals[0]?.value ?? 0,
+    [
+      ...invitationActions.map((action) => ({
+        ...action,
+        id: `job:${action.id}:accept`,
+        title: "Accept funded invitation",
+        note: "Your acceptance is required",
+      })),
+      ...milestoneActions.map((action) => ({
+        ...action,
+        id: `milestone:${action.id}`,
+        title:
+          action.status === "REVISION_REQUESTED"
+            ? "Submit milestone revision"
+            : "Review milestone proof",
+      })),
+    ],
+  );
   return {
     verification: {
       email: emailVerified,
@@ -264,8 +250,8 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
       };
     }),
     activeJobCount: activeJobTotals[0]?.value ?? 0,
-    pendingActions,
-    pendingActionCount,
+    pendingActions: pendingSummary.pendingActions,
+    pendingActionCount: pendingSummary.pendingActionCount,
     financials,
     isFirstTimeUser: isFirstTimeUser({
       hasAgreement: agreementHistory.length > 0,

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import {
   auditLogs,
@@ -13,6 +13,7 @@ import {
 } from "@/server/db/schema";
 import { getUserFinancialSummary } from "@/features/payments/server/queries";
 import { isFirstTimeUser } from "./onboarding";
+import { pendingActionTitle, prioritizePendingActions } from "./pending-actions";
 
 const activeStatuses = [
   "INVITED",
@@ -38,6 +39,10 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
     portfolioHistory,
     ownProfile,
     financials,
+    invitationActionTotals,
+    milestoneActionTotals,
+    invitationActions,
+    milestoneActions,
   ] = await Promise.all([
     db
       .select()
@@ -103,6 +108,84 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
       .where(eq(profiles.userId, userId))
       .limit(1),
     getUserFinancialSummary(userId),
+    db
+      .select({ value: count(jobs.id) })
+      .from(jobs)
+      .where(
+        and(
+          eq(jobs.workerUserId, userId),
+          eq(jobs.status, "FUNDED_AWAITING_ACCEPTANCE"),
+        ),
+      ),
+    db
+      .select({ value: count(milestones.id) })
+      .from(milestones)
+      .innerJoin(jobs, eq(milestones.jobId, jobs.id))
+      .where(
+        and(
+          inArray(jobs.status, activeStatuses),
+          or(
+            and(
+              eq(jobs.clientUserId, userId),
+              inArray(milestones.status, ["PROOF_SUBMITTED", "UNDER_REVIEW"]),
+            ),
+            and(
+              eq(jobs.workerUserId, userId),
+              eq(milestones.status, "REVISION_REQUESTED"),
+            ),
+          ),
+        ),
+      ),
+    db
+      .select({
+        id: jobs.id,
+        jobId: jobs.id,
+        detail: jobs.title,
+        urgencyAt: sql<Date>`coalesce(${jobs.acceptanceExpiresAt}, ${jobs.updatedAt})`,
+        createdAt: jobs.updatedAt,
+      })
+      .from(jobs)
+      .where(
+        and(
+          eq(jobs.workerUserId, userId),
+          eq(jobs.status, "FUNDED_AWAITING_ACCEPTANCE"),
+        ),
+      )
+      .orderBy(
+        asc(sql`coalesce(${jobs.acceptanceExpiresAt}, ${jobs.updatedAt})`),
+        asc(jobs.updatedAt),
+        asc(jobs.id),
+      )
+      .limit(4),
+    db
+      .select({
+        id: milestones.id,
+        jobId: jobs.id,
+        detail: jobs.title,
+        note: milestones.title,
+        status: milestones.status,
+        urgencyAt: milestones.dueAt,
+        createdAt: milestones.updatedAt,
+      })
+      .from(milestones)
+      .innerJoin(jobs, eq(milestones.jobId, jobs.id))
+      .where(
+        and(
+          inArray(jobs.status, activeStatuses),
+          or(
+            and(
+              eq(jobs.clientUserId, userId),
+              inArray(milestones.status, ["PROOF_SUBMITTED", "UNDER_REVIEW"]),
+            ),
+            and(
+              eq(jobs.workerUserId, userId),
+              eq(milestones.status, "REVISION_REQUESTED"),
+            ),
+          ),
+        ),
+      )
+      .orderBy(asc(milestones.dueAt), asc(milestones.updatedAt), asc(milestones.id))
+      .limit(4),
   ]);
 
   const jobIds = jobRows.map((job) => job.id);
@@ -129,33 +212,24 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
     current.push(milestone);
     milestonesByJob.set(milestone.jobId, current);
   }
-  const pendingActions = jobRows.flatMap((job) => {
-    const role = job.clientUserId === userId ? "CLIENT" : "WORKER";
-    const items = milestonesByJob.get(job.id) ?? [];
-    if (role === "WORKER" && job.status === "FUNDED_AWAITING_ACCEPTANCE")
-      return [
-        {
-          jobId: job.id,
-          title: "Accept funded invitation",
-          detail: job.title,
-          note: "Your acceptance is required",
-        },
-      ];
-    const waiting = items.find((item) =>
-      role === "CLIENT"
-        ? ["PROOF_SUBMITTED", "UNDER_REVIEW"].includes(item.status)
-        : item.status === "REVISION_REQUESTED",
-    );
-    if (!waiting) return [];
-    return [
-      {
-        jobId: job.id,
-        title: role === "CLIENT" ? "Review milestone proof" : "Submit milestone revision",
-        detail: job.title,
-        note: waiting.title,
-      },
-    ];
-  });
+  const pendingActions = prioritizePendingActions([
+    ...invitationActions.map((action) => ({
+      ...action,
+      id: `job:${action.id}:accept`,
+      title: "Accept funded invitation",
+      note: "Your acceptance is required",
+    })),
+    ...milestoneActions.map((action) => ({
+      ...action,
+      id: `milestone:${action.id}`,
+      title:
+        action.status === "REVISION_REQUESTED"
+          ? "Submit milestone revision"
+          : "Review milestone proof",
+    })),
+  ]);
+  const pendingActionCount =
+    (invitationActionTotals[0]?.value ?? 0) + (milestoneActionTotals[0]?.value ?? 0);
   return {
     verification: {
       email: emailVerified,
@@ -166,7 +240,11 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
       const role = job.clientUserId === userId ? ("CLIENT" as const) : ("WORKER" as const);
       const items = milestonesByJob.get(job.id) ?? [];
       const completed = items.filter((item) => item.status === "RELEASED").length;
-      const action = pendingActions.find((item) => item.jobId === job.id);
+      const actionTitle = pendingActionTitle(
+        role,
+        job.status,
+        items.map((item) => item.status),
+      );
       const counterpartyId = role === "CLIENT" ? job.workerUserId : job.clientUserId;
       return {
         id: job.id,
@@ -181,12 +259,13 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
         asset: job.asset,
         assetDecimals: job.assetDecimals,
         progress: `${completed} of ${items.length}`,
-        nextAction: action?.title ?? "No action required",
+        nextAction: actionTitle ?? "No action required",
         updatedAt: job.updatedAt,
       };
     }),
     activeJobCount: activeJobTotals[0]?.value ?? 0,
     pendingActions,
+    pendingActionCount,
     financials,
     isFirstTimeUser: isFirstTimeUser({
       hasAgreement: agreementHistory.length > 0,

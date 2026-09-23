@@ -140,9 +140,9 @@ export default async function DashboardPage() {
           icon={<Clock3 size={20} />}
           tone="amber"
           label="Pending actions"
-          value={String(data.pendingActions.length)}
+          value={String(data.pendingActionCount)}
           note={
-            data.pendingActions.length ? "Items genuinely waiting on you" : "Nothing waiting on you"
+            data.pendingActionCount ? "Items genuinely waiting on you" : "Nothing waiting on you"
           }
         />
         <Metric
@@ -213,11 +213,11 @@ export default async function DashboardPage() {
               <h2>Pending actions</h2>
               <p>Items waiting on you</p>
             </div>
-            <span className="count-badge">{data.pendingActions.length}</span>
+            <span className="count-badge">{data.pendingActionCount}</span>
           </div>
           {data.pendingActions.length ? (
-            data.pendingActions.slice(0, 4).map((action) => (
-              <div className="action-item" key={`${action.jobId}-${action.title}`}>
+            data.pendingActions.map((action) => (
+              <div className="action-item" key={action.id}>
                 <span className="action-icon">
                   <Clock3 size={18} />
                 </span>

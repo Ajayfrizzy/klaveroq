@@ -1,5 +1,7 @@
 export type DashboardOperation = {
   id?: string;
+  jobId?: string | null;
+  milestoneId?: string | null;
   idempotencyKey?: string;
   externalReference?: string | null;
   type: string;
@@ -27,9 +29,25 @@ export function utcMonthRange(now = new Date()) {
 }
 
 function settlementKey(record: DashboardOperation) {
-  const category = releaseTypes.has(record.type) ? "RELEASE" : record.type;
-  const reference = record.externalReference ?? record.idempotencyKey ?? record.id;
-  return reference ? `${category}:${reference}` : null;
+  if (
+    !releaseTypes.has(record.type) ||
+    !record.externalReference ||
+    !record.jobId ||
+    !record.milestoneId ||
+    !record.asset ||
+    record.assetDecimals === undefined ||
+    record.amount === null
+  )
+    return null;
+  return [
+    "RELEASE",
+    record.jobId,
+    record.milestoneId,
+    record.asset,
+    record.assetDecimals,
+    record.amount,
+    record.externalReference,
+  ].join(":");
 }
 
 function unique(records: DashboardOperation[]) {

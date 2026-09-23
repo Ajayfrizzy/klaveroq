@@ -11,24 +11,21 @@ import {
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { activity } from "@/features/activity/fixtures";
-import { jobs } from "@/features/jobs/fixtures";
-
-const format = (value: number) => new Intl.NumberFormat("en-US").format(value);
-
 import { getCurrentUser } from "@/server/auth/session";
-import { db } from "@/server/db";
-import { jobListings, proposals } from "@/server/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { getDashboardData } from "@/features/dashboard/server/queries";
 
 export const dynamic = "force-dynamic";
+const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
 
 export default async function DashboardPage() {
   const current = await getCurrentUser();
-  const displayName = current?.profile?.displayName?.split(" ")[0] || "there";
-  const profileRequirements = current?.profile
+  if (!current) redirect("/login");
+  const data = await getDashboardData(current.user.id, Boolean(current.user.emailVerifiedAt));
+  const displayName = current.profile?.displayName?.split(" ")[0] || "there";
+  const profileRequirements = current.profile
     ? [
         Boolean(current.profile.displayName?.trim()),
         Boolean(current.profile.headline?.trim() || current.profile.primaryRole?.trim()),
@@ -39,24 +36,11 @@ export default async function DashboardPage() {
   const profileComplete = profileRequirements.length > 0 && profileRequirements.every(Boolean);
   const primaryStartAction = !profileComplete
     ? { href: "/profile", label: "Complete profile", icon: <UserRound size={16} /> }
-    : !current?.profile?.isPublic
+    : !current.profile?.isPublic
       ? { href: "/profile", label: "Publish profile", icon: <ShieldCheck size={16} /> }
       : { href: "/discover", label: "Find work", icon: <Compass size={16} /> };
-  let marketplaceActivity = 0;
-  if (current) {
-    const [listingCount, proposalCount] = await Promise.all([
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(jobListings)
-        .where(eq(jobListings.clientUserId, current.user.id)),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(proposals)
-        .where(eq(proposals.workerUserId, current.user.id)),
-    ]);
-    marketplaceActivity =
-      Number(listingCount[0]?.count ?? 0) + Number(proposalCount[0]?.count ?? 0);
-  }
+  const allVerified = Object.values(data.verification).every(Boolean);
+
   return (
     <AppShell>
       <div className="page-heading">
@@ -67,7 +51,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {marketplaceActivity === 0 && (
+      {data.jobs.length === 0 && (
         <section className="first-user-panel" aria-labelledby="welcome-title">
           <div>
             <p className="eyebrow">Start here</p>
@@ -102,22 +86,33 @@ export default async function DashboardPage() {
         </div>
         <div className="readiness-copy">
           <div>
-            <h2 id="readiness-title">Ready for protected payments</h2>
-            <span className="verified-label">
-              <Check size={13} /> Verified
-            </span>
+            <h2 id="readiness-title">
+              {allVerified ? "Ready for protected payments" : "Complete payment security"}
+            </h2>
+            {allVerified && (
+              <span className="verified-label">
+                <Check size={13} /> Verified
+              </span>
+            )}
           </div>
-          <p>Your identity and funding wallet are verified.</p>
+          <p>
+            {allVerified
+              ? "Your email, identity, and funding wallet are verified."
+              : "Complete the remaining checks before protected payments are enabled."}
+          </p>
         </div>
         <div className="readiness-items">
           <span>
-            <Check size={15} /> Email
+            {data.verification.email && <Check size={15} />} Email{" "}
+            {data.verification.email ? "verified" : "pending"}
           </span>
           <span>
-            <Check size={15} /> Identity
+            {data.verification.identity && <Check size={15} />} Identity{" "}
+            {data.verification.identity ? "verified" : "pending"}
           </span>
           <span>
-            <Check size={15} /> Wallet
+            {data.verification.wallet && <Check size={15} />} Wallet{" "}
+            {data.verification.wallet ? "verified" : "pending"}
           </span>
         </div>
         <Link href="/wallet">
@@ -126,50 +121,52 @@ export default async function DashboardPage() {
       </section>
 
       <section className="metrics-grid" aria-label="Account summary">
-        <article>
-          <span className="metric-icon teal">
-            <BriefIcon />
-          </span>
-          <div>
-            <p>Active jobs</p>
-            <strong>3</strong>
-            <small>Across client and worker roles</small>
-          </div>
-        </article>
-        <article>
-          <span className="metric-icon green">
-            <CircleDollarSign size={20} />
-          </span>
-          <div>
-            <p>Secured in jobs</p>
-            <strong>
-              260,500 <em>CKB</em>
-            </strong>
-            <small>Funds confirmed by PactAgent</small>
-          </div>
-        </article>
-        <article>
-          <span className="metric-icon amber">
-            <Clock3 size={20} />
-          </span>
-          <div>
-            <p>Pending actions</p>
-            <strong>2</strong>
-            <small>One review, one acceptance</small>
-          </div>
-        </article>
-        <article>
-          <span className="metric-icon blue">
-            <WalletCards size={20} />
-          </span>
-          <div>
-            <p>Released this month</p>
-            <strong>
-              129,500 <em>CKB</em>
-            </strong>
-            <small>4 milestone payments</small>
-          </div>
-        </article>
+        <Metric
+          icon={<BriefIcon />}
+          tone="teal"
+          label="Active jobs"
+          value={String(data.jobs.length)}
+          note="Across client and worker roles"
+        />
+        <Metric
+          icon={<CircleDollarSign size={20} />}
+          tone="green"
+          label="Secured in jobs"
+          value={
+            data.financials.secured
+              ? `${ckb(data.financials.secured.amount)} ${data.financials.secured.asset}`
+              : "Unavailable"
+          }
+          note={
+            data.financials.secured
+              ? `${data.financials.secured.count} confirmed funding record${data.financials.secured.count === 1 ? "" : "s"}`
+              : "No confirmed funding records"
+          }
+        />
+        <Metric
+          icon={<Clock3 size={20} />}
+          tone="amber"
+          label="Pending actions"
+          value={String(data.pendingActions.length)}
+          note={
+            data.pendingActions.length ? "Items genuinely waiting on you" : "Nothing waiting on you"
+          }
+        />
+        <Metric
+          icon={<WalletCards size={20} />}
+          tone="blue"
+          label="Released this month"
+          value={
+            data.financials.released
+              ? `${ckb(data.financials.released.amount)} ${data.financials.released.asset}`
+              : "Unavailable"
+          }
+          note={
+            data.financials.released
+              ? `${data.financials.released.count} confirmed settlement${data.financials.released.count === 1 ? "" : "s"}`
+              : "No confirmed release records"
+          }
+        />
       </section>
 
       <div className="dashboard-grid">
@@ -191,33 +188,37 @@ export default async function DashboardPage() {
             <span />
           </div>
           <div className="job-list">
-            {jobs.map((job) => (
-              <Link className="job-row" href={`/jobs/${job.id}`} key={job.id}>
-                <div className="job-title">
-                  <span className={`role-mark ${job.role.toLowerCase()}`}>
-                    {job.role === "CLIENT" ? "C" : "W"}
-                  </span>
-                  <div>
-                    <strong>{job.title}</strong>
-                    <span>
-                      {job.counterparty} · {job.id}
-                    </span>
+            {data.jobs.length ? (
+              data.jobs.slice(0, 5).map((job) => (
+                <Link className="job-row" href={`/jobs/${job.id}`} key={job.id}>
+                  <div className="job-title">
+                    <span className={`role-mark ${job.role.toLowerCase()}`}>{job.role[0]}</span>
+                    <div>
+                      <strong>{job.title}</strong>
+                      <span>
+                        {job.counterparty} · {job.reference}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <StatusBadge status={job.displayStatus} />
-                <div className="job-value">
-                  <strong>
-                    {format(job.total)} {job.asset}
-                  </strong>
-                  <span>{job.milestoneProgress} milestones</span>
-                </div>
-                <div className="job-next">
-                  <strong>{job.nextAction}</strong>
-                  <span>Updated {job.updatedAt}</span>
-                </div>
-                <ArrowRight className="row-arrow" size={18} />
-              </Link>
-            ))}
+                  <StatusBadge status={job.status} />
+                  <div className="job-value">
+                    <strong>
+                      {ckb(job.amount)} {job.asset}
+                    </strong>
+                    <span>{job.progress} milestones</span>
+                  </div>
+                  <div className="job-next">
+                    <strong>{job.nextAction}</strong>
+                    <span>Updated {job.updatedAt.toLocaleDateString()}</span>
+                  </div>
+                  <ArrowRight className="row-arrow" size={18} />
+                </Link>
+              ))
+            ) : (
+              <div className="market-empty compact-empty">
+                <p>No active jobs yet.</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -227,34 +228,29 @@ export default async function DashboardPage() {
               <h2>Pending actions</h2>
               <p>Items waiting on you</p>
             </div>
-            <span className="count-badge">2</span>
+            <span className="count-badge">{data.pendingActions.length}</span>
           </div>
-          <div className="action-item priority">
-            <span className="action-icon">
-              <Clock3 size={18} />
-            </span>
-            <div>
-              <strong>Review milestone proof</strong>
-              <p>Checkout experience redesign</p>
-              <small>Review window closes in 2 days</small>
-              <Link href="/jobs/KQ-1048">
-                Review proof <ArrowRight size={14} />
-              </Link>
+          {data.pendingActions.length ? (
+            data.pendingActions.slice(0, 4).map((action) => (
+              <div className="action-item" key={`${action.jobId}-${action.title}`}>
+                <span className="action-icon">
+                  <Clock3 size={18} />
+                </span>
+                <div>
+                  <strong>{action.title}</strong>
+                  <p>{action.detail}</p>
+                  <small>{action.note}</small>
+                  <Link href={`/jobs/${action.jobId}`}>
+                    Open job <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="market-empty compact-empty">
+              <p>No pending actions.</p>
             </div>
-          </div>
-          <div className="action-item">
-            <span className="action-icon green">
-              <ShieldCheck size={18} />
-            </span>
-            <div>
-              <strong>Invitation funded</strong>
-              <p>Brand launch photography</p>
-              <small>Waiting for Mira to accept</small>
-              <Link href="/jobs/KQ-1046">
-                View invitation <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
+          )}
         </aside>
       </div>
 
@@ -262,26 +258,57 @@ export default async function DashboardPage() {
         <div className="section-heading">
           <div>
             <h2>Recent activity</h2>
-            <p>Verified events across your workspace</p>
+            <p>Authorized events across your workspace</p>
           </div>
           <Link href="/activity">
             Full activity <ArrowRight size={15} />
           </Link>
         </div>
         <div className="activity-list">
-          {activity.map((item) => (
-            <div className="activity-row" key={item.title + item.detail}>
-              <span className={`activity-dot ${item.tone}`} />
-              <div>
-                <strong>{item.title}</strong>
-                <span>{item.detail}</span>
+          {data.activity.length ? (
+            data.activity.slice(0, 5).map((item) => (
+              <div className="activity-row" key={item.id}>
+                <span className="activity-dot blue" />
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.detail}</span>
+                </div>
+                <time>{item.createdAt.toLocaleString()}</time>
               </div>
-              <time>{item.time}</time>
+            ))
+          ) : (
+            <div className="market-empty compact-empty">
+              <p>No activity recorded yet.</p>
             </div>
-          ))}
+          )}
         </div>
       </section>
     </AppShell>
+  );
+}
+
+function Metric({
+  icon,
+  tone,
+  label,
+  value,
+  note,
+}: {
+  icon: React.ReactNode;
+  tone: string;
+  label: string;
+  value: string;
+  note: string;
+}) {
+  return (
+    <article>
+      <span className={`metric-icon ${tone}`}>{icon}</span>
+      <div>
+        <p>{label}</p>
+        <strong>{value}</strong>
+        <small>{note}</small>
+      </div>
+    </article>
   );
 }
 

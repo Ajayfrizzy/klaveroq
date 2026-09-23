@@ -1,15 +1,13 @@
 import { ArrowRight, BriefcaseBusiness, Compass, Filter, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, or } from "drizzle-orm";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { jobs as fixtureJobs } from "@/features/jobs/fixtures";
 import { db } from "@/server/db";
-import { jobListings, profiles, proposals } from "@/server/db/schema";
+import { jobListings, jobs, profiles, proposals } from "@/server/db/schema";
 import { getCurrentUser } from "@/server/auth/session";
-import { usesPreviewData } from "@/server/deployment";
 
 export const dynamic = "force-dynamic";
 const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
@@ -19,13 +17,20 @@ export default async function JobsPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const { view = "agreements" } = await searchParams;
-  const preview = usesPreviewData();
-  const current = preview ? null : await getCurrentUser();
-  if (!preview && !current) {
+  const current = await getCurrentUser();
+  if (!current) {
     const returnTo = view === "agreements" ? "/jobs" : `/jobs?view=${view}`;
     redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
   }
   const userId = current?.user.id;
+  const agreements =
+    view === "agreements" && userId
+      ? await db
+          .select()
+          .from(jobs)
+          .where(or(eq(jobs.clientUserId, userId), eq(jobs.workerUserId, userId)))
+          .orderBy(desc(jobs.updatedAt))
+      : [];
   const listings =
     view === "listings" && userId
       ? await db
@@ -88,26 +93,37 @@ export default async function JobsPage({
               <span>Next action</span>
               <span />
             </div>
-            {fixtureJobs.map((job) => (
-              <Link className="data-row job-data-row" href={`/jobs/${job.id}`} key={job.id}>
-                <div className="entity-cell">
-                  <span className={`role-mark ${job.role.toLowerCase()}`}>{job.role[0]}</span>
-                  <p>
-                    <strong>{job.title}</strong>
-                    <small>
-                      {job.counterparty} · {job.id} · As {job.role.toLowerCase()}
-                    </small>
-                  </p>
-                </div>
-                <StatusBadge status={job.displayStatus} />
-                <strong>
-                  {new Intl.NumberFormat().format(job.total)} {job.asset}
-                </strong>
-                <span>{job.milestoneProgress} milestones</span>
-                <span>{job.nextAction}</span>
-                <ArrowRight size={17} />
-              </Link>
-            ))}
+            {agreements.length ? (
+              agreements.map((job) => {
+                const role = job.clientUserId === userId ? "CLIENT" : "WORKER";
+                return (
+                  <Link className="data-row job-data-row" href={`/jobs/${job.id}`} key={job.id}>
+                    <div className="entity-cell">
+                      <span className={`role-mark ${role.toLowerCase()}`}>{role[0]}</span>
+                      <p>
+                        <strong>{job.title}</strong>
+                        <small>
+                          {job.reference} · As {role.toLowerCase()}
+                        </small>
+                      </p>
+                    </div>
+                    <StatusBadge status={job.status} />
+                    <strong>
+                      {ckb(job.subtotal)} {job.asset}
+                    </strong>
+                    <span>Open for milestones</span>
+                    <span>View agreement</span>
+                    <ArrowRight size={17} />
+                  </Link>
+                );
+              })
+            ) : (
+              <div className="market-empty account-empty">
+                <BriefcaseBusiness size={26} />
+                <h2>No agreements yet</h2>
+                <p>Your client and worker agreements will appear here.</p>
+              </div>
+            )}
           </section>
         </>
       )}

@@ -182,7 +182,7 @@ export function SupportHome() {
           </label>
           <label>
             Reference ID
-            <input name="referenceId" placeholder="e.g. KQ-1048" />
+            <input name="referenceId" placeholder="Job or payment reference" />
           </label>
           <label className="case-message">
             Subject

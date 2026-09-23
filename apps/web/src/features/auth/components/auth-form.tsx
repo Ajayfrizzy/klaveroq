@@ -3,15 +3,24 @@
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { GOOGLE_OAUTH_MESSAGES, googleOAuthHref, safeReturnTo } from "@/server/auth/google";
+import { initialAuthCredentials } from "@/features/auth/defaults";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
-  const [email, setEmail] = useState(mode === "login" ? "client@klaveroq.local" : "");
-  const [password, setPassword] = useState(mode === "login" ? "KlaveroqDemo!2026" : "");
+  const searchParams = useSearchParams();
+  const defaults = initialAuthCredentials();
+  const [email, setEmail] = useState(defaults.email);
+  const [password, setPassword] = useState(defaults.password);
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const oauthError = searchParams.get("oauthError");
+  const returnTo = safeReturnTo(searchParams.get("returnTo"));
+  const googleHref = googleOAuthHref(returnTo);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true);
@@ -26,9 +35,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message ?? "Authentication failed.");
-      const returnTo = new URLSearchParams(window.location.search).get("returnTo");
       router.push(
-        returnTo?.startsWith("/") && !returnTo.startsWith("//")
+        returnTo !== "/"
           ? returnTo
           : ["SUPPORT", "SUPER_ADMIN"].includes(body.data?.user?.systemRole)
             ? "/admin"
@@ -57,6 +65,21 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             ? "Access your agreements, milestones, and payment records."
             : "Create an account before funding or accepting protected work."}
         </p>
+        <a
+          className={`google-auth-button${googleBusy ? " disabled" : ""}`}
+          href={googleHref}
+          aria-disabled={googleBusy}
+          onClick={(event) => {
+            if (googleBusy) event.preventDefault();
+            else setGoogleBusy(true);
+          }}
+        >
+          <GoogleIcon />
+          {googleBusy ? "Opening Google..." : "Continue with Google"}
+        </a>
+        <div className="auth-separator">
+          <span>or continue with email</span>
+        </div>
         <form onSubmit={submit}>
           {mode === "register" && (
             <label>
@@ -91,9 +114,11 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               onChange={(event) => setPassword(event.target.value)}
             />
           </label>
-          {error && (
+          {(error || oauthError) && (
             <div className="form-errors" role="alert">
-              {error}
+              {error ||
+                GOOGLE_OAUTH_MESSAGES[oauthError ?? ""] ||
+                GOOGLE_OAUTH_MESSAGES.OAUTH_FAILED}
             </div>
           )}
           <button className="primary-button" disabled={busy}>
@@ -113,5 +138,28 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </small>
       </section>
     </main>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+      <path
+        fill="#4285F4"
+        d="M21.6 12.23c0-.71-.06-1.4-.18-2.06H12v3.89h5.38a4.6 4.6 0 0 1-2 3.02v2.52h3.24c1.9-1.75 2.98-4.33 2.98-7.37Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 22c2.7 0 4.98-.9 6.63-2.4l-3.24-2.52c-.9.6-2.05.96-3.39.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.6A10 10 0 0 0 12 22Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M6.39 13.91A6 6 0 0 1 6.08 12c0-.66.11-1.31.31-1.91v-2.6H3.04A10 10 0 0 0 2 12c0 1.61.38 3.14 1.04 4.51l3.35-2.6Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.96c1.47 0 2.79.51 3.83 1.5l2.87-2.88A9.63 9.63 0 0 0 12 2a10 10 0 0 0-8.96 5.49l3.35 2.6C7.18 7.72 9.39 5.96 12 5.96Z"
+      />
+    </svg>
   );
 }

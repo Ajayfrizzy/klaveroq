@@ -19,7 +19,7 @@ npm install
 cp .env.example apps/web/.env
 docker compose up -d
 npm run db:migrate
-npm run db:seed
+KLAVEROQ_ALLOW_LOCAL_SEED=1 npm run db:seed
 npm run dev
 ```
 
@@ -35,7 +35,7 @@ npm run typecheck    # Check TypeScript
 npm test             # Run the test suite
 npm run db:generate  # Generate a Drizzle migration
 npm run db:migrate   # Apply database migrations
-npm run db:seed      # Create local demo data
+KLAVEROQ_ALLOW_LOCAL_SEED=1 npm run db:seed  # Create local-only demo data
 ```
 
 ## Repository map
@@ -63,15 +63,15 @@ Copy `.env.example` to `apps/web/.env`. The example contains safe local defaults
 
 Do not commit `apps/web/.env` or other files containing credentials.
 
-### Vercel visual previews
+### Data and preview fixtures
 
-When Vercel runs the app without `DATABASE_URL`, the public jobs, work-discovery, and talent
-screens automatically use read-only sample data. This keeps visual review deployments navigable
-without presenting preview actions as functional backend operations. Configure `DATABASE_URL` for
-the full database-backed behavior.
+Hosted environments always use `DATABASE_URL`. If the database is missing or unavailable, the
+request fails visibly instead of falling back to sample records. Fixture modules are retained only
+for isolated local tests and are not imported by customer-facing routes.
 
-Set `KLAVEROQ_PREVIEW_MODE=1` to exercise the same fallback locally, or set it to `0` to disable the
-automatic fallback explicitly.
+`KLAVEROQ_PREVIEW_MODE=1` is accepted only outside production and CI. The seed command has a second
+guard: it requires `KLAVEROQ_ALLOW_LOCAL_SEED=1` and a loopback `DATABASE_URL`. It refuses production
+or remote databases.
 
 The local PostgreSQL database and volume now use Klaveroq identifiers. Developers with the old
 development volume can reset it with `docker compose down -v` before running `docker compose up -d`.
@@ -86,6 +86,22 @@ Password: `KlaveroqDemo!2026`
 - `writer@klaveroq.local`
 - `admin@klaveroq.local`
 - `support@klaveroq.local`
+
+These accounts exist only after the explicitly guarded local seed command. Never configure them in
+a hosted database. See [the seeded-data cleanup procedure](SEEDED_DATA_CLEANUP.md) before
+removing any suspected demo records from an existing environment.
+
+## Google OAuth
+
+Set `APP_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `DATABASE_URL` in the runtime
+environment. For local development, register
+`http://127.0.0.1:3000/api/auth/google/callback` in Google Cloud. For the DigitalOcean beta, set
+`APP_URL=https://beta.klaveroq.com` and register the exact callback
+`https://beta.klaveroq.com/api/auth/google/callback`.
+
+The client secret is server-only. Restart the application after changing environment variables.
+Google sign-in cannot be considered end-to-end verified until real credentials and a browser login
+have been tested in that environment.
 
 ## Code organization rules
 

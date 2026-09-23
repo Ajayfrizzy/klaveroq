@@ -1315,6 +1315,41 @@ button {
   display: grid;
   gap: 15px;
 }
+.google-auth-button {
+  display: flex;
+  min-height: 43px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid #c7cbc9;
+  border-radius: 6px;
+  color: #202124;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.google-auth-button:hover {
+  background: #f8f9fa;
+}
+.google-auth-button.disabled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+.auth-separator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.auth-separator::before,
+.auth-separator::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
 .auth-panel form label {
   display: grid;
   gap: 7px;

@@ -18,6 +18,17 @@ import {
 } from "./schema";
 
 async function main() {
+  const databaseUrl = process.env.DATABASE_URL;
+  const hostname = databaseUrl ? new URL(databaseUrl).hostname : "";
+  if (
+    process.env.NODE_ENV === "production" ||
+    process.env.KLAVEROQ_ALLOW_LOCAL_SEED !== "1" ||
+    !["127.0.0.1", "localhost", "::1"].includes(hostname)
+  ) {
+    throw new Error(
+      "Local seed refused. Set KLAVEROQ_ALLOW_LOCAL_SEED=1 and use a loopback DATABASE_URL.",
+    );
+  }
   const passwordHash = await hashPassword("KlaveroqDemo!2026");
   const demoUsers = [
     {

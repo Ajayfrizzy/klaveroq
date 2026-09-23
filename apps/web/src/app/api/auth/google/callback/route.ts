@@ -1,31 +1,59 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { GOOGLE_OAUTH_COOKIES } from "@/server/auth/google";
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import {
+  GOOGLE_OAUTH_COOKIES,
+  googleAccountAction,
+  safeReturnTo,
+  validOAuthTransaction,
+} from "@/server/auth/google";
 import { db } from "@/server/db";
 import { authIdentities, profiles, users } from "@/server/db/schema";
 import { createSession } from "@/server/auth/session";
-import { ApiError, withApi } from "@/server/http/errors";
+import { ApiError } from "@/server/http/errors";
 
 const googleKeys = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
-export const GET = withApi(async (request: Request) => {
+const appUrl = () => process.env.APP_URL ?? "http://127.0.0.1:3000";
+
+function errorRedirect(code: string, returnTo = "/") {
+  const url = new URL("/login", appUrl());
+  url.searchParams.set("oauthError", code);
+  if (returnTo !== "/") url.searchParams.set("returnTo", returnTo);
+  return Response.redirect(url);
+}
+
+async function callback(request: Request) {
   const url = new URL(request.url);
-  const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
   const store = await cookies();
   const expectedState = store.get(GOOGLE_OAUTH_COOKIES.state)?.value;
   const nonce = store.get(GOOGLE_OAUTH_COOKIES.nonce)?.value;
   const verifier = store.get(GOOGLE_OAUTH_COOKIES.verifier)?.value;
-  store.delete(GOOGLE_OAUTH_COOKIES.state);
-  store.delete(GOOGLE_OAUTH_COOKIES.nonce);
-  store.delete(GOOGLE_OAUTH_COOKIES.verifier);
-  if (!code || !state || state !== expectedState || !nonce || !verifier)
+  const returnTo = safeReturnTo(store.get(GOOGLE_OAUTH_COOKIES.returnTo)?.value);
+  for (const name of Object.values(GOOGLE_OAUTH_COOKIES)) store.delete(name);
+
+  const providerError = url.searchParams.get("error");
+  if (providerError)
+    return errorRedirect(
+      providerError === "access_denied" ? providerError : "OAUTH_FAILED",
+      returnTo,
+    );
+
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  if (
+    !validOAuthTransaction({ code, state, expectedState, nonce, verifier }) ||
+    !code ||
+    !nonce ||
+    !verifier
+  )
     throw new ApiError(400, "OAUTH_STATE_INVALID", "Google sign-in could not be verified.");
+
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret)
     throw new ApiError(503, "GOOGLE_OAUTH_NOT_CONFIGURED", "Google sign-in is not configured.");
-  const callback = `${process.env.APP_URL ?? "http://127.0.0.1:3000"}/api/auth/google/callback`;
+
+  const redirectUri = `${appUrl()}/api/auth/google/callback`;
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -33,7 +61,7 @@ export const GET = withApi(async (request: Request) => {
       code,
       client_id: clientId,
       client_secret: clientSecret,
-      redirect_uri: callback,
+      redirect_uri: redirectUri,
       grant_type: "authorization_code",
       code_verifier: verifier,
     }),
@@ -44,6 +72,7 @@ export const GET = withApi(async (request: Request) => {
       "GOOGLE_TOKEN_EXCHANGE_FAILED",
       "Google sign-in could not be completed.",
     );
+
   const token = (await tokenResponse.json()) as { id_token?: string };
   if (!token.id_token)
     throw new ApiError(502, "GOOGLE_ID_TOKEN_MISSING", "Google did not return an identity token.");
@@ -57,38 +86,104 @@ export const GET = withApi(async (request: Request) => {
       "GOOGLE_IDENTITY_INVALID",
       "The Google identity is incomplete or unverified.",
     );
+
+  const subject = String(payload.sub);
   const email = String(payload.email).toLowerCase();
   const userId = await db.transaction(async (tx) => {
     const [identity] = await tx
-      .select()
+      .select({ userId: authIdentities.userId })
       .from(authIdentities)
       .where(
-        sql`${authIdentities.provider} = 'google' AND ${authIdentities.providerSubject} = ${payload.sub}`,
+        and(eq(authIdentities.provider, "google"), eq(authIdentities.providerSubject, subject)),
       )
       .limit(1);
-    if (identity) return identity.userId;
-    let [user] = await tx
-      .select()
+    if (identity) {
+      const [linkedUser] = await tx
+        .select()
+        .from(users)
+        .where(eq(users.id, identity.userId))
+        .limit(1);
+      if (
+        !linkedUser ||
+        googleAccountAction({
+          linked: true,
+          linkedStatus: linkedUser.status,
+          emailOwnerExists: true,
+        }) === "unavailable"
+      )
+        throw new ApiError(403, "ACCOUNT_UNAVAILABLE", "This account cannot sign in.");
+      await tx
+        .update(users)
+        .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+        .where(eq(users.id, linkedUser.id));
+      return linkedUser.id;
+    }
+
+    const [emailOwner] = await tx
+      .select({ id: users.id })
       .from(users)
       .where(sql`lower(${users.email}) = ${email}`)
       .limit(1);
-    if (!user) {
-      [user] = await tx
-        .insert(users)
-        .values({ email, emailVerifiedAt: new Date(), status: "ACTIVE" })
-        .returning();
-      await tx
-        .insert(profiles)
-        .values({ userId: user.id, displayName: String(payload.name ?? email.split("@")[0]) });
+    if (
+      googleAccountAction({ linked: false, emailOwnerExists: Boolean(emailOwner) }) === "conflict"
+    )
+      throw new ApiError(
+        409,
+        "GOOGLE_ACCOUNT_CONFLICT",
+        "Sign in with your existing method before connecting Google.",
+      );
+
+    const [created] = await tx
+      .insert(users)
+      .values({ email, emailVerifiedAt: new Date(), status: "ACTIVE", lastLoginAt: new Date() })
+      .onConflictDoNothing()
+      .returning();
+    if (!created) {
+      const [concurrentIdentity] = await tx
+        .select({ userId: authIdentities.userId })
+        .from(authIdentities)
+        .where(
+          and(eq(authIdentities.provider, "google"), eq(authIdentities.providerSubject, subject)),
+        )
+        .limit(1);
+      if (concurrentIdentity) return concurrentIdentity.userId;
+      throw new ApiError(
+        409,
+        "GOOGLE_ACCOUNT_CONFLICT",
+        "Sign in with your existing method before connecting Google.",
+      );
     }
-    await tx.insert(authIdentities).values({
-      userId: user.id,
-      provider: "google",
-      providerSubject: String(payload.sub),
-      providerEmail: email,
+    await tx.insert(profiles).values({
+      userId: created.id,
+      displayName: String(payload.name ?? email.split("@")[0]).slice(0, 100),
     });
-    return user.id;
+    const inserted = await tx
+      .insert(authIdentities)
+      .values({
+        userId: created.id,
+        provider: "google",
+        providerSubject: subject,
+        providerEmail: email,
+      })
+      .onConflictDoNothing()
+      .returning({ userId: authIdentities.userId });
+    if (!inserted.length)
+      throw new ApiError(409, "OAUTH_FAILED", "Google sign-in could not be completed safely.");
+    return created.id;
   });
+
   await createSession(userId, request);
-  return Response.redirect(new URL("/", process.env.APP_URL ?? "http://127.0.0.1:3000"));
-});
+  return Response.redirect(new URL(returnTo, appUrl()));
+}
+
+export async function GET(request: Request) {
+  let returnTo = "/";
+  try {
+    returnTo = safeReturnTo((await cookies()).get(GOOGLE_OAUTH_COOKIES.returnTo)?.value);
+    return await callback(request);
+  } catch (error) {
+    if (error instanceof ApiError) return errorRedirect(error.code, returnTo);
+    console.error(error);
+    return errorRedirect("OAUTH_FAILED", returnTo);
+  }
+}

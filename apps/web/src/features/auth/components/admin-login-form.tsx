@@ -4,11 +4,13 @@ import { Headphones, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { initialAuthCredentials } from "@/features/auth/defaults";
 
 export function AdminLoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("support@klaveroq.local");
-  const [password, setPassword] = useState("KlaveroqDemo!2026");
+  const defaults = initialAuthCredentials();
+  const [email, setEmail] = useState(defaults.email);
+  const [password, setPassword] = useState(defaults.password);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {

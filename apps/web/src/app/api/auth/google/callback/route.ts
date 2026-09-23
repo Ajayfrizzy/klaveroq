@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { and, eq, sql } from "drizzle-orm";
 import {
   GOOGLE_OAUTH_COOKIES,
+  GOOGLE_OAUTH_COOKIE_PATH,
   googleAccountAction,
   safeReturnTo,
   validOAuthTransaction,
@@ -29,7 +30,14 @@ async function callback(request: Request) {
   const nonce = store.get(GOOGLE_OAUTH_COOKIES.nonce)?.value;
   const verifier = store.get(GOOGLE_OAUTH_COOKIES.verifier)?.value;
   const returnTo = safeReturnTo(store.get(GOOGLE_OAUTH_COOKIES.returnTo)?.value);
-  for (const name of Object.values(GOOGLE_OAUTH_COOKIES)) store.delete(name);
+  for (const name of Object.values(GOOGLE_OAUTH_COOKIES))
+    store.set(name, "", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: GOOGLE_OAUTH_COOKIE_PATH,
+      maxAge: 0,
+    });
 
   const providerError = url.searchParams.get("error");
   if (providerError)
@@ -140,13 +148,24 @@ async function callback(request: Request) {
       .returning();
     if (!created) {
       const [concurrentIdentity] = await tx
-        .select({ userId: authIdentities.userId })
+        .select({ userId: authIdentities.userId, status: users.status })
         .from(authIdentities)
+        .innerJoin(users, eq(users.id, authIdentities.userId))
         .where(
           and(eq(authIdentities.provider, "google"), eq(authIdentities.providerSubject, subject)),
         )
         .limit(1);
-      if (concurrentIdentity) return concurrentIdentity.userId;
+      if (
+        concurrentIdentity &&
+        googleAccountAction({
+          linked: true,
+          linkedStatus: concurrentIdentity.status,
+          emailOwnerExists: true,
+        }) === "login"
+      )
+        return concurrentIdentity.userId;
+      if (concurrentIdentity)
+        throw new ApiError(403, "ACCOUNT_UNAVAILABLE", "This account cannot sign in.");
       throw new ApiError(
         409,
         "GOOGLE_ACCOUNT_CONFLICT",

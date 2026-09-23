@@ -16,9 +16,9 @@ import { AppShell } from "@/components/layout/app-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getCurrentUser } from "@/server/auth/session";
 import { getDashboardData } from "@/features/dashboard/server/queries";
+import { formatAssetAmount, presentAssetTotals } from "@/features/dashboard/server/metrics";
 
 export const dynamic = "force-dynamic";
-const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
 
 export default async function DashboardPage() {
   const current = await getCurrentUser();
@@ -40,6 +40,7 @@ export default async function DashboardPage() {
       ? { href: "/profile", label: "Publish profile", icon: <ShieldCheck size={16} /> }
       : { href: "/discover", label: "Find work", icon: <Compass size={16} /> };
   const allVerified = Object.values(data.verification).every(Boolean);
+  const released = presentAssetTotals(data.financials.released, "No confirmed releases this month");
 
   return (
     <AppShell>
@@ -51,7 +52,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {data.jobs.length === 0 && (
+      {data.isFirstTimeUser && (
         <section className="first-user-panel" aria-labelledby="welcome-title">
           <div>
             <p className="eyebrow">Start here</p>
@@ -125,23 +126,15 @@ export default async function DashboardPage() {
           icon={<BriefIcon />}
           tone="teal"
           label="Active jobs"
-          value={String(data.jobs.length)}
+          value={String(data.activeJobCount)}
           note="Across client and worker roles"
         />
         <Metric
           icon={<CircleDollarSign size={20} />}
           tone="green"
           label="Secured in jobs"
-          value={
-            data.financials.secured
-              ? `${ckb(data.financials.secured.amount)} ${data.financials.secured.asset}`
-              : "Unavailable"
-          }
-          note={
-            data.financials.secured
-              ? `${data.financials.secured.count} confirmed funding record${data.financials.secured.count === 1 ? "" : "s"}`
-              : "No confirmed funding records"
-          }
+          value="Unavailable"
+          note="Awaiting reconciled PactAgent balances"
         />
         <Metric
           icon={<Clock3 size={20} />}
@@ -156,16 +149,8 @@ export default async function DashboardPage() {
           icon={<WalletCards size={20} />}
           tone="blue"
           label="Released this month"
-          value={
-            data.financials.released
-              ? `${ckb(data.financials.released.amount)} ${data.financials.released.asset}`
-              : "Unavailable"
-          }
-          note={
-            data.financials.released
-              ? `${data.financials.released.count} confirmed settlement${data.financials.released.count === 1 ? "" : "s"}`
-              : "No confirmed release records"
-          }
+          value={released.value}
+          note={released.note}
         />
       </section>
 
@@ -203,7 +188,7 @@ export default async function DashboardPage() {
                   <StatusBadge status={job.status} />
                   <div className="job-value">
                     <strong>
-                      {ckb(job.amount)} {job.asset}
+                      {formatAssetAmount(job.amount, job.assetDecimals)} {job.asset}
                     </strong>
                     <span>{job.progress} milestones</span>
                   </div>

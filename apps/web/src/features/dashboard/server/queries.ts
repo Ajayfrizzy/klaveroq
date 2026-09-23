@@ -1,15 +1,18 @@
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, count, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/server/db";
 import {
   auditLogs,
   identityVerifications,
+  jobListings,
   jobs,
   milestones,
-  operations,
+  portfolioItems,
   profiles,
+  proposals,
   wallets,
 } from "@/server/db/schema";
-import { confirmedFinancialSummary } from "./metrics";
+import { getUserFinancialSummary } from "@/features/payments/server/queries";
+import { isFirstTimeUser } from "./onboarding";
 
 const activeStatuses = [
   "INVITED",
@@ -23,7 +26,19 @@ const activeStatuses = [
 ] as const;
 
 export async function getDashboardData(userId: string, emailVerified: boolean) {
-  const [jobRows, identityRows, walletRows, activityRows] = await Promise.all([
+  const [
+    jobRows,
+    activeJobTotals,
+    identityRows,
+    walletRows,
+    activityRows,
+    agreementHistory,
+    listingHistory,
+    proposalHistory,
+    portfolioHistory,
+    ownProfile,
+    financials,
+  ] = await Promise.all([
     db
       .select()
       .from(jobs)
@@ -35,6 +50,15 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
       )
       .orderBy(desc(jobs.updatedAt))
       .limit(20),
+    db
+      .select({ value: count(jobs.id) })
+      .from(jobs)
+      .where(
+        and(
+          or(eq(jobs.clientUserId, userId), eq(jobs.workerUserId, userId)),
+          inArray(jobs.status, activeStatuses),
+        ),
+      ),
     db
       .select({ id: identityVerifications.id })
       .from(identityVerifications)
@@ -53,6 +77,32 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
       .where(eq(auditLogs.actorUserId, userId))
       .orderBy(desc(auditLogs.createdAt))
       .limit(8),
+    db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(or(eq(jobs.clientUserId, userId), eq(jobs.workerUserId, userId)))
+      .limit(1),
+    db
+      .select({ id: jobListings.id })
+      .from(jobListings)
+      .where(eq(jobListings.clientUserId, userId))
+      .limit(1),
+    db
+      .select({ id: proposals.id })
+      .from(proposals)
+      .where(eq(proposals.workerUserId, userId))
+      .limit(1),
+    db
+      .select({ id: portfolioItems.id })
+      .from(portfolioItems)
+      .where(eq(portfolioItems.userId, userId))
+      .limit(1),
+    db
+      .select({ isPublic: profiles.isPublic })
+      .from(profiles)
+      .where(eq(profiles.userId, userId))
+      .limit(1),
+    getUserFinancialSummary(userId),
   ]);
 
   const jobIds = jobRows.map((job) => job.id);
@@ -63,15 +113,8 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
         .filter((id): id is string => Boolean(id)),
     ),
   );
-  const [milestoneRows, operationRows, profileRows] = await Promise.all([
+  const [milestoneRows, profileRows] = await Promise.all([
     jobIds.length ? db.select().from(milestones).where(inArray(milestones.jobId, jobIds)) : [],
-    jobIds.length
-      ? db
-          .select()
-          .from(operations)
-          .where(inArray(operations.jobId, jobIds))
-          .orderBy(desc(operations.createdAt))
-      : [],
     profileIds.length
       ? db
           .select({ userId: profiles.userId, displayName: profiles.displayName })
@@ -113,8 +156,6 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
       },
     ];
   });
-  const financials = confirmedFinancialSummary(operationRows);
-
   return {
     verification: {
       email: emailVerified,
@@ -138,13 +179,22 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
         status: job.status,
         amount: job.subtotal,
         asset: job.asset,
+        assetDecimals: job.assetDecimals,
         progress: `${completed} of ${items.length}`,
         nextAction: action?.title ?? "No action required",
         updatedAt: job.updatedAt,
       };
     }),
+    activeJobCount: activeJobTotals[0]?.value ?? 0,
     pendingActions,
     financials,
+    isFirstTimeUser: isFirstTimeUser({
+      hasAgreement: agreementHistory.length > 0,
+      hasListing: listingHistory.length > 0,
+      hasProposal: proposalHistory.length > 0,
+      hasPortfolioItem: portfolioHistory.length > 0,
+      profileIsPublic: ownProfile[0]?.isPublic ?? false,
+    }),
     activity: activityRows.map((item) => ({
       id: item.id,
       title: item.action

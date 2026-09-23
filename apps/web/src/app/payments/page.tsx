@@ -1,11 +1,11 @@
 import { ArrowDownLeft, ArrowUpRight, ReceiptText, RotateCcw } from "lucide-react";
-import { desc, eq, or } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { formatAssetAmount, presentAssetTotals } from "@/features/dashboard/server/metrics";
+import { getPaymentHistory, getUserFinancialSummary } from "@/features/payments/server/queries";
 import { getCurrentUser } from "@/server/auth/session";
-import { db } from "@/server/db";
-import { jobs, operations } from "@/server/db/schema";
 
 const icons = {
   MILESTONE_RELEASE: ArrowDownLeft,
@@ -19,31 +19,22 @@ const labels: Record<string, string> = {
   FUND: "Funding",
   REFUND: "Refund",
 };
-const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
-
-export default async function PaymentsPage() {
+export default async function PaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const current = await getCurrentUser();
   if (!current) redirect("/login?returnTo=%2Fpayments");
-  const records = await db
-    .select({ operation: operations, job: jobs })
-    .from(operations)
-    .innerJoin(jobs, eq(operations.jobId, jobs.id))
-    .where(or(eq(jobs.clientUserId, current.user.id), eq(jobs.workerUserId, current.user.id)))
-    .orderBy(desc(operations.createdAt))
-    .limit(100);
-  const confirmed = records.filter(
-    ({ operation }) => operation.status === "CONFIRMED" && operation.amount !== null,
-  );
-  const currentMonth = new Date();
-  const releases = confirmed.filter(
-    ({ operation }) =>
-      ["MILESTONE_RELEASE", "RELEASE"].includes(operation.type) &&
-      operation.createdAt.getUTCMonth() === currentMonth.getUTCMonth() &&
-      operation.createdAt.getUTCFullYear() === currentMonth.getUTCFullYear(),
-  );
-  const funding = confirmed.filter(({ operation }) => operation.type === "FUND");
-  const total = (rows: typeof records) =>
-    rows.reduce((sum, row) => sum + (row.operation.amount ?? 0n), 0n);
+  const requestedPage = Number((await searchParams).page ?? "1");
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const [financials, history] = await Promise.all([
+    getUserFinancialSummary(current.user.id),
+    getPaymentHistory(current.user.id, page),
+  ]);
+  const funding = presentAssetTotals(financials.funding, "No confirmed funding operations");
+  const released = presentAssetTotals(financials.released, "No confirmed releases this month");
+  const totalPages = Math.max(1, Math.ceil(history.total / history.pageSize));
   return (
     <AppShell>
       <PageHeader
@@ -54,27 +45,19 @@ export default async function PaymentsPage() {
       />
       <section className="payment-stats">
         <article>
-          <span>Confirmed funding</span>
-          <strong>{funding.length ? `${ckb(total(funding))} CKB` : "Unavailable"}</strong>
-          <small>
-            {funding.length
-              ? `Across ${funding.length} operation${funding.length === 1 ? "" : "s"}`
-              : "No confirmed funding records"}
-          </small>
+          <span>Currently secured</span>
+          <strong>Unavailable</strong>
+          <small>Awaiting reconciled PactAgent balances</small>
+        </article>
+        <article>
+          <span>Confirmed funding history</span>
+          <strong>{funding.value}</strong>
+          <small>{funding.note}</small>
         </article>
         <article>
           <span>Released this month</span>
-          <strong>{releases.length ? `${ckb(total(releases))} CKB` : "Unavailable"}</strong>
-          <small>
-            {releases.length
-              ? `${releases.length} confirmed settlement${releases.length === 1 ? "" : "s"}`
-              : "No confirmed release records"}
-          </small>
-        </article>
-        <article>
-          <span>Platform fees</span>
-          <strong>Unavailable</strong>
-          <small>No authoritative fee settlement records</small>
+          <strong>{released.value}</strong>
+          <small>{released.note}</small>
         </article>
       </section>
       <section className="panel data-panel">
@@ -83,6 +66,15 @@ export default async function PaymentsPage() {
             <h2>Transaction history</h2>
             <p>Payment operations associated with your agreements</p>
           </div>
+          {totalPages > 1 && (
+            <div>
+              {page > 1 && <Link href={`/payments?page=${page - 1}`}>Previous</Link>}
+              <span>
+                Page {Math.min(page, totalPages)} of {totalPages}
+              </span>
+              {page < totalPages && <Link href={`/payments?page=${page + 1}`}>Next</Link>}
+            </div>
+          )}
         </div>
         <div className="data-head payment-head">
           <span>Transaction</span>
@@ -91,8 +83,8 @@ export default async function PaymentsPage() {
           <span>Amount</span>
           <span>Status</span>
         </div>
-        {records.length ? (
-          records.map(({ operation, job }) => {
+        {history.records.length ? (
+          history.records.map(({ operation, job }) => {
             const Icon = icons[operation.type as keyof typeof icons] ?? ReceiptText;
             return (
               <div className="data-row payment-row" key={operation.id}>
@@ -112,7 +104,7 @@ export default async function PaymentsPage() {
                 <strong>
                   {operation.amount === null
                     ? "Unavailable"
-                    : `${ckb(operation.amount)} ${operation.asset ?? job.asset}`}
+                    : `${formatAssetAmount(operation.amount, job.assetDecimals)} ${operation.asset ?? job.asset}`}
                 </strong>
                 <span
                   className={

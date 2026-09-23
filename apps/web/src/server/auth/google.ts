@@ -5,6 +5,9 @@ export const GOOGLE_OAUTH_COOKIES = {
   returnTo: "klaveroq_google_return_to",
 } as const;
 
+export const GOOGLE_OAUTH_COOKIE_PATH = "/api/auth/google";
+export const GOOGLE_OAUTH_COOKIE_MAX_AGE_SECONDS = 600;
+
 export function safeReturnTo(value: string | null | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
   try {

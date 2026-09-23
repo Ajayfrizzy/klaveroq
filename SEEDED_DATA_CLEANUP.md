@@ -29,14 +29,35 @@ where lower(u.email) in (
   'writer@klaveroq.local', 'admin@klaveroq.local', 'support@klaveroq.local'
 );
 
--- Dependencies that must be reviewed before deletion.
-select 'sessions' source, count(*) from sessions where user_id in (select id from users where email like '%@klaveroq.local')
-union all select 'auth_identities', count(*) from auth_identities where user_id in (select id from users where email like '%@klaveroq.local')
-union all select 'jobs', count(*) from jobs where client_user_id in (select id from users where email like '%@klaveroq.local') or worker_user_id in (select id from users where email like '%@klaveroq.local')
-union all select 'job_listings', count(*) from job_listings where client_user_id in (select id from users where email like '%@klaveroq.local')
-union all select 'proposals', count(*) from proposals where worker_user_id in (select id from users where email like '%@klaveroq.local')
-union all select 'operations', count(*) from operations where initiated_by in (select id from users where email like '%@klaveroq.local')
-union all select 'audit_logs', count(*) from audit_logs where actor_user_id in (select id from users where email like '%@klaveroq.local');
+-- Dependencies that must be reviewed before deletion. The exact allowlist avoids
+-- accidentally classifying an unrelated .local account as demonstration data.
+with seed_users as (
+  select id from users where lower(email) in (
+    'client@klaveroq.local', 'worker@klaveroq.local', 'designer@klaveroq.local',
+    'writer@klaveroq.local', 'admin@klaveroq.local', 'support@klaveroq.local'
+  )
+), seed_jobs as (
+  select id from jobs
+  where client_user_id in (select id from seed_users)
+     or worker_user_id in (select id from seed_users)
+     or reference like 'KQ-DEMO-%'
+), seed_listings as (
+  select id from job_listings where client_user_id in (select id from seed_users)
+)
+select 'sessions' source, count(*) from sessions where user_id in (select id from seed_users)
+union all select 'auth_identities', count(*) from auth_identities where user_id in (select id from seed_users)
+union all select 'profiles', count(*) from profiles where user_id in (select id from seed_users)
+union all select 'portfolio_items', count(*) from portfolio_items where user_id in (select id from seed_users)
+union all select 'wallets', count(*) from wallets where user_id in (select id from seed_users)
+union all select 'identity_verifications', count(*) from identity_verifications where user_id in (select id from seed_users)
+union all select 'verification_tokens', count(*) from verification_tokens where user_id in (select id from seed_users)
+union all select 'jobs', count(*) from jobs where id in (select id from seed_jobs)
+union all select 'job_listings', count(*) from job_listings where id in (select id from seed_listings)
+union all select 'proposals', count(*) from proposals where worker_user_id in (select id from seed_users) or listing_id in (select id from seed_listings)
+union all select 'operations', count(*) from operations where initiated_by in (select id from seed_users) or job_id in (select id from seed_jobs)
+union all select 'audit_logs', count(*) from audit_logs where actor_user_id in (select id from seed_users)
+union all select 'notifications', count(*) from notifications where user_id in (select id from seed_users)
+union all select 'support_tickets', count(*) from support_tickets where user_id in (select id from seed_users);
 ```
 
 The schema also links users through profiles, portfolios, wallets, identity checks, verification

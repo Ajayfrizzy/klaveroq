@@ -2,7 +2,12 @@ import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { withApi } from "@/server/http/errors";
 import { randomToken } from "@/server/http/security";
-import { GOOGLE_OAUTH_COOKIES, safeReturnTo } from "@/server/auth/google";
+import {
+  GOOGLE_OAUTH_COOKIES,
+  GOOGLE_OAUTH_COOKIE_MAX_AGE_SECONDS,
+  GOOGLE_OAUTH_COOKIE_PATH,
+  safeReturnTo,
+} from "@/server/auth/google";
 
 export const GET = withApi(async (request: Request) => {
   const requestUrl = new URL(request.url);
@@ -23,8 +28,8 @@ export const GET = withApi(async (request: Request) => {
     httpOnly: true,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
-    path: "/api/auth/google",
-    maxAge: 600,
+    path: GOOGLE_OAUTH_COOKIE_PATH,
+    maxAge: GOOGLE_OAUTH_COOKIE_MAX_AGE_SECONDS,
   };
   store.set(GOOGLE_OAUTH_COOKIES.state, state, options);
   store.set(GOOGLE_OAUTH_COOKIES.nonce, nonce, options);

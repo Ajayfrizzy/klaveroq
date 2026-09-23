@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  GOOGLE_OAUTH_COOKIE_MAX_AGE_SECONDS,
+  GOOGLE_OAUTH_COOKIE_PATH,
+  GOOGLE_OAUTH_MESSAGES,
   googleAccountAction,
   googleOAuthHref,
   safeReturnTo,
@@ -47,5 +50,14 @@ describe("Google OAuth security decisions", () => {
     expect(
       googleAccountAction({ linked: true, linkedStatus: "SUSPENDED", emailOwnerExists: true }),
     ).toBe("unavailable");
+    expect(
+      googleAccountAction({ linked: true, linkedStatus: "CLOSED", emailOwnerExists: true }),
+    ).toBe("unavailable");
+  });
+
+  it("uses a short transaction lifetime and an understandable cancellation message", () => {
+    expect(GOOGLE_OAUTH_COOKIE_PATH).toBe("/api/auth/google");
+    expect(GOOGLE_OAUTH_COOKIE_MAX_AGE_SECONDS).toBe(600);
+    expect(GOOGLE_OAUTH_MESSAGES.access_denied).toMatch(/cancelled/i);
   });
 });

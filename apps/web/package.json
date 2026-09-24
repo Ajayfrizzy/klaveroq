@@ -13,7 +13,7 @@
     "test:integration": "node ../../scripts/reset-test-db.mjs && node ../../scripts/run-playwright.mjs tests/e2e/marketplace.integration.spec.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx src/server/db/seed.ts"
+    "db:seed:demo": "tsx src/server/db/seed.ts"
   },
   "dependencies": {
     "@ckb-ccc/core": "^1.18.0",

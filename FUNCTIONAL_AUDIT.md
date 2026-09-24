@@ -15,8 +15,9 @@ Milestone: standalone marketplace, before PactAgent integration
 ## Executive findings
 
 - [x] The runtime marketplace pages read PostgreSQL through Drizzle. Public discovery and talent do not import fixture data.
-- [x] Google authentication code and owner-tested behavior were preserved.
-- [x] Profile persistence, portfolio create/edit, public profile visibility, Jobs filtering, support submission/retrieval, and wallet empty/stored-record states passed isolated HTTP workflow tests.
+- [x] The dedicated local development volume was reset, migrations were reapplied, and all marketplace/business tables were confirmed empty.
+- [x] Google authentication code and credentials were preserved; mocked provider claims cover valid and invalid identities. Real-Google browser verification remains manual.
+- [x] Profile persistence, failed-save input retention, portfolio create/edit/delete, public profile visibility, logout/repeat sign-in, Jobs filtering, support submission/retrieval, and wallet empty/stored-record states passed isolated browser or HTTP workflow tests.
 - [x] The Wallet & Security page now reads only the signed-in user's wallet, identity, session, and hold records. Fabricated addresses, dates, events, device counts, MFA, and protection claims were removed.
 - [x] The signed-in Jobs search and status filter now submit URL parameters and constrain an authorized database query.
 - [x] PactAgent/Mainnet operational copy was removed from the shell, dashboard, direct-job flow, job detail, talent invitation, discovery copy, and metadata.
@@ -32,7 +33,7 @@ Milestone: standalone marketplace, before PactAgent integration
 | -------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Password login                         | Implemented, code-traced               | Login form -> `POST /api/auth/login` -> same-origin check, password verification, lockout checks -> `sessions` insert and cookie -> redirect | Browser test lockout, cookie expiry, and error states                                                                                                                | `features/auth/components/auth-form.tsx`, `api/auth/login/route.ts`, `server/auth/session.ts`                                  |
 | Registration                           | Partial                                | Register form -> `POST /api/auth/register` -> validated user/profile/token inserts -> session/email state                                    | No production email delivery was found for verification. Test duplicate email and real mail handoff before release                                                   | `auth-form.tsx`, `api/auth/register/route.ts`, `api/auth/verify-email/route.ts`                                                |
-| Google sign-in                         | Owner-tested; preserved                | Google start/callback -> state, nonce, issuer/audience/email checks -> user/identity/profile/session upsert -> redirect                      | Keep an automated callback-state regression test; do not change working provider configuration                                                                       | `api/auth/google/route.ts`, `api/auth/google/callback/route.ts`, `server/auth/google.ts`                                       |
+| Google sign-in                         | Mock-tested; real browser test pending | Google start/callback -> state, nonce, issuer/audience/email checks -> user/identity/profile/session upsert -> redirect                      | Complete the documented real-provider repeat-login, logout, persistence, and restart checks before release                                                           | `api/auth/google/route.ts`, `api/auth/google/callback/route.ts`, `server/auth/google.ts`                                       |
 | Password reset                         | API-only / partial                     | Request/reset endpoints validate tokens and update credentials                                                                               | No customer reset pages or confirmed mail delivery. Add request and reset UI, mail adapter, expiry/replay browser tests                                              | `api/auth/password/request/route.ts`, `api/auth/password/reset/route.ts`                                                       |
 | Dashboard                              | Implemented, code-traced               | Authenticated page -> participant-scoped jobs, actions, verification records, confirmed-operation aggregates -> cards/lists                  | Payment balance remains explicitly unavailable. Add page-level database tests and browser checks for each role/state                                                 | `app/page.tsx`, `features/dashboard/server/queries.ts`, `metrics.ts`, `onboarding.ts`                                          |
 | Global navigation                      | Implemented, code-traced               | Sidebar, top bar, mobile menu, and marketplace header destinations all resolve to existing pages                                             | Active-state matching covers exact paths only; nested Jobs/Profile highlighting is cosmetic                                                                          | `components/layout/app-shell.tsx`, `features/marketplace/components/marketplace-header.tsx`                                    |
@@ -45,7 +46,7 @@ Milestone: standalone marketplace, before PactAgent integration
 | Public talent profile                  | Implemented and tested                 | Public/owner authorization -> sanitized profile, portfolio, completed-work metrics -> public page                                            | External portfolio URLs are user supplied; retain safe protocol validation and add UI accessibility checks                                                           | `app/talent/[userId]/page.tsx`, `talent/server/public-profile.ts`, `authorization.ts`                                          |
 | Profile editing                        | Implemented and tested                 | Owner form -> `PATCH /api/profile` -> schema and publication rules -> owner row update + audit -> persisted reload                           | Avatar upload is absent although `avatarKey` exists                                                                                                                  | `app/profile/page.tsx`, `profile-editor.tsx`, `api/profile/route.ts`                                                           |
 | Profile publication                    | Implemented and tested                 | Visibility button -> completeness check -> owner profile update + audit -> public endpoint appears/disappears                                | Public-profile discoverability should receive a browser test in CI                                                                                                   | `profile-editor.tsx`, `api/profile/visibility/route.ts`, `talent/server/publication.ts`                                        |
-| Portfolio create/edit/delete           | Implemented and tested for create/edit | Owner form -> idempotent create or owner-checked patch/delete -> `portfolio_items` -> local UI update                                        | Media upload is absent although `mediaKey` exists. Delete was code-traced, not exercised                                                                             | `profile-editor.tsx`, `api/profile/portfolio/**`                                                                               |
+| Portfolio create/edit/delete           | Implemented and browser-tested         | Owner form -> idempotent create or owner-checked patch/delete -> `portfolio_items` -> local UI update and persisted reload                   | Media upload is absent although `mediaKey` exists                                                                                                                    | `profile-editor.tsx`, `api/profile/portfolio/**`                                                                               |
 | Jobs workspace tabs                    | Implemented, code-traced               | Authenticated user -> participant agreements, owned listings, or owned proposals -> linked rows                                              | Listings/proposals tabs have no local search/filter; add if volume requires it                                                                                       | `app/jobs/page.tsx`                                                                                                            |
 | Jobs agreement search/status filter    | Implemented and tested                 | GET form -> Zod query parser -> participant condition plus title/reference/email/name/status SQL -> filtered rows/empty state                | Add database-level tests for counterparty-name and authorization isolation                                                                                           | `app/jobs/page.tsx`, `features/jobs/server/filters.ts`                                                                         |
 | Public job creation                    | Implemented and browser-tested         | Listing wizard -> persistent draft URL -> reload/edit -> publish checks -> listing and milestone rows -> discovery                           | AI builder uses mock output by default                                                                                                                               | `app/jobs/new/public/page.tsx`, `listing-wizard.tsx`, `api/marketplace/listings/**`                                            |
@@ -113,9 +114,9 @@ All mutation routes below use schema validation. Customer mutations generally us
 
 ### Configuration finding
 
-The current `apps/web/.env` identifies a loopback PostgreSQL service on port 5433. It does not point the runtime Drizzle client at Supabase. That configured database was offline during the audit (`ECONNREFUSED`), so its live rows were not read or changed. No credentials are reproduced here.
+The current `apps/web/.env` identifies `127.0.0.1:5433/klaveroq`; it does not point the runtime Drizzle client at Supabase. Docker confirmed this is `klaveroq-postgres-1`, backed by the dedicated named volume `klaveroq_klaveroq_postgres`. On 2026-09-24 that exact volume was removed and recreated, then every migration was applied. The separate test service remains tmpfs-backed on port 55434.
 
-The same migrations and `src/server/db/seed.ts` were run against a disposable database on port 55433. Runtime pages use the database query layer; repository fixtures under `features/*/fixtures.ts` have no runtime imports. Therefore, if Alex Morgan, Maya Chen, or the seeded listings appear in the running app, they are database rows from the seed (or equivalent copied rows), not the unused fixture arrays.
+Runtime pages use the database query layer; repository fixtures under `features/*/fixtures.ts` have no runtime imports. The demonstration seeder is isolated behind the explicitly named `db:seed:demo` command, requires `KLAVEROQ_ALLOW_LOCAL_SEED=1`, rejects production, and accepts only a loopback database hostname. Normal startup and all automated tests do not invoke it.
 
 ### Candidate records and dependencies
 
@@ -141,10 +142,11 @@ The seed's `VERIFIED` sandbox identities, synthetic wallet, funded timestamps, r
 
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
-- `npm test`: 15 files, 76 tests passed, including 4 new Jobs-filter regression tests.
+- `npm test`: 15 files, 80 tests passed, including mocked Google identity claims and Jobs-filter regression tests.
 - `npm run build`: passed; all application and API routes compiled successfully.
 - Disposable PostgreSQL 17 migrations on `127.0.0.1:55434/klaveroq_test`: passed after a guarded schema reset.
 - Isolated HTTP workflow suite against the running Next.js app: passed login, profile persistence, portfolio create/edit persistence, public profile unpublish/republish, Jobs text/status filtering, support ticket create/list retrieval, wallet/security empty-state assertions, and authorized stored-wallet rendering.
+- Playwright empty-database/profile journey: passed from a freshly migrated schema. It confirmed all business tables were empty and public discovery had no demo records, then exercised non-JSON failed-save recovery, profile persistence, portfolio create/edit/delete, publication, logout, repeat sign-in, and refresh persistence.
 - Playwright Chromium desktop marketplace journey: passed with fresh client, worker, and competing-worker accounts activated only in the disposable test database. It covered profile publication, portfolio creation, draft save/reload/edit/publish, unauthorized draft edit, filtered discovery, proposal submission/edit/refresh persistence, concurrent proposals, participant messaging, shortlist, award, losing-worker notification, and the agreement draft in both Jobs workspaces.
 - Playwright API/database integration suite: passed listing publication, cross-account edit denial, concurrent and duplicate proposal handling, participant-only messages, atomic award, second-award rejection, losing-worker notification, and the same `DRAFT` agreement for both participants.
 - Playwright Pixel 7 viewport check: passed public marketplace rendering with no horizontal document overflow.
@@ -153,13 +155,11 @@ No Supabase endpoint, seed command, PactAgent integration, fabricated payment co
 
 ### Exact remaining manual browser cases
 
-1. Sign in to the isolated local app. Edit headline/bio/skills, save, reload `/profile`, and confirm values persist.
-2. Add a portfolio item, reload, edit it, open its public profile, then delete it and confirm it disappears from both owner and public views.
-3. Make a complete profile private and confirm `/talent/[userId]` returns not found; publish it and confirm it appears in Find Talent and at the public URL.
-4. Open `/jobs`, search by title, reference, worker email, and participant display name; combine each with a status; confirm Clear restores all authorized agreements and another user never appears.
-5. Submit a support case, open it, reply with and without an allowed attachment, reload, close it, and verify the closed composer disappears.
-6. Use an account with no wallet/identity and confirm pending/not-started/unavailable states. Use a seeded account and confirm only its stored record appears, with the no-payment-capability disclaimer.
-7. Test all changed pages at mobile and desktop widths for long wallet addresses, user agents, status labels, and filter wrapping.
+1. Open `http://127.0.0.1:3000`, complete Google consent with a previously used account, and confirm exactly one user, one Google identity, and one editable profile are created in the reset development database.
+2. Repeat Google sign-in, refresh an authenticated page, log out, restart the application, and sign in again; confirm no duplicate user, identity, or profile rows.
+3. Open `/jobs`, search by title, reference, worker email, and participant display name; combine each with a status; confirm Clear restores all authorized agreements and another user never appears.
+4. Submit a support case, open it, reply with and without an allowed attachment, reload, close it, and verify the closed composer disappears.
+5. Test all changed pages at mobile and desktop widths for long wallet addresses, user agents, status labels, and filter wrapping.
 
 ## Prioritized implementation plan
 
@@ -183,6 +183,15 @@ No Supabase endpoint, seed command, PactAgent integration, fabricated payment co
 5. Production claims such as “protected payment,” “escrow,” “funds secured,” “settled,” or “refunded.” These must be derived from reconciled PactAgent results, not local rows or seeded timestamps.
 
 ## Files changed in this repair pass
+
+### Clean database, profile reliability, and verification (2026-09-24)
+
+- Reset `klaveroq_klaveroq_postgres`, reapplied migrations, and verified zero business records.
+- Isolated the optional demonstration seeder behind the explicit `db:seed:demo` command and existing loopback/opt-in guards.
+- Standardized local browser and OAuth documentation on `http://127.0.0.1:3000`.
+- Made profile and portfolio requests resilient to network and non-JSON failures while preserving unsaved input and restoring saved values on Cancel.
+- Added empty-database/profile/portfolio/logout/repeat-sign-in Playwright coverage and mocked Google claim validation tests.
+- Replaced remaining customer-facing payment-protection claims with accurate standalone marketplace language.
 
 ### Standalone marketplace completion (2026-09-24)
 

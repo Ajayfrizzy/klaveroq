@@ -58,12 +58,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           </span>{" "}
           Klaveroq
         </Link>
-        <p className="eyebrow">Protected work payments</p>
+        <p className="eyebrow">Professional marketplace</p>
         <h1>{mode === "login" ? "Sign in" : "Create account"}</h1>
         <p>
           {mode === "login"
-            ? "Access your agreements, milestones, and payment records."
-            : "Create an account before funding or accepting protected work."}
+            ? "Access your agreements, milestones, and available payment records."
+            : "Create an account to publish work, submit proposals, and manage agreements."}
         </p>
         <a
           className={`google-auth-button${googleBusy ? " disabled" : ""}`}

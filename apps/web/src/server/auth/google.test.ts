@@ -4,6 +4,7 @@ import {
   GOOGLE_OAUTH_COOKIE_PATH,
   GOOGLE_OAUTH_MESSAGES,
   googleAccountAction,
+  googleIdentityFromClaims,
   googleOAuthHref,
   safeReturnTo,
   validOAuthTransaction,
@@ -53,6 +54,33 @@ describe("Google OAuth security decisions", () => {
     expect(
       googleAccountAction({ linked: true, linkedStatus: "CLOSED", emailOwnerExists: true }),
     ).toBe("unavailable");
+  });
+
+  it("accepts a complete mocked provider identity and normalizes it", () => {
+    expect(
+      googleIdentityFromClaims(
+        {
+          sub: "google-subject-1",
+          email: "Fresh.User@Example.com",
+          email_verified: true,
+          name: "Fresh User",
+          nonce: "expected-nonce",
+        },
+        "expected-nonce",
+      ),
+    ).toEqual({
+      subject: "google-subject-1",
+      email: "fresh.user@example.com",
+      displayName: "Fresh User",
+    });
+  });
+
+  it.each([
+    { nonce: "wrong", sub: "subject", email: "user@example.com", email_verified: true },
+    { nonce: "expected", sub: "", email: "user@example.com", email_verified: true },
+    { nonce: "expected", sub: "subject", email: "user@example.com", email_verified: false },
+  ])("rejects an invalid mocked provider identity %#", (claims) => {
+    expect(googleIdentityFromClaims(claims, "expected")).toBeNull();
   });
 
   it("uses a short transaction lifetime and an understandable cancellation message", () => {

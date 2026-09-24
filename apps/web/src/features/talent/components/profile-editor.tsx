@@ -55,6 +55,18 @@ const commaList = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+async function responseBody(response: Response) {
+  if (!(response.headers.get("content-type") ?? "").includes("application/json")) return null;
+  try {
+    return (await response.json()) as {
+      data?: Profile | PortfolioItem;
+      error?: { message?: string };
+    };
+  } catch {
+    return null;
+  }
+}
+
 const emptyPortfolio = {
   title: "",
   description: "",
@@ -102,6 +114,7 @@ export function ProfileEditor({
   initialPortfolio: PortfolioItem[];
 }) {
   const router = useRouter();
+  const [savedProfile, setSavedProfile] = useState(initialProfile);
   const [profile, setProfile] = useState(initialProfile);
   const [skillsText, setSkillsText] = useState(initialProfile.skills.join(", "));
   const [languagesText, setLanguagesText] = useState(initialProfile.languages.join(", "));
@@ -127,36 +140,61 @@ export function ProfileEditor({
   const readyCount = readiness.filter((item) => item.complete).length;
   const profileReady = readyCount === readiness.length;
 
+  const cancelProfileEdit = () => {
+    setProfile(savedProfile);
+    setSkillsText(savedProfile.skills.join(", "));
+    setLanguagesText(savedProfile.languages.join(", "));
+    setEditing(false);
+    setFeedback("");
+    setFeedbackIsError(false);
+  };
+
+  const cancelPortfolioEdit = () => {
+    setPortfolioId(null);
+    setPortfolioForm(emptyPortfolio);
+    setShowPortfolioForm(false);
+  };
+
   const saveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true);
     setFeedback("");
     setFeedbackIsError(false);
-    const response = await fetch("/api/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...profile,
-        headline: profile.headline ?? "",
-        bio: profile.bio ?? "",
-        primaryRole: profile.primaryRole ?? "",
-        experienceLevel: profile.experienceLevel ?? "INTERMEDIATE",
-        countryCode: profile.countryCode ?? "",
-        skills: commaList(skillsText),
-        languages: commaList(languagesText),
-      }),
-    });
-    const body = await response.json();
-    if (!response.ok) {
-      setFeedbackIsError(true);
-      setFeedback(body.error?.message ?? "Profile could not be saved.");
-    } else {
-      setProfile(body.data);
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...profile,
+          headline: profile.headline ?? "",
+          bio: profile.bio ?? "",
+          primaryRole: profile.primaryRole ?? "",
+          experienceLevel: profile.experienceLevel ?? "INTERMEDIATE",
+          countryCode: profile.countryCode ?? "",
+          skills: commaList(skillsText),
+          languages: commaList(languagesText),
+        }),
+      });
+      const body = await responseBody(response);
+      if (!response.ok || !body?.data) {
+        setFeedbackIsError(true);
+        setFeedback(body?.error?.message ?? "Profile could not be saved. Please try again.");
+        return;
+      }
+      const updated = body.data as Profile;
+      setSavedProfile(updated);
+      setProfile(updated);
+      setSkillsText(updated.skills.join(", "));
+      setLanguagesText(updated.languages.join(", "));
       setEditing(false);
       setFeedback("Profile saved.");
       router.refresh();
+    } catch {
+      setFeedbackIsError(true);
+      setFeedback("Profile could not be saved. Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   const editPortfolio = (item: PortfolioItem) => {
@@ -177,46 +215,63 @@ export function ProfileEditor({
     setBusy(true);
     setFeedback("");
     setFeedbackIsError(false);
-    const response = await fetch(
-      portfolioId ? `/api/profile/portfolio/${portfolioId}` : "/api/profile/portfolio",
-      {
-        method: portfolioId ? "PATCH" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(!portfolioId ? { "Idempotency-Key": crypto.randomUUID() } : {}),
+    try {
+      const response = await fetch(
+        portfolioId ? `/api/profile/portfolio/${portfolioId}` : "/api/profile/portfolio",
+        {
+          method: portfolioId ? "PATCH" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(!portfolioId ? { "Idempotency-Key": crypto.randomUUID() } : {}),
+          },
+          body: JSON.stringify({ ...portfolioForm, skills: commaList(portfolioForm.skills) }),
         },
-        body: JSON.stringify({ ...portfolioForm, skills: commaList(portfolioForm.skills) }),
-      },
-    );
-    const body = await response.json();
-    if (!response.ok) {
-      setFeedbackIsError(true);
-      setFeedback(body.error?.message ?? "Portfolio item could not be saved.");
-    } else {
+      );
+      const body = await responseBody(response);
+      if (!response.ok || !body?.data) {
+        setFeedbackIsError(true);
+        setFeedback(body?.error?.message ?? "Portfolio item could not be saved. Please try again.");
+        return;
+      }
+      const updated = body.data as PortfolioItem;
       setPortfolio((items) =>
         portfolioId
-          ? items.map((item) => (item.id === portfolioId ? body.data : item))
-          : [body.data, ...items],
+          ? items.map((item) => (item.id === portfolioId ? updated : item))
+          : [updated, ...items],
       );
-      setPortfolioId(null);
-      setPortfolioForm(emptyPortfolio);
-      setShowPortfolioForm(false);
+      cancelPortfolioEdit();
       setFeedback("Portfolio saved.");
+    } catch {
+      setFeedbackIsError(true);
+      setFeedback("Portfolio item could not be saved. Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   const removePortfolio = async (id: string) => {
     if (!confirm("Remove this portfolio item?")) return;
     setBusy(true);
-    const response = await fetch(`/api/profile/portfolio/${id}`, { method: "DELETE" });
-    if (response.ok) setPortfolio((items) => items.filter((item) => item.id !== id));
-    else {
-      const body = await response.json();
+    setFeedback("");
+    setFeedbackIsError(false);
+    try {
+      const response = await fetch(`/api/profile/portfolio/${id}`, { method: "DELETE" });
+      const body = await responseBody(response);
+      if (response.ok) {
+        setPortfolio((items) => items.filter((item) => item.id !== id));
+        setFeedback("Portfolio item removed.");
+      } else {
+        setFeedbackIsError(true);
+        setFeedback(
+          body?.error?.message ?? "Portfolio item could not be removed. Please try again.",
+        );
+      }
+    } catch {
       setFeedbackIsError(true);
-      setFeedback(body.error?.message ?? "Portfolio item could not be removed.");
+      setFeedback("Portfolio item could not be removed. Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   const updateVisibility = async () => {
@@ -224,21 +279,31 @@ export function ProfileEditor({
     setBusy(true);
     setFeedback("");
     setFeedbackIsError(false);
-    const response = await fetch("/api/profile/visibility", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isPublic: makePublic }),
-    });
-    const body = await response.json();
-    if (!response.ok) {
-      setFeedbackIsError(true);
-      setFeedback(body.error?.message ?? "Profile visibility could not be changed.");
-    } else {
-      setProfile(body.data);
+    try {
+      const response = await fetch("/api/profile/visibility", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPublic: makePublic }),
+      });
+      const body = await responseBody(response);
+      if (!response.ok || !body?.data) {
+        setFeedbackIsError(true);
+        setFeedback(
+          body?.error?.message ?? "Profile visibility could not be changed. Please try again.",
+        );
+        return;
+      }
+      const updated = body.data as Profile;
+      setSavedProfile(updated);
+      setProfile(updated);
       setFeedback(makePublic ? "Profile published." : "Profile is now private.");
       router.refresh();
+    } catch {
+      setFeedbackIsError(true);
+      setFeedback("Profile visibility could not be changed. Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   return (
@@ -262,7 +327,10 @@ export function ProfileEditor({
             <Link className="secondary-button" href={`/talent/${profile.userId}`}>
               <ExternalLink size={15} /> Preview profile
             </Link>
-            <button className="secondary-button" onClick={() => setEditing((value) => !value)}>
+            <button
+              className="secondary-button"
+              onClick={() => (editing ? cancelProfileEdit() : setEditing(true))}
+            >
               {editing ? <X size={15} /> : <Pencil size={15} />}
               {editing ? "Cancel" : "Edit profile"}
             </button>
@@ -654,11 +722,7 @@ export function ProfileEditor({
               </label>
             </div>
             <div className="proposal-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setShowPortfolioForm(false)}
-              >
+              <button type="button" className="secondary-button" onClick={cancelPortfolioEdit}>
                 Cancel
               </button>
               <button className="primary-button" disabled={busy}>

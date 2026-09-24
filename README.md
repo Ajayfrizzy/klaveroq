@@ -22,7 +22,8 @@ npm run db:migrate
 npm run dev
 ```
 
-The web application runs at `http://localhost:3000` by default.
+The web application runs at `http://127.0.0.1:3000` by default. Use that exact origin for browser
+access, `APP_URL`, and the Google OAuth redirect URI; do not mix it with `localhost`.
 
 Register fresh client and worker accounts at `/register`. The normal setup does not seed the six
 demonstration accounts. Run the guarded seed command only when demonstration data is explicitly
@@ -40,7 +41,7 @@ npm run test:integration --workspace=@klaveroq/web  # Real API/PostgreSQL transa
 npm run test:e2e --workspace=@klaveroq/web          # Chromium desktop and mobile journeys
 npm run db:generate  # Generate a Drizzle migration
 npm run db:migrate   # Apply database migrations
-KLAVEROQ_ALLOW_LOCAL_SEED=1 npm run db:seed  # Create local-only demo data
+KLAVEROQ_ALLOW_LOCAL_SEED=1 npm run db:seed:demo  # Explicitly create local-only demo data
 ```
 
 ## Repository map

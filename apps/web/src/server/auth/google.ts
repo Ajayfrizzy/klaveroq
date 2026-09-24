@@ -52,6 +52,26 @@ export function googleAccountAction(input: {
   return "create" as const;
 }
 
+export function googleIdentityFromClaims(claims: Record<string, unknown>, expectedNonce: string) {
+  if (
+    claims.nonce !== expectedNonce ||
+    typeof claims.sub !== "string" ||
+    !claims.sub ||
+    typeof claims.email !== "string" ||
+    !claims.email ||
+    claims.email_verified !== true
+  )
+    return null;
+  return {
+    subject: claims.sub,
+    email: claims.email.toLowerCase(),
+    displayName:
+      typeof claims.name === "string" && claims.name.trim()
+        ? claims.name.trim().slice(0, 100)
+        : claims.email.split("@")[0].slice(0, 100),
+  };
+}
+
 export const GOOGLE_OAUTH_MESSAGES: Record<string, string> = {
   access_denied: "Google sign-in was cancelled. You can try again or continue with email.",
   OAUTH_STATE_INVALID: "Google sign-in expired or could not be verified. Please try again.",

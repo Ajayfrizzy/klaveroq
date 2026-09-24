@@ -17,11 +17,22 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "chromium",
-      testIgnore: /responsive\.spec\.ts/,
+      name: "clean-database",
+      testMatch: /clean-database-profile\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
-    { name: "mobile", testMatch: /responsive\.spec\.ts/, use: { ...devices["Pixel 7"] } },
+    {
+      name: "chromium",
+      dependencies: ["clean-database"],
+      testIgnore: /(?:clean-database-profile|responsive)\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "mobile",
+      dependencies: ["clean-database"],
+      testMatch: /responsive\.spec\.ts/,
+      use: { ...devices["Pixel 7"] },
+    },
   ],
   webServer: {
     command: "npm run build && npx next start --hostname 127.0.0.1 --port 3199",

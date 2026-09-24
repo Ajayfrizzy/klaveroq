@@ -109,7 +109,7 @@ export function SupportHome() {
           </span>
           <div>
             <h2>Guides</h2>
-            <p>Learn how protected jobs work</p>
+            <p>Learn how milestone jobs work</p>
           </div>
           <ArrowRight size={17} />
         </a>

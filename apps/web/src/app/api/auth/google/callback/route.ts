@@ -5,6 +5,7 @@ import {
   GOOGLE_OAUTH_COOKIES,
   GOOGLE_OAUTH_COOKIE_PATH,
   googleAccountAction,
+  googleIdentityFromClaims,
   safeReturnTo,
   validOAuthTransaction,
 } from "@/server/auth/google";
@@ -88,15 +89,15 @@ async function callback(request: Request) {
     audience: clientId,
     issuer: ["https://accounts.google.com", "accounts.google.com"],
   });
-  if (payload.nonce !== nonce || !payload.sub || !payload.email || payload.email_verified !== true)
+  const googleIdentity = googleIdentityFromClaims(payload, nonce);
+  if (!googleIdentity)
     throw new ApiError(
       400,
       "GOOGLE_IDENTITY_INVALID",
       "The Google identity is incomplete or unverified.",
     );
 
-  const subject = String(payload.sub);
-  const email = String(payload.email).toLowerCase();
+  const { subject, email, displayName } = googleIdentity;
   const userId = await db.transaction(async (tx) => {
     const [identity] = await tx
       .select({ userId: authIdentities.userId })
@@ -174,7 +175,7 @@ async function callback(request: Request) {
     }
     await tx.insert(profiles).values({
       userId: created.id,
-      displayName: String(payload.name ?? email.split("@")[0]).slice(0, 100),
+      displayName,
     });
     const inserted = await tx
       .insert(authIdentities)

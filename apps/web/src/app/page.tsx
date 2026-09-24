@@ -159,7 +159,7 @@ export default async function DashboardPage() {
           <div className="section-heading">
             <div>
               <h2>Active jobs</h2>
-              <p>Your current protected work</p>
+              <p>Your current marketplace work</p>
             </div>
             <Link href="/jobs">
               View all <ArrowRight size={15} />

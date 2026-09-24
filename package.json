@@ -16,7 +16,7 @@
     "test": "npm run test --workspace=@klaveroq/web",
     "db:generate": "npm run db:generate --workspace=@klaveroq/web",
     "db:migrate": "npm run db:migrate --workspace=@klaveroq/web",
-    "db:seed": "npm run db:seed --workspace=@klaveroq/web"
+    "db:seed:demo": "npm run db:seed:demo --workspace=@klaveroq/web"
   },
   "engines": {
     "node": ">=22"

@@ -160,7 +160,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
           <ArrowLeft size={17} /> Overview
         </Link>
         <div>
-          <p className="eyebrow">Protected agreement</p>
+          <p className="eyebrow">Direct agreement</p>
           <h1>Create a new job</h1>
           <p>Set the work, milestones, and funding terms before inviting your worker.</p>
         </div>

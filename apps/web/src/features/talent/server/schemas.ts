@@ -3,34 +3,59 @@ import { z } from "zod";
 
 const blankToUndefined = (value: unknown) => (value === "" ? undefined : value);
 const blankToNull = (value: unknown) => (value === "" || value === undefined ? null : value);
-const optionalUrl = z.preprocess(blankToNull, z.string().trim().url().max(500).nullable());
+const optionalText = (maximum: number) =>
+  z.preprocess(blankToNull, z.string().trim().max(maximum).nullable());
+const optionalUrl = z.preprocess(
+  blankToNull,
+  z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .refine((value) => ["http:", "https:"].includes(new URL(value).protocol), {
+      message: "Use an http:// or https:// URL.",
+    })
+    .nullable(),
+);
 const normalizedList = (maximum: number) =>
   z
     .array(z.string().trim().min(1).max(60))
     .max(maximum)
     .transform((items) => [...new Set(items.map((item) => item.toLowerCase()))]);
 
-export const profileInputSchema = z.object({
-  displayName: z.string().trim().min(2).max(100),
-  headline: z.string().trim().min(5).max(160),
-  bio: z.string().trim().min(40).max(5000),
-  primaryRole: z.string().trim().min(2).max(100),
-  skills: normalizedList(20),
-  experienceLevel: z.enum(["ENTRY", "INTERMEDIATE", "EXPERT"]),
-  yearsExperience: z.number().int().min(0).max(80).nullable(),
-  languages: normalizedList(10),
-  availability: z.enum(["AVAILABLE", "LIMITED", "UNAVAILABLE"]),
-  timezone: z.string().trim().min(2).max(80),
-  countryCode: z
-    .string()
-    .trim()
-    .length(2)
-    .transform((value) => value.toUpperCase()),
-  preferredWorkCategories: z.array(z.enum(JOB_CATEGORIES)).max(JOB_CATEGORIES.length),
-  githubUrl: optionalUrl,
-  websiteUrl: optionalUrl,
-  linkedinUrl: optionalUrl,
-});
+export const profileInputSchema = z
+  .object({
+    displayName: z.string().trim().min(2).max(100).optional(),
+    headline: optionalText(160).optional(),
+    bio: optionalText(5000).optional(),
+    primaryRole: optionalText(100).optional(),
+    skills: normalizedList(20).optional(),
+    experienceLevel: z.enum(["ENTRY", "INTERMEDIATE", "EXPERT"]).nullable().optional(),
+    yearsExperience: z.number().int().min(0).max(80).nullable().optional(),
+    languages: normalizedList(10).optional(),
+    availability: z.enum(["AVAILABLE", "LIMITED", "UNAVAILABLE"]).optional(),
+    timezone: optionalText(80).optional(),
+    countryCode: z
+      .preprocess(
+        blankToNull,
+        z
+          .string()
+          .trim()
+          .length(2)
+          .transform((value) => value.toUpperCase())
+          .nullable(),
+      )
+      .optional(),
+    preferredWorkCategories: z.array(z.enum(JOB_CATEGORIES)).max(JOB_CATEGORIES.length).optional(),
+    githubUrl: optionalUrl.optional(),
+    websiteUrl: optionalUrl.optional(),
+    linkedinUrl: optionalUrl.optional(),
+    makePrivateIfIncomplete: z.boolean().optional(),
+  })
+  .strict()
+  .refine((input) => Object.keys(input).some((key) => key !== "makePrivateIfIncomplete"), {
+    message: "Provide at least one profile field to update.",
+  });
 
 export const profileVisibilitySchema = z.object({ isPublic: z.boolean() });
 

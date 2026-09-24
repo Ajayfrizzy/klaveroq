@@ -17,6 +17,7 @@ Milestone: standalone marketplace, before PactAgent integration
 - [x] The runtime marketplace pages read PostgreSQL through Drizzle. Public discovery and talent do not import fixture data.
 - [x] The dedicated local development volume was reset, migrations were reapplied, and all marketplace/business tables were confirmed empty.
 - [x] Google authentication code and credentials were preserved; mocked provider claims cover valid and invalid identities. Real-Google browser verification remains manual.
+- [x] Fresh private profiles can now be saved incrementally. Editing and publishing use separate validation rules, with field-level errors and an explicit private fallback for incomplete published profiles.
 - [x] Profile persistence, failed-save input retention, portfolio create/edit/delete, public profile visibility, logout/repeat sign-in, Jobs filtering, support submission/retrieval, and wallet empty/stored-record states passed isolated browser or HTTP workflow tests.
 - [x] The Wallet & Security page now reads only the signed-in user's wallet, identity, session, and hold records. Fabricated addresses, dates, events, device counts, MFA, and protection claims were removed.
 - [x] The signed-in Jobs search and status filter now submit URL parameters and constrain an authorized database query.
@@ -44,8 +45,8 @@ Milestone: standalone marketplace, before PactAgent integration
 | Client proposal evaluation             | Implemented, code-traced               | Listing owner sees sealed proposals -> shortlist/reject/award endpoints -> transactional proposal/listing updates and notifications          | Award creates a `DRAFT` job only, not funding. Browser-test concurrency and losing-proposal notifications                                                            | `client-proposals.tsx`, `api/marketplace/proposals/[id]/{shortlist,reject,award}/route.ts`                                     |
 | Find Talent                            | Implemented, code-traced               | GET filters -> only public profiles -> portfolio previews and database-derived reputation -> cards                                           | Reputation sorting after a 100-profile pre-limit is not globally correct. Move derived ordering/pagination to a scalable query                                       | `app/talent/page.tsx`, `features/talent/server/queries.ts`, `schemas.ts`                                                       |
 | Public talent profile                  | Implemented and tested                 | Public/owner authorization -> sanitized profile, portfolio, completed-work metrics -> public page                                            | External portfolio URLs are user supplied; retain safe protocol validation and add UI accessibility checks                                                           | `app/talent/[userId]/page.tsx`, `talent/server/public-profile.ts`, `authorization.ts`                                          |
-| Profile editing                        | Implemented and tested                 | Owner form -> `PATCH /api/profile` -> schema and publication rules -> owner row update + audit -> persisted reload                           | Avatar upload is absent although `avatarKey` exists                                                                                                                  | `app/profile/page.tsx`, `profile-editor.tsx`, `api/profile/route.ts`                                                           |
-| Profile publication                    | Implemented and tested                 | Visibility button -> completeness check -> owner profile update + audit -> public endpoint appears/disappears                                | Public-profile discoverability should receive a browser test in CI                                                                                                   | `profile-editor.tsx`, `api/profile/visibility/route.ts`, `talent/server/publication.ts`                                        |
+| Profile editing                        | Implemented and browser-tested         | Owner form -> strict partial `PATCH /api/profile` -> field validation -> owner row update + audit -> immediate and refreshed result          | Avatar upload is absent although `avatarKey` exists                                                                                                                  | `app/profile/page.tsx`, `profile-editor.tsx`, `api/profile/route.ts`                                                           |
+| Profile publication                    | Implemented and browser-tested         | Visibility button -> independent completeness check -> owner profile update + audit -> public endpoint appears/disappears                    | A published edit that removes required data returns `409` until restored or explicitly saved private                                                                 | `profile-editor.tsx`, `api/profile/visibility/route.ts`, `talent/server/publication.ts`                                        |
 | Portfolio create/edit/delete           | Implemented and browser-tested         | Owner form -> idempotent create or owner-checked patch/delete -> `portfolio_items` -> local UI update and persisted reload                   | Media upload is absent although `mediaKey` exists                                                                                                                    | `profile-editor.tsx`, `api/profile/portfolio/**`                                                                               |
 | Jobs workspace tabs                    | Implemented, code-traced               | Authenticated user -> participant agreements, owned listings, or owned proposals -> linked rows                                              | Listings/proposals tabs have no local search/filter; add if volume requires it                                                                                       | `app/jobs/page.tsx`                                                                                                            |
 | Jobs agreement search/status filter    | Implemented and tested                 | GET form -> Zod query parser -> participant condition plus title/reference/email/name/status SQL -> filtered rows/empty state                | Add database-level tests for counterparty-name and authorization isolation                                                                                           | `app/jobs/page.tsx`, `features/jobs/server/filters.ts`                                                                         |
@@ -142,14 +143,14 @@ The seed's `VERIFIED` sandbox identities, synthetic wallet, funded timestamps, r
 
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
-- `npm test`: 15 files, 80 tests passed, including mocked Google identity claims and Jobs-filter regression tests.
+- `npm test`: 15 files, 82 tests passed, including partial-profile validation, mocked Google identity claims, and Jobs-filter regression tests.
 - `npm run build`: passed; all application and API routes compiled successfully.
 - Disposable PostgreSQL 17 migrations on `127.0.0.1:55434/klaveroq_test`: passed after a guarded schema reset.
 - Isolated HTTP workflow suite against the running Next.js app: passed login, profile persistence, portfolio create/edit persistence, public profile unpublish/republish, Jobs text/status filtering, support ticket create/list retrieval, wallet/security empty-state assertions, and authorized stored-wallet rendering.
-- Playwright empty-database/profile journey: passed from a freshly migrated schema. It confirmed all business tables were empty and public discovery had no demo records, then exercised non-JSON failed-save recovery, profile persistence, portfolio create/edit/delete, publication, logout, repeat sign-in, and refresh persistence.
+- Playwright empty-database/profile journey: passed from a freshly migrated schema. It exercised Google-equivalent initialization, name-only and partial private saves, field-level validation, incomplete publication, multi-session completion, non-JSON failed-save recovery, publication, safe published edits, `409` incomplete-public-edit handling, portfolio persistence, logout, and repeat sign-in.
 - Playwright Chromium desktop marketplace journey: passed with fresh client, worker, and competing-worker accounts activated only in the disposable test database. It covered profile publication, portfolio creation, draft save/reload/edit/publish, unauthorized draft edit, filtered discovery, proposal submission/edit/refresh persistence, concurrent proposals, participant messaging, shortlist, award, losing-worker notification, and the agreement draft in both Jobs workspaces.
-- Playwright API/database integration suite: passed listing publication, cross-account edit denial, concurrent and duplicate proposal handling, participant-only messages, atomic award, second-award rejection, losing-worker notification, and the same `DRAFT` agreement for both participants.
-- Playwright Pixel 7 viewport check: passed public marketplace rendering with no horizontal document overflow.
+- Playwright API/database integration suite: passed name-only profile `200`, partial save `200`, invalid target `400`, incomplete publish `422`, published-profile conflict `409`, explicit private fallback, listing publication, cross-account edit denial, concurrent and duplicate proposals, messages, and atomic award.
+- Playwright Pixel 7 viewport checks: passed public marketplace and authenticated professional-profile rendering with no horizontal document overflow.
 
 No Supabase endpoint, seed command, PactAgent integration, fabricated payment confirmation, deployment, commit, or push was used.
 
@@ -184,6 +185,14 @@ No Supabase endpoint, seed command, PactAgent integration, fabricated payment co
 
 ## Files changed in this repair pass
 
+### Fresh Google profile editing (2026-09-25)
+
+- Confirmed the root cause: browser-required completion fields prevented submit, while a bypassed request returned `400` because the edit schema required headline, bio, primary role, and country.
+- Split strict partial editing from publication completeness and added a guarded `409` choice for published profiles that would become incomplete.
+- Removed fabricated experience and location values from the editor payload and generated migration `0008_curvy_oracle.sql` to stop assigning `Africa/Lagos` to new profiles.
+- Added field-level errors, expired-session guidance, partial private saves, immediate rendering, focused profile sections, and responsive behavior.
+- Added database/API and browser coverage for fresh Google-equivalent initialization, gradual completion, publication, published edits, persistence, and unauthorized target rejection.
+
 ### Clean database, profile reliability, and verification (2026-09-24)
 
 - Reset `klaveroq_klaveroq_postgres`, reapplied migrations, and verified zero business records.
@@ -202,7 +211,7 @@ No Supabase endpoint, seed command, PactAgent integration, fabricated payment co
 - Disposable PostgreSQL service, guarded reset, Playwright configuration, desktop/mobile browser tests, and API/database integration tests.
 - Local testing documentation and this audit.
 
-No database schema migration was required. Google OAuth routes, credentials, and callback configuration were not changed.
+No database schema migration was required for the standalone marketplace pass. Google OAuth routes, credentials, and callback configuration were not changed.
 
 ### Prior repair pass (2026-09-23)
 

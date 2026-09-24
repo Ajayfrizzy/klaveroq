@@ -81,16 +81,45 @@ describe("talent profiles", () => {
       githubUrl: "",
       websiteUrl: "",
       linkedinUrl: "",
-      isPublic: true,
     });
     expect(profile.skills).toEqual(["react", "typescript"]);
     expect(profile.countryCode).toBe("NG");
     expect(profile.githubUrl).toBeNull();
-    expect(profile).not.toHaveProperty("isPublic");
     expect(talentQuerySchema.parse({ minCompletedJobs: "5" }).minCompletedJobs).toBe(5);
     expect(() =>
       portfolioInputSchema.parse({ title: "x", description: "short", skills: [] }),
     ).toThrow();
+  });
+
+  it("accepts bounded partial private-profile edits without inventing defaults", () => {
+    expect(profileInputSchema.parse({ displayName: "Updated name" })).toEqual({
+      displayName: "Updated name",
+    });
+    expect(
+      profileInputSchema.parse({
+        headline: "",
+        bio: "",
+        primaryRole: "",
+        experienceLevel: null,
+        countryCode: "",
+        timezone: "",
+      }),
+    ).toEqual({
+      headline: null,
+      bio: null,
+      primaryRole: null,
+      experienceLevel: null,
+      countryCode: null,
+      timezone: null,
+    });
+  });
+
+  it("rejects target identifiers, oversized values, and unsafe profile URLs", () => {
+    expect(() =>
+      profileInputSchema.parse({ displayName: "Owner", userId: "another-user" }),
+    ).toThrow();
+    expect(() => profileInputSchema.parse({ headline: "x".repeat(161) })).toThrow();
+    expect(() => profileInputSchema.parse({ websiteUrl: "javascript:alert(1)" })).toThrow();
   });
 
   it("rejects incomplete profiles and allows complete profiles to be published", () => {
@@ -100,11 +129,18 @@ describe("talent profiles", () => {
       primaryRole: null,
       bio: null,
       skills: [],
+      experienceLevel: null,
+      countryCode: null,
+      timezone: null,
     };
     expect(getMissingPublicationFields(incomplete)).toEqual([
-      "professional headline or primary role",
-      "bio",
+      "professional headline",
+      "primary role",
+      "professional bio",
       "at least one skill",
+      "experience level",
+      "country",
+      "timezone",
     ]);
     expect(() => assertProfileCanBePublished(incomplete)).toThrow(
       /Complete your profile before publishing/,
@@ -112,9 +148,13 @@ describe("talent profiles", () => {
     expect(() =>
       assertProfileCanBePublished({
         ...incomplete,
+        headline: "Accessible frontend engineer",
         primaryRole: "Frontend engineering",
         bio: "I deliver accessible applications with clear, reviewable milestones.",
         skills: ["typescript"],
+        experienceLevel: "EXPERT",
+        countryCode: "NG",
+        timezone: "Africa/Lagos",
       }),
     ).not.toThrow();
   });

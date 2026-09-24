@@ -188,7 +188,7 @@ export const profiles = pgTable(
       .default([])
       .notNull(),
     countryCode: varchar("country_code", { length: 2 }),
-    timezone: varchar("timezone", { length: 80 }).default("Africa/Lagos").notNull(),
+    timezone: varchar("timezone", { length: 80 }),
     avatarKey: text("avatar_key"),
     githubUrl: text("github_url"),
     websiteUrl: text("website_url"),

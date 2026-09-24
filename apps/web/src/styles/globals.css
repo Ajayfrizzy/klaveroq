@@ -4840,6 +4840,67 @@ button {
   border-top: 1px solid var(--soft-line);
   margin-top: 20px;
 }
+.profile-details-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.65fr);
+}
+.profile-details-grid > section {
+  min-width: 0;
+  border-bottom: 1px solid var(--soft-line);
+  padding: 18px 0;
+}
+.profile-details-grid > section:nth-child(odd) {
+  padding-right: 22px;
+}
+.profile-details-grid > section:nth-child(even) {
+  border-left: 1px solid var(--soft-line);
+  padding-left: 22px;
+}
+.profile-fact-section h3,
+.profile-link-section h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+}
+.profile-fact-section dl {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+}
+.profile-fact-section dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+}
+.profile-fact-section dt {
+  color: var(--muted);
+}
+.profile-fact-section dd {
+  margin: 0;
+  color: #344054;
+  font-weight: 700;
+  text-align: right;
+  text-transform: capitalize;
+}
+.profile-link-section {
+  padding-top: 18px;
+}
+.profile-save-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.profile-edit-form .field-error {
+  color: var(--danger);
+  font-weight: 650;
+}
+.profile-edit-form [aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.publish-guidance {
+  color: var(--muted);
+  font-size: 9px;
+}
 .portfolio-manager {
   overflow: hidden;
 }
@@ -6636,6 +6697,16 @@ button {
 
   .profile-readiness ul {
     grid-template-columns: 1fr;
+  }
+
+  .profile-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-details-grid > section:nth-child(n) {
+    border-left: 0;
+    padding-right: 0;
+    padding-left: 0;
   }
 
   .listing-steps li div {

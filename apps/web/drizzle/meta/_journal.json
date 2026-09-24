@@ -57,6 +57,13 @@
       "when": 1786551510646,
       "tag": "0007_jazzy_hardball",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790290774788,
+      "tag": "0008_curvy_oracle",
+      "breakpoints": true
     }
   ]
 }

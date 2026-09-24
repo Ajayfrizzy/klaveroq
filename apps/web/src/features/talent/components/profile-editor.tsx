@@ -32,7 +32,7 @@ type Profile = {
   availability: "AVAILABLE" | "LIMITED" | "UNAVAILABLE";
   preferredWorkCategories: string[];
   countryCode: string | null;
-  timezone: string;
+  timezone: string | null;
   githubUrl: string | null;
   websiteUrl: string | null;
   linkedinUrl: string | null;
@@ -60,7 +60,15 @@ async function responseBody(response: Response) {
   try {
     return (await response.json()) as {
       data?: Profile | PortfolioItem;
-      error?: { message?: string };
+      error?: {
+        code?: string;
+        message?: string;
+        details?: {
+          fieldErrors?: Record<string, string[]>;
+          missingFields?: string[];
+          canMakePrivate?: boolean;
+        };
+      };
     };
   } catch {
     return null;
@@ -126,16 +134,31 @@ export function ProfileEditor({
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [feedbackIsError, setFeedbackIsError] = useState(false);
-  const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [canSaveAsPrivate, setCanSaveAsPrivate] = useState(false);
+  const set = <K extends keyof Profile>(key: K, value: Profile[K]) => {
     setProfile((current) => ({ ...current, [key]: value }));
+    setFieldErrors((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+    setCanSaveAsPrivate(false);
+  };
+  const fieldError = (name: string) => fieldErrors[name]?.[0];
   const readiness = [
     { label: "Display name", complete: Boolean(profile.displayName.trim()) },
+    { label: "Professional headline", complete: Boolean(profile.headline?.trim()) },
+    { label: "Primary role", complete: Boolean(profile.primaryRole?.trim()) },
     {
-      label: "Professional headline or primary role",
-      complete: Boolean(profile.headline?.trim() || profile.primaryRole?.trim()),
+      label: "Professional bio",
+      complete: Boolean(profile.bio && profile.bio.trim().length >= 40),
     },
-    { label: "Bio", complete: Boolean(profile.bio?.trim()) },
-    { label: "At least one skill", complete: profile.skills.some((skill) => skill.trim()) },
+    { label: "At least one skill", complete: commaList(skillsText).length > 0 },
+    { label: "Experience level", complete: Boolean(profile.experienceLevel) },
+    { label: "Country", complete: Boolean(profile.countryCode) },
+    { label: "Timezone", complete: Boolean(profile.timezone?.trim()) },
   ];
   const readyCount = readiness.filter((item) => item.complete).length;
   const profileReady = readyCount === readiness.length;
@@ -147,6 +170,8 @@ export function ProfileEditor({
     setEditing(false);
     setFeedback("");
     setFeedbackIsError(false);
+    setFieldErrors({});
+    setCanSaveAsPrivate(false);
   };
 
   const cancelPortfolioEdit = () => {
@@ -155,30 +180,45 @@ export function ProfileEditor({
     setShowPortfolioForm(false);
   };
 
-  const saveProfile = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const persistProfile = async (makePrivateIfIncomplete = false) => {
     setBusy(true);
     setFeedback("");
     setFeedbackIsError(false);
+    setFieldErrors({});
+    setCanSaveAsPrivate(false);
     try {
       const response = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...profile,
-          headline: profile.headline ?? "",
-          bio: profile.bio ?? "",
-          primaryRole: profile.primaryRole ?? "",
-          experienceLevel: profile.experienceLevel ?? "INTERMEDIATE",
-          countryCode: profile.countryCode ?? "",
+          displayName: profile.displayName,
+          headline: profile.headline,
+          bio: profile.bio,
+          primaryRole: profile.primaryRole,
           skills: commaList(skillsText),
+          experienceLevel: profile.experienceLevel,
+          yearsExperience: profile.yearsExperience,
           languages: commaList(languagesText),
+          availability: profile.availability,
+          timezone: profile.timezone,
+          countryCode: profile.countryCode,
+          preferredWorkCategories: profile.preferredWorkCategories,
+          githubUrl: profile.githubUrl,
+          websiteUrl: profile.websiteUrl,
+          linkedinUrl: profile.linkedinUrl,
+          ...(makePrivateIfIncomplete ? { makePrivateIfIncomplete: true } : {}),
         }),
       });
       const body = await responseBody(response);
       if (!response.ok || !body?.data) {
         setFeedbackIsError(true);
-        setFeedback(body?.error?.message ?? "Profile could not be saved. Please try again.");
+        setFieldErrors(body?.error?.details?.fieldErrors ?? {});
+        setCanSaveAsPrivate(Boolean(body?.error?.details?.canMakePrivate));
+        setFeedback(
+          response.status === 401
+            ? "Your session expired. Sign in again before saving; your changes are still in this form."
+            : (body?.error?.message ?? "Profile could not be saved. Please try again."),
+        );
         return;
       }
       const updated = body.data as Profile;
@@ -187,7 +227,7 @@ export function ProfileEditor({
       setSkillsText(updated.skills.join(", "));
       setLanguagesText(updated.languages.join(", "));
       setEditing(false);
-      setFeedback("Profile saved.");
+      setFeedback(updated.isPublic ? "Profile saved." : "Private profile saved.");
       router.refresh();
     } catch {
       setFeedbackIsError(true);
@@ -195,6 +235,11 @@ export function ProfileEditor({
     } finally {
       setBusy(false);
     }
+  };
+
+  const saveProfile = (event: React.FormEvent) => {
+    event.preventDefault();
+    void persistProfile();
   };
 
   const editPortfolio = (item: PortfolioItem) => {
@@ -288,8 +333,12 @@ export function ProfileEditor({
       const body = await responseBody(response);
       if (!response.ok || !body?.data) {
         setFeedbackIsError(true);
+        const missing = body?.error?.details?.missingFields;
         setFeedback(
-          body?.error?.message ?? "Profile visibility could not be changed. Please try again.",
+          missing?.length
+            ? `Complete your profile before publishing: ${missing.join(", ")}.`
+            : (body?.error?.message ??
+                "Profile visibility could not be changed. Please try again."),
         );
         return;
       }
@@ -351,36 +400,50 @@ export function ProfileEditor({
                 <input
                   value={profile.displayName}
                   onChange={(event) => set("displayName", event.target.value)}
+                  aria-invalid={Boolean(fieldError("displayName"))}
+                  aria-describedby={fieldError("displayName") ? "display-name-error" : undefined}
                   required
                 />
+                {fieldError("displayName") && (
+                  <small className="field-error" id="display-name-error">
+                    {fieldError("displayName")}
+                  </small>
+                )}
               </label>
               <label>
                 Primary role
                 <input
                   value={profile.primaryRole ?? ""}
-                  onChange={(event) => set("primaryRole", event.target.value)}
-                  required
+                  onChange={(event) => set("primaryRole", event.target.value || null)}
+                  aria-invalid={Boolean(fieldError("primaryRole"))}
                 />
+                {fieldError("primaryRole") && (
+                  <small className="field-error">{fieldError("primaryRole")}</small>
+                )}
               </label>
             </div>
             <label>
               Professional headline
               <input
                 value={profile.headline ?? ""}
-                onChange={(event) => set("headline", event.target.value)}
+                onChange={(event) => set("headline", event.target.value || null)}
                 maxLength={160}
-                required
+                aria-invalid={Boolean(fieldError("headline"))}
               />
+              {fieldError("headline") && (
+                <small className="field-error">{fieldError("headline")}</small>
+              )}
             </label>
             <label>
               Bio
               <textarea
                 value={profile.bio ?? ""}
-                onChange={(event) => set("bio", event.target.value)}
+                onChange={(event) => set("bio", event.target.value || null)}
                 rows={6}
                 maxLength={5000}
-                required
+                aria-invalid={Boolean(fieldError("bio"))}
               />
+              {fieldError("bio") && <small className="field-error">{fieldError("bio")}</small>}
             </label>
             <div className="profile-form-section-heading">
               <h3>Expertise</h3>
@@ -391,9 +454,17 @@ export function ProfileEditor({
                 Skills
                 <input
                   value={skillsText}
-                  onChange={(event) => setSkillsText(event.target.value)}
+                  onChange={(event) => {
+                    setSkillsText(event.target.value);
+                    setFieldErrors((current) => ({ ...current, skills: [] }));
+                    setCanSaveAsPrivate(false);
+                  }}
                   placeholder="React, research, product design"
+                  aria-invalid={Boolean(fieldError("skills"))}
                 />
+                {fieldError("skills") && (
+                  <small className="field-error">{fieldError("skills")}</small>
+                )}
               </label>
               <label>
                 Languages
@@ -432,13 +503,18 @@ export function ProfileEditor({
               <label>
                 Experience level
                 <select
-                  value={profile.experienceLevel ?? "INTERMEDIATE"}
-                  onChange={(event) => set("experienceLevel", event.target.value)}
+                  value={profile.experienceLevel ?? ""}
+                  onChange={(event) => set("experienceLevel", event.target.value || null)}
+                  aria-invalid={Boolean(fieldError("experienceLevel"))}
                 >
+                  <option value="">Not specified</option>
                   <option value="ENTRY">Entry</option>
                   <option value="INTERMEDIATE">Intermediate</option>
                   <option value="EXPERT">Expert</option>
                 </select>
+                {fieldError("experienceLevel") && (
+                  <small className="field-error">{fieldError("experienceLevel")}</small>
+                )}
               </label>
               <label>
                 Years of experience
@@ -450,7 +526,11 @@ export function ProfileEditor({
                   onChange={(event) =>
                     set("yearsExperience", event.target.value ? Number(event.target.value) : null)
                   }
+                  aria-invalid={Boolean(fieldError("yearsExperience"))}
                 />
+                {fieldError("yearsExperience") && (
+                  <small className="field-error">{fieldError("yearsExperience")}</small>
+                )}
               </label>
               <label>
                 Availability
@@ -471,8 +551,8 @@ export function ProfileEditor({
                 Country
                 <select
                   value={profile.countryCode ?? ""}
-                  onChange={(event) => set("countryCode", event.target.value)}
-                  required
+                  onChange={(event) => set("countryCode", event.target.value || null)}
+                  aria-invalid={Boolean(fieldError("countryCode"))}
                 >
                   <option value="">Select a country</option>
                   {profile.countryCode &&
@@ -485,21 +565,27 @@ export function ProfileEditor({
                     </option>
                   ))}
                 </select>
+                {fieldError("countryCode") && (
+                  <small className="field-error">{fieldError("countryCode")}</small>
+                )}
               </label>
               <label>
                 Timezone
                 <input
                   list="klaveroq-timezones"
-                  value={profile.timezone}
-                  onChange={(event) => set("timezone", event.target.value)}
-                  placeholder="Africa/Lagos"
-                  required
+                  value={profile.timezone ?? ""}
+                  onChange={(event) => set("timezone", event.target.value || null)}
+                  placeholder="Select your timezone"
+                  aria-invalid={Boolean(fieldError("timezone"))}
                 />
                 <datalist id="klaveroq-timezones">
                   {commonTimezones.map((timezone) => (
                     <option value={timezone} key={timezone} />
                   ))}
                 </datalist>
+                {fieldError("timezone") && (
+                  <small className="field-error">{fieldError("timezone")}</small>
+                )}
               </label>
             </div>
             <div className="profile-form-section-heading">
@@ -513,7 +599,11 @@ export function ProfileEditor({
                   type="url"
                   value={profile.githubUrl ?? ""}
                   onChange={(event) => set("githubUrl", event.target.value || null)}
+                  aria-invalid={Boolean(fieldError("githubUrl"))}
                 />
+                {fieldError("githubUrl") && (
+                  <small className="field-error">{fieldError("githubUrl")}</small>
+                )}
               </label>
               <label>
                 Website URL
@@ -521,7 +611,11 @@ export function ProfileEditor({
                   type="url"
                   value={profile.websiteUrl ?? ""}
                   onChange={(event) => set("websiteUrl", event.target.value || null)}
+                  aria-invalid={Boolean(fieldError("websiteUrl"))}
                 />
+                {fieldError("websiteUrl") && (
+                  <small className="field-error">{fieldError("websiteUrl")}</small>
+                )}
               </label>
               <label>
                 LinkedIn URL
@@ -529,46 +623,103 @@ export function ProfileEditor({
                   type="url"
                   value={profile.linkedinUrl ?? ""}
                   onChange={(event) => set("linkedinUrl", event.target.value || null)}
+                  aria-invalid={Boolean(fieldError("linkedinUrl"))}
                 />
+                {fieldError("linkedinUrl") && (
+                  <small className="field-error">{fieldError("linkedinUrl")}</small>
+                )}
               </label>
             </div>
-            <button className="primary-button" disabled={busy}>
-              <Save size={16} /> {busy ? "Saving..." : "Save profile"}
-            </button>
+            <div className="profile-save-actions">
+              <button className="primary-button" disabled={busy}>
+                <Save size={16} /> {busy ? "Saving..." : "Save profile"}
+              </button>
+              {canSaveAsPrivate && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={busy}
+                  onClick={() => void persistProfile(true)}
+                >
+                  <EyeOff size={16} /> Save and make private
+                </button>
+              )}
+            </div>
           </form>
         ) : (
           <div className="profile-view-body">
-            <section className="profile-bio">
-              <h3>About</h3>
-              <p>{profile.bio || "Add a bio to describe your professional work."}</p>
-            </section>
-            <section className="profile-skills">
-              <h3>Skills</h3>
-              <div>
-                {profile.skills.length ? (
-                  profile.skills.map((skill) => <span key={skill}>{skill}</span>)
-                ) : (
-                  <p>No skills added yet.</p>
-                )}
-              </div>
-            </section>
-            <div className="profile-links">
-              {profile.githubUrl && (
-                <a href={profile.githubUrl} target="_blank" rel="noreferrer">
-                  <Github size={15} /> GitHub
-                </a>
-              )}
-              {profile.websiteUrl && (
-                <a href={profile.websiteUrl} target="_blank" rel="noreferrer">
-                  <Globe2 size={15} /> Website
-                </a>
-              )}
-              {profile.linkedinUrl && (
-                <a href={profile.linkedinUrl} target="_blank" rel="noreferrer">
-                  <ExternalLink size={15} /> LinkedIn
-                </a>
-              )}
+            <div className="profile-details-grid">
+              <section className="profile-bio">
+                <h3>About</h3>
+                <p>{profile.bio || "Add a bio to describe your professional work."}</p>
+              </section>
+              <section className="profile-skills">
+                <h3>Skills</h3>
+                <div>
+                  {profile.skills.length ? (
+                    profile.skills.map((skill) => <span key={skill}>{skill}</span>)
+                  ) : (
+                    <p>No skills added yet.</p>
+                  )}
+                </div>
+              </section>
+              <section className="profile-fact-section">
+                <h3>Experience</h3>
+                <dl>
+                  <div>
+                    <dt>Level</dt>
+                    <dd>
+                      {profile.experienceLevel
+                        ? profile.experienceLevel.toLowerCase()
+                        : "Not specified"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Years</dt>
+                    <dd>{profile.yearsExperience ?? "Not specified"}</dd>
+                  </div>
+                </dl>
+              </section>
+              <section className="profile-fact-section">
+                <h3>Location</h3>
+                <dl>
+                  <div>
+                    <dt>Country</dt>
+                    <dd>
+                      {profile.countryCode
+                        ? (regionNames.of(profile.countryCode) ?? profile.countryCode)
+                        : "Not specified"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Timezone</dt>
+                    <dd>{profile.timezone || "Not specified"}</dd>
+                  </div>
+                </dl>
+              </section>
             </div>
+            {(profile.githubUrl || profile.websiteUrl || profile.linkedinUrl) && (
+              <section className="profile-link-section">
+                <h3>Professional links</h3>
+                <div className="profile-links">
+                  {profile.githubUrl && (
+                    <a href={profile.githubUrl} target="_blank" rel="noreferrer">
+                      <Github size={15} /> GitHub
+                    </a>
+                  )}
+                  {profile.websiteUrl && (
+                    <a href={profile.websiteUrl} target="_blank" rel="noreferrer">
+                      <Globe2 size={15} /> Website
+                    </a>
+                  )}
+                  {profile.linkedinUrl && (
+                    <a href={profile.linkedinUrl} target="_blank" rel="noreferrer">
+                      <ExternalLink size={15} /> LinkedIn
+                    </a>
+                  )}
+                </div>
+              </section>
+            )}
           </div>
         )}
       </section>
@@ -626,15 +777,15 @@ export function ProfileEditor({
           type="button"
           className={profile.isPublic ? "secondary-button" : "primary-button"}
           onClick={updateVisibility}
-          disabled={busy || (!profile.isPublic && !profileReady)}
+          disabled={busy}
           aria-describedby={!profile.isPublic && !profileReady ? "publish-guidance" : undefined}
         >
           {profile.isPublic ? <EyeOff size={16} /> : <Eye size={16} />}
           {profile.isPublic ? "Make profile private" : "Publish profile"}
         </button>
         {!profile.isPublic && !profileReady && (
-          <span className="sr-only" id="publish-guidance">
-            Complete all required profile details before publishing.
+          <span id="publish-guidance" className="publish-guidance">
+            Complete all required details before publishing.
           </span>
         )}
       </section>

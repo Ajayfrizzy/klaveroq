@@ -370,13 +370,17 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                 </div>
               ) : (
                 <label>
-                  Worker email
+                  Existing member email
                   <input
                     type="email"
                     value={worker}
                     onChange={(event) => setWorker(event.target.value)}
                     placeholder="worker@example.com"
                   />
+                  <small>
+                    The email must belong to an existing Klaveroq account. External invitations are
+                    not supported yet.
+                  </small>
                 </label>
               )}
               <div className="process-list">

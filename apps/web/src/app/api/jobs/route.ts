@@ -1,6 +1,14 @@
 import { and, desc, eq, gt, or } from "drizzle-orm";
 import { db } from "@/server/db";
-import { feeQuotes, jobs, milestones, operations, profiles, users } from "@/server/db/schema";
+import {
+  feeQuotes,
+  jobs,
+  milestones,
+  notifications,
+  operations,
+  profiles,
+  users,
+} from "@/server/db/schema";
 import { requireUser } from "@/server/auth/session";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
@@ -21,7 +29,8 @@ export const GET = withApi(async () => {
 
 export const POST = withApi(async (request: Request) => {
   assertSameOrigin(request);
-  const { user } = await requireUser();
+  const current = await requireUser();
+  const { user } = current;
   const input = createJobSchema.parse(await request.json());
   const suppliedKey = request.headers.get("idempotency-key");
   if (!suppliedKey || suppliedKey.length > 100)
@@ -72,10 +81,16 @@ export const POST = withApi(async (request: Request) => {
     : await db
         .select({ id: users.id, email: users.email })
         .from(users)
-        .where(eq(users.email, input.workerEmail!))
+        .where(and(eq(users.email, input.workerEmail!), eq(users.status, "ACTIVE")))
         .limit(1);
   if (input.workerUserId && !worker)
     throw new ApiError(404, "TALENT_NOT_FOUND", "The selected professional is unavailable.");
+  if (!worker)
+    throw new ApiError(
+      404,
+      "ACCOUNT_NOT_FOUND",
+      "No Klaveroq account uses that email. External email invitations are not supported yet.",
+    );
   if (worker?.id === user.id)
     throw new ApiError(
       400,
@@ -121,6 +136,13 @@ export const POST = withApi(async (request: Request) => {
       idempotencyKey,
       status: "CONFIRMED",
       metadata: { reference },
+    });
+    await tx.insert(notifications).values({
+      userId: worker.id,
+      type: "JOB_INVITATION",
+      title: "New job invitation",
+      body: `${current.profile?.displayName ?? user.email} invited you to review ${input.title}.`,
+      href: `/jobs/${created.id}`,
     });
     return created;
   });

@@ -184,7 +184,14 @@ export default async function JobsPage({
         <section className="panel workspace-market-list">
           {listings.length ? (
             listings.map((listing) => (
-              <Link href={`/discover/${listing.id}`} key={listing.id}>
+              <Link
+                href={
+                  listing.status === "DRAFT"
+                    ? `/jobs/new/public?draft=${listing.id}`
+                    : `/discover/${listing.id}`
+                }
+                key={listing.id}
+              >
                 <div>
                   <strong>{listing.title}</strong>
                   <small>

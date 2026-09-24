@@ -28,6 +28,18 @@ type ListingMilestone = {
 
 type Stage = 1 | 2 | 3;
 
+export type ListingDraft = {
+  id: string;
+  title: string;
+  description: string;
+  category: (typeof JOB_CATEGORIES)[number];
+  skills: string[];
+  budgetMin: string;
+  budgetMax: string;
+  proposalDeadline: string;
+  milestones: Array<Omit<ListingMilestone, "id">>;
+};
+
 const blankMilestone = (deliveryDays = 7): ListingMilestone => ({
   id: crypto.randomUUID(),
   title: "",
@@ -37,6 +49,12 @@ const blankMilestone = (deliveryDays = 7): ListingMilestone => ({
   deliveryDays,
 });
 const units = (value: string) => BigInt(Math.round(Number(value || 0) * 100_000_000)).toString();
+const displayUnits = (value: string) => {
+  const amount = BigInt(value);
+  const whole = amount / 100_000_000n;
+  const fraction = (amount % 100_000_000n).toString().padStart(8, "0").replace(/0+$/, "");
+  return `${whole}${fraction ? `.${fraction}` : ""}`;
+};
 const minimumDeadline = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 
 const stages = [
@@ -45,24 +63,37 @@ const stages = [
   { number: 3 as const, label: "Set terms" },
 ];
 
-export function ListingWizard() {
+export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft }) {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>(1);
   const [reviewing, setReviewing] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<(typeof JOB_CATEGORIES)[number]>("DESIGN");
-  const [skills, setSkills] = useState("");
-  const [budgetMin, setBudgetMin] = useState("");
-  const [budgetMax, setBudgetMax] = useState("");
-  const [proposalDeadline, setProposalDeadline] = useState("");
-  const [milestones, setMilestones] = useState<ListingMilestone[]>([blankMilestone()]);
+  const [title, setTitle] = useState(initialDraft?.title ?? "");
+  const [description, setDescription] = useState(initialDraft?.description ?? "");
+  const [category, setCategory] = useState<(typeof JOB_CATEGORIES)[number]>(
+    initialDraft?.category ?? "DESIGN",
+  );
+  const [skills, setSkills] = useState(initialDraft?.skills.join(", ") ?? "");
+  const [budgetMin, setBudgetMin] = useState(
+    initialDraft ? displayUnits(initialDraft.budgetMin) : "",
+  );
+  const [budgetMax, setBudgetMax] = useState(
+    initialDraft ? displayUnits(initialDraft.budgetMax) : "",
+  );
+  const [proposalDeadline, setProposalDeadline] = useState(
+    initialDraft?.proposalDeadline.slice(0, 10) ?? "",
+  );
+  const [milestones, setMilestones] = useState<ListingMilestone[]>(
+    initialDraft?.milestones.map((item) => ({ ...item, id: crypto.randomUUID() })) ?? [
+      blankMilestone(),
+    ],
+  );
   const [busy, setBusy] = useState(false);
   const [assistantBusy, setAssistantBusy] = useState(false);
   const [error, setError] = useState("");
   const [assistantNote, setAssistantNote] = useState("");
-  const [draftId, setDraftId] = useState<string | null>(null);
-  const [draftNeedsUpdate, setDraftNeedsUpdate] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(initialDraft?.id ?? null);
+  const [draftNeedsUpdate, setDraftNeedsUpdate] = useState(Boolean(initialDraft));
+  const [saved, setSaved] = useState(Boolean(initialDraft));
   const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   const skillItems = skills
@@ -166,6 +197,57 @@ export function ListingWizard() {
     setReviewing(true);
   };
 
+  const payload = () => ({
+    title,
+    description,
+    category,
+    skills: skillItems,
+    budgetMin: units(budgetMin),
+    budgetMax: units(budgetMax),
+    proposalDeadline: new Date(`${proposalDeadline}T23:59:59`).toISOString(),
+    milestones: milestones.map(
+      ({ title, deliverable, acceptanceCriteria, evidenceRequirements, deliveryDays }) => ({
+        title,
+        deliverable,
+        acceptanceCriteria,
+        evidenceRequirements,
+        deliveryDays,
+      }),
+    ),
+  });
+
+  const saveDraft = async () => {
+    const message = validate("all");
+    if (message) return setError(message);
+    setBusy(true);
+    setError("");
+    setSaved(false);
+    try {
+      const response = await fetch(
+        draftId ? `/api/marketplace/listings/${draftId}` : "/api/marketplace/listings",
+        {
+          method: draftId ? "PATCH" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(draftId ? {} : { "Idempotency-Key": idempotencyKey }),
+          },
+          body: JSON.stringify(payload()),
+        },
+      );
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error?.message ?? "The draft could not be saved.");
+      setDraftId(body.data.id);
+      setDraftNeedsUpdate(false);
+      setSaved(true);
+      router.replace(`/jobs/new/public?draft=${body.data.id}`);
+      router.refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The draft could not be saved.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const editDraft = () => {
     setError("");
     if (draftId) setDraftNeedsUpdate(true);
@@ -178,29 +260,12 @@ export function ListingWizard() {
     setError("");
     try {
       let listingId = draftId;
-      const payload = {
-        title,
-        description,
-        category,
-        skills: skillItems,
-        budgetMin: units(budgetMin),
-        budgetMax: units(budgetMax),
-        proposalDeadline: new Date(`${proposalDeadline}T23:59:59`).toISOString(),
-        milestones: milestones.map(
-          ({ title, deliverable, acceptanceCriteria, evidenceRequirements, deliveryDays }) => ({
-            title,
-            deliverable,
-            acceptanceCriteria,
-            evidenceRequirements,
-            deliveryDays,
-          }),
-        ),
-      };
+      const listingPayload = payload();
       if (!listingId) {
         const response = await fetch("/api/marketplace/listings", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(listingPayload),
         });
         const body = await response.json();
         if (!response.ok) throw new Error(body.error?.message ?? "The draft could not be created.");
@@ -210,7 +275,7 @@ export function ListingWizard() {
         const response = await fetch(`/api/marketplace/listings/${listingId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(listingPayload),
         });
         const body = await response.json();
         if (!response.ok) throw new Error(body.error?.message ?? "The draft could not be updated.");
@@ -604,7 +669,11 @@ export function ListingWizard() {
               {error}
             </p>
           )}
+          {saved && !error && <p className="form-feedback success">Draft saved.</p>}
           <div className="wizard-actions">
+            <button type="button" className="secondary-button" onClick={saveDraft} disabled={busy}>
+              {busy ? "Saving..." : "Save draft"}
+            </button>
             {stage === 1 ? (
               <Link className="secondary-button" href="/jobs/new">
                 Cancel

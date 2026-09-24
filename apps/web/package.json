@@ -7,15 +7,18 @@
     "build": "next build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude 'tests/e2e/**'",
+    "test:e2e": "node ../../scripts/reset-test-db.mjs && node ../../scripts/run-playwright.mjs",
+    "test:e2e:ui": "node ../../scripts/reset-test-db.mjs && node ../../scripts/run-playwright.mjs --ui",
+    "test:integration": "node ../../scripts/reset-test-db.mjs && node ../../scripts/run-playwright.mjs tests/e2e/marketplace.integration.spec.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/server/db/seed.ts"
   },
   "dependencies": {
     "@ckb-ccc/core": "^1.18.0",
-    "@node-rs/argon2": "^2.0.2",
     "@klaveroq/domain": "*",
+    "@node-rs/argon2": "^2.0.2",
     "drizzle-orm": "^0.45.2",
     "jose": "^6.2.4",
     "lucide-react": "^0.468.0",
@@ -26,6 +29,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.3",
     "@types/react-dom": "^19.0.2",

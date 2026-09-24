@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import {
   jobListings,
@@ -19,6 +19,15 @@ import {
 import { proposalInputSchema } from "@/features/marketplace/server/schemas";
 import { audit } from "@/server/audit";
 import { getProposalEvaluations } from "@/features/marketplace/server/queries";
+
+function isDuplicateProposal(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const record = error as { code?: string; constraint_name?: string; cause?: unknown };
+  return (
+    (record.code === "23505" && record.constraint_name === "proposal_listing_worker_unique") ||
+    isDuplicateProposal(record.cause)
+  );
+}
 
 export const GET = withApi(
   async (_request: Request, context: RouteContext<"/api/marketplace/listings/[id]/proposals">) => {
@@ -63,41 +72,62 @@ export const POST = withApi(
       .limit(1);
     if (prior?.metadata && typeof prior.metadata === "object" && "proposalId" in prior.metadata)
       return Response.json({ data: prior.metadata, idempotentReplay: true });
-    const proposal = await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(proposals)
-        .values({
-          listingId: id,
-          workerUserId: user.id,
-          coverLetter: input.coverLetter,
-          totalBid: BigInt(input.totalBid),
-          estimatedDurationDays: input.estimatedDurationDays,
-        })
-        .returning();
-      await tx.insert(proposalMilestones).values(
-        input.milestones.map((item, index) => ({
-          ...item,
-          amount: BigInt(item.amount),
-          proposalId: created.id,
-          sequence: index + 1,
-        })),
+    const [existing] = await db
+      .select({ id: proposals.id })
+      .from(proposals)
+      .where(and(eq(proposals.listingId, id), eq(proposals.workerUserId, user.id)))
+      .limit(1);
+    if (existing)
+      throw new ApiError(
+        409,
+        "PROPOSAL_ALREADY_EXISTS",
+        "You already submitted a proposal for this listing. Edit or withdraw the existing proposal.",
       );
-      await tx.insert(operations).values({
-        initiatedBy: user.id,
-        type: "SUBMIT_PROPOSAL",
-        idempotencyKey: operationKey,
-        status: "CONFIRMED",
-        metadata: { proposalId: created.id, listingId: id },
+    const proposal = await db
+      .transaction(async (tx) => {
+        const [created] = await tx
+          .insert(proposals)
+          .values({
+            listingId: id,
+            workerUserId: user.id,
+            coverLetter: input.coverLetter,
+            totalBid: BigInt(input.totalBid),
+            estimatedDurationDays: input.estimatedDurationDays,
+          })
+          .returning();
+        await tx.insert(proposalMilestones).values(
+          input.milestones.map((item, index) => ({
+            ...item,
+            amount: BigInt(item.amount),
+            proposalId: created.id,
+            sequence: index + 1,
+          })),
+        );
+        await tx.insert(operations).values({
+          initiatedBy: user.id,
+          type: "SUBMIT_PROPOSAL",
+          idempotencyKey: operationKey,
+          status: "CONFIRMED",
+          metadata: { proposalId: created.id, listingId: id },
+        });
+        await tx.insert(notifications).values({
+          userId: listing.clientUserId,
+          type: "PROPOSAL_RECEIVED",
+          title: "New proposal received",
+          body: `A worker submitted a proposal for ${listing.title}.`,
+          href: `/discover/${id}`,
+        });
+        return created;
+      })
+      .catch((error: unknown) => {
+        if (isDuplicateProposal(error))
+          throw new ApiError(
+            409,
+            "PROPOSAL_ALREADY_EXISTS",
+            "You already submitted a proposal for this listing. Edit or withdraw the existing proposal.",
+          );
+        throw error;
       });
-      await tx.insert(notifications).values({
-        userId: listing.clientUserId,
-        type: "PROPOSAL_RECEIVED",
-        title: "New proposal received",
-        body: `A worker submitted a proposal for ${listing.title}.`,
-        href: `/discover/${id}`,
-      });
-      return created;
-    });
     await audit(request, {
       actorUserId: user.id,
       action: "proposal.submitted",

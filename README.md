@@ -17,13 +17,16 @@ Trusted work marketplace for talent discovery, verifiable milestones, and protec
 ```bash
 npm install
 cp .env.example apps/web/.env
-docker compose up -d
+docker compose up -d postgres
 npm run db:migrate
-KLAVEROQ_ALLOW_LOCAL_SEED=1 npm run db:seed
 npm run dev
 ```
 
 The web application runs at `http://localhost:3000` by default.
+
+Register fresh client and worker accounts at `/register`. The normal setup does not seed the six
+demonstration accounts. Run the guarded seed command only when demonstration data is explicitly
+needed.
 
 ## Useful commands
 
@@ -33,6 +36,8 @@ npm run build        # Create a production build
 npm run lint         # Run ESLint
 npm run typecheck    # Check TypeScript
 npm test             # Run the test suite
+npm run test:integration --workspace=@klaveroq/web  # Real API/PostgreSQL transactions
+npm run test:e2e --workspace=@klaveroq/web          # Chromium desktop and mobile journeys
 npm run db:generate  # Generate a Drizzle migration
 npm run db:migrate   # Apply database migrations
 KLAVEROQ_ALLOW_LOCAL_SEED=1 npm run db:seed  # Create local-only demo data
@@ -75,6 +80,23 @@ or remote databases.
 
 The local PostgreSQL database and volume now use Klaveroq identifiers. Developers with the old
 development volume can reset it with `docker compose down -v` before running `docker compose up -d`.
+
+### Isolated browser and integration tests
+
+The test harness never uses `apps/web/.env`'s normal database. Start its temporary PostgreSQL
+service, then run either suite:
+
+```bash
+docker compose up -d postgres-test
+npm run test:integration --workspace=@klaveroq/web
+npm run test:e2e --workspace=@klaveroq/web
+```
+
+The service is `klaveroq_test` on `127.0.0.1:55434` and stores data in container `tmpfs`. Before a
+suite, `scripts/reset-test-db.mjs` refuses non-loopback or non-test database names, resets only that
+database, and reapplies migrations. Tests create uniquely named accounts and do not run the demo
+seeder. Playwright starts the application at `http://127.0.0.1:3199` with separate Next.js build
+artifacts, so it can coexist with a development server.
 
 ## Demo accounts
 

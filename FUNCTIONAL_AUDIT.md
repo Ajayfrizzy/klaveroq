@@ -1,6 +1,7 @@
 # Klaveroq Functional Audit
 
-Audit date: 2026-09-23  
+Audit date: 2026-09-24
+
 Milestone: standalone marketplace, before PactAgent integration
 
 ## Status legend
@@ -20,8 +21,9 @@ Milestone: standalone marketplace, before PactAgent integration
 - [x] The signed-in Jobs search and status filter now submit URL parameters and constrain an authorized database query.
 - [x] PactAgent/Mainnet operational copy was removed from the shell, dashboard, direct-job flow, job detail, talent invitation, discovery copy, and metadata.
 - [x] Inert notification preferences are explicitly disabled. Placeholder support-guide links are now non-interactive labels.
-- [ ] The core agreement execution UI is incomplete. Proof submission, milestone review, cancellation, disputes, and worker acceptance have APIs but no customer controls on the agreement page.
-- [ ] Direct invitations to an email that is not already linked to a user cannot be accepted: no invitation email/claim workflow links `workerEmail` to `workerUserId`.
+- [x] Public listing draft persistence, reload/edit/publish, filtered discovery, proposals, participant-only messaging, shortlist, concurrent award, notifications, and persistent agreement-draft creation passed a real multi-account Playwright run against disposable PostgreSQL.
+- [x] Agreement detail now displays both participants, terms, milestones, proof/review controls for valid in-progress states, cancellation and dispute controls, and explicit pre-funding/PactAgent gates.
+- [x] Direct invitations are restricted to existing Klaveroq accounts and create a linked recipient notification. Unknown-email invitations return `ACCOUNT_NOT_FOUND` and create no invitation.
 - [ ] Payment funding, escrow balances, releases, refunds, settlement, and blockchain reconciliation are not implemented. Database statuses and timestamps are not proof of an on-chain operation.
 
 ## Customer-facing feature audit
@@ -46,15 +48,15 @@ Milestone: standalone marketplace, before PactAgent integration
 | Portfolio create/edit/delete           | Implemented and tested for create/edit | Owner form -> idempotent create or owner-checked patch/delete -> `portfolio_items` -> local UI update                                        | Media upload is absent although `mediaKey` exists. Delete was code-traced, not exercised                                                                             | `profile-editor.tsx`, `api/profile/portfolio/**`                                                                               |
 | Jobs workspace tabs                    | Implemented, code-traced               | Authenticated user -> participant agreements, owned listings, or owned proposals -> linked rows                                              | Listings/proposals tabs have no local search/filter; add if volume requires it                                                                                       | `app/jobs/page.tsx`                                                                                                            |
 | Jobs agreement search/status filter    | Implemented and tested                 | GET form -> Zod query parser -> participant condition plus title/reference/email/name/status SQL -> filtered rows/empty state                | Add database-level tests for counterparty-name and authorization isolation                                                                                           | `app/jobs/page.tsx`, `features/jobs/server/filters.ts`                                                                         |
-| Public job creation                    | Implemented, code-traced               | Listing wizard -> create/update draft -> publish checks -> listing and milestone rows -> discovery                                           | Full browser workflow not run. AI builder uses mock output by default                                                                                                | `app/jobs/new/public/page.tsx`, `listing-wizard.tsx`, `api/marketplace/listings/**`                                            |
-| Direct job invitation                  | Partial                                | Wizard -> fee quote -> participant/target validation -> job, milestones, and operation transaction -> Jobs redirect                          | Creates an invitation record only. No funding occurs. Unknown-email invite cannot be claimed or accepted. Add invitation token/email/linking workflow                | `app/jobs/new/direct/page.tsx`, `job-wizard.tsx`, `api/fees/quote/route.ts`, `api/jobs/route.ts`                               |
+| Public job creation                    | Implemented and browser-tested         | Listing wizard -> persistent draft URL -> reload/edit -> publish checks -> listing and milestone rows -> discovery                           | AI builder uses mock output by default                                                                                                                               | `app/jobs/new/public/page.tsx`, `listing-wizard.tsx`, `api/marketplace/listings/**`                                            |
+| Direct job invitation                  | Implemented for existing users         | Wizard -> fee quote -> existing-account validation -> job, milestones, operation and recipient notification -> Jobs                          | External email delivery/claiming remains a separate future workflow. No funding occurs                                                                               | `app/jobs/new/direct/page.tsx`, `job-wizard.tsx`, `api/fees/quote/route.ts`, `api/jobs/route.ts`                               |
 | Awarded proposal draft confirmation    | Partial                                | Client button -> owner/state check -> `DRAFT` to `INVITED`, operation and audit                                                              | No worker-facing action appears on job detail; no notification is created by draft confirmation                                                                      | `confirm-draft-button.tsx`, `api/jobs/[id]/confirm/route.ts`                                                                   |
-| Agreement detail                       | Partial                                | Participant-only server query -> job/milestones/review -> status page                                                                        | Page exposes almost no lifecycle controls. Funding timestamp is now labeled unreconciled                                                                             | `app/jobs/[id]/page.tsx`, `features/jobs/server/access.ts`                                                                     |
+| Agreement detail                       | Implemented pre-funding UI             | Participant-only query -> participants/terms/milestones/proofs/dispute/cancellation state -> role-aware controls                             | Funded acceptance and settlement remain disabled pending authoritative PactAgent state                                                                               | `app/jobs/[id]/page.tsx`, `features/jobs/components/agreement-actions.tsx`                                                     |
 | Worker acceptance                      | API-only and PactAgent-blocked         | Worker/state/identity/wallet checks -> payout snapshot -> job/milestone state updates                                                        | Requires authoritative funded state from PactAgent and a customer UI; current error text still assumes funded invitation                                             | `api/jobs/[id]/accept/route.ts`                                                                                                |
-| Proof submission/files                 | API-only / partial                     | Participant/state checks -> proof records and authorized file storage/download                                                               | No customer UI on agreement detail. File malware scanning is not integrated; do not imply `scanStatus` is an external scan                                           | `api/milestones/[id]/proofs/route.ts`, `api/proofs/[id]/files/route.ts`, `api/files/[id]/route.ts`                             |
-| Milestone review/revision              | API-only / partial                     | Client/state checks -> review/revision rows -> milestone transition                                                                          | Approval creates a pending release operation only. No settlement occurs and no customer UI exists                                                                    | `api/milestones/[id]/review/route.ts`                                                                                          |
-| Cancellation                           | API-only / partial                     | Participant/state checks -> request/accept/decline transitions                                                                               | Refund outcome is pending data only and requires PactAgent; no customer UI                                                                                           | `api/jobs/[id]/cancellation/route.ts`                                                                                          |
-| Disputes/evidence                      | API-only / partial                     | Participant creates/reads dispute, submits evidence; admin decision is role-gated                                                            | Customer agreement UI and complete admin dispute UI are absent. Settlement operation is pending only                                                                 | `api/jobs/[id]/disputes/route.ts`, `api/disputes/[id]/evidence/route.ts`, `api/admin/disputes/[id]/decision/route.ts`          |
+| Proof submission/files                 | UI implemented for eligible states     | Worker/state checks -> agreement form -> proof records and authorized file storage/download                                                  | File upload UI and malware scanning remain absent; links and notes are supported                                                                                     | `agreement-actions.tsx`, `api/milestones/[id]/proofs/route.ts`, `api/proofs/[id]/files/route.ts`                               |
+| Milestone review/revision              | UI implemented for eligible states     | Client sees latest proof -> approve/revision controls -> review rows and milestone transition                                                | Approval creates a pending release operation only; no settlement occurs                                                                                              | `agreement-actions.tsx`, `api/milestones/[id]/review/route.ts`                                                                 |
+| Cancellation                           | UI implemented for permitted states    | Participant/state checks -> request/counterparty accept/decline controls -> persisted transition                                             | Any refund outcome remains pending data and requires PactAgent                                                                                                       | `agreement-actions.tsx`, `api/jobs/[id]/cancellation/route.ts`                                                                 |
+| Disputes/evidence                      | Partial UI                             | Participant opens a milestone/job dispute from agreement detail; evidence API and admin decision remain role-gated                           | Dispute evidence upload and complete admin decision UI remain standalone work; settlement is PactAgent-blocked                                                       | `agreement-actions.tsx`, `api/jobs/[id]/disputes/route.ts`, `api/disputes/[id]/evidence/route.ts`                              |
 | Reviews/reputation                     | Implemented, code-traced               | Completed-job participant -> one review per reviewer -> stored review -> derived public metrics                                              | Seeded reviews are demonstrations, not external verification. Browser-test both participants and duplicate prevention                                                | `engagement-review.tsx`, `api/jobs/[id]/reviews/route.ts`, `reputation/server/queries.ts`                                      |
 | Payments page/history                  | Partial and honest                     | Participant-scoped confirmed operations -> historical totals/table                                                                           | Current secured balance is unavailable. There is no reconciled chain balance, funding action, release confirmation, refund confirmation, or settlement UI            | `app/payments/page.tsx`, `payments/server/queries.ts`, `dashboard/server/metrics.ts`                                           |
 | Wallet & Security page                 | Implemented and tested                 | Session -> user-scoped wallets/latest identity/active sessions/active holds -> truthful records and unavailable states                       | Connect/change wallet UI intentionally disabled. Session revocation, MFA, and login alerts do not exist                                                              | `app/wallet/page.tsx`, `server/auth/session.ts`                                                                                |
@@ -76,7 +78,7 @@ Milestone: standalone marketplace, before PactAgent integration
 - [x] Notification “Mark all read” is wired; notification settings is explicitly disabled.
 - [x] Wallet connect is explicitly disabled and explains the integration dependency; fabricated copy/explorer/change actions were removed.
 - [x] Support guide topics no longer masquerade as four separate articles.
-- [ ] Agreement detail needs worker accept, proof submit, client review/revision, cancellation, and dispute controls before the related APIs form a usable workflow.
+- [x] Agreement detail exposes proof submit, client review/revision, cancellation, and dispute controls only in permitted states; worker acceptance remains visibly PactAgent-blocked.
 - [ ] Password request/reset and identity start/return need customer pages.
 
 ## API endpoint inventory
@@ -141,10 +143,13 @@ The seed's `VERIFIED` sandbox identities, synthetic wallet, funded timestamps, r
 - `npm run lint`: passed.
 - `npm test`: 15 files, 76 tests passed, including 4 new Jobs-filter regression tests.
 - `npm run build`: passed; all application and API routes compiled successfully.
-- Disposable PostgreSQL 17 migrations: passed.
+- Disposable PostgreSQL 17 migrations on `127.0.0.1:55434/klaveroq_test`: passed after a guarded schema reset.
 - Isolated HTTP workflow suite against the running Next.js app: passed login, profile persistence, portfolio create/edit persistence, public profile unpublish/republish, Jobs text/status filtering, support ticket create/list retrieval, wallet/security empty-state assertions, and authorized stored-wallet rendering.
+- Playwright Chromium desktop marketplace journey: passed with fresh client, worker, and competing-worker accounts activated only in the disposable test database. It covered profile publication, portfolio creation, draft save/reload/edit/publish, unauthorized draft edit, filtered discovery, proposal submission/edit/refresh persistence, concurrent proposals, participant messaging, shortlist, award, losing-worker notification, and the agreement draft in both Jobs workspaces.
+- Playwright API/database integration suite: passed listing publication, cross-account edit denial, concurrent and duplicate proposal handling, participant-only messages, atomic award, second-award rejection, losing-worker notification, and the same `DRAFT` agreement for both participants.
+- Playwright Pixel 7 viewport check: passed public marketplace rendering with no horizontal document overflow.
 
-Browser automation packages were not installed, so no workflow is labeled browser-tested. The HTTP checks exercised rendered server pages and real API/database persistence but did not validate focus behavior, responsive layout, or browser-native form interaction.
+No Supabase endpoint, seed command, PactAgent integration, fabricated payment confirmation, deployment, commit, or push was used.
 
 ### Exact remaining manual browser cases
 
@@ -160,14 +165,14 @@ Browser automation packages were not installed, so no workflow is labeled browse
 
 ### Complete before PactAgent
 
-1. **P0: Complete the agreement UI** for worker acceptance gating, proof submission, proof files, client review/revision, cancellation, and disputes. Reuse existing participant/state APIs and add end-to-end tests.
-2. **P0: Build invitation claiming** with signed, expiring tokens, email delivery, authentication handoff, and atomic `workerUserId` linking. Until then, restrict direct invitations to existing public talent.
+1. **P0: Add authoritative PactAgent state before enabling worker acceptance or any funding-dependent action.**
+2. **P0: Design external invitation claiming separately** with an expiring, single-use token, verified recipient ownership, email delivery, authentication handoff, and atomic account linking.
 3. **P0: Remove sandbox trust from non-local environments**. Gate sandbox identity completion, sandbox funding, auto-review, and local seed behavior with tested deployment assertions.
 4. **P1: Finish account recovery and identity UI** with real mail/provider adapters, callback handling, and clear provider labels.
 5. **P1: Complete support hardening**: attachment scanning/quarantine, reply/close browser tests, guide content, and clearer upload failure recovery.
 6. **P1: Make audit coverage systematic** for every state-changing route, including wallet, proof review, disputes, notification reads, and support replies.
 7. **P2: Add notification preferences and individual read semantics**, or continue to keep settings disabled.
-8. **P2: Add Playwright with disposable database setup** and cover the seven manual cases above in CI.
+8. **P2: Add the Playwright and disposable database commands to CI**; the local harness and core marketplace scenarios now exist.
 
 ### Must wait for PactAgent integration
 
@@ -178,6 +183,19 @@ Browser automation packages were not installed, so no workflow is labeled browse
 5. Production claims such as “protected payment,” “escrow,” “funds secured,” “settled,” or “refunded.” These must be derived from reconciled PactAgent results, not local rows or seeded timestamps.
 
 ## Files changed in this repair pass
+
+### Standalone marketplace completion (2026-09-24)
+
+- Public listing draft UI/page and My Listings draft navigation.
+- Existing-user direct invitation validation and recipient notifications.
+- Duplicate-proposal conflict handling for both normal and concurrent submissions.
+- Agreement participant, milestone, proof/review, cancellation, dispute, and funding-gate UI.
+- Disposable PostgreSQL service, guarded reset, Playwright configuration, desktop/mobile browser tests, and API/database integration tests.
+- Local testing documentation and this audit.
+
+No database schema migration was required. Google OAuth routes, credentials, and callback configuration were not changed.
+
+### Prior repair pass (2026-09-23)
 
 - `apps/web/src/app/wallet/page.tsx`
 - `apps/web/src/app/jobs/page.tsx`

@@ -4350,6 +4350,67 @@ button {
     animation: none;
   }
 }
+
+.agreement-actions {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+.agreement-actions > form,
+.agreement-actions > section {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--soft-line);
+  padding-top: 16px;
+}
+.agreement-actions h3,
+.agreement-actions p {
+  margin: 0;
+}
+.agreement-actions h3 {
+  font-size: 13px;
+}
+.agreement-actions label {
+  display: grid;
+  gap: 6px;
+  color: #344054;
+  font-size: 11px;
+  font-weight: 700;
+}
+.agreement-actions textarea,
+.agreement-actions select {
+  width: 100%;
+}
+.agreement-status-note,
+.agreement-blocked-action {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.agreement-blocked-action {
+  display: flex;
+  gap: 8px;
+  color: #92400e;
+}
+.agreement-blocked-action svg {
+  flex: 0 0 auto;
+}
+.agreement-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.agreement-proof {
+  display: grid;
+  gap: 5px;
+  background: #f8fafc;
+  padding: 10px;
+}
+.agreement-proof a {
+  overflow-wrap: anywhere;
+  color: var(--brand);
+  font-size: 11px;
+}
 .new-case button:disabled,
 .reply-composer button:disabled {
   cursor: wait;

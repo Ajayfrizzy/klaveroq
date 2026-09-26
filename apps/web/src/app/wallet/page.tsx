@@ -2,30 +2,45 @@ import {
   AlertCircle,
   Check,
   Clock3,
-  KeyRound,
   LockKeyhole,
   ShieldCheck,
   Smartphone,
   WalletCards,
 } from "lucide-react";
+import Link from "next/link";
 import { and, desc, eq, gt, isNull, or } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { getCurrentUser } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { identityVerifications, securityHolds, sessions, wallets } from "@/server/db/schema";
+import {
+  identityVerifications,
+  mfaMethods,
+  securityHolds,
+  sessions,
+  wallets,
+} from "@/server/db/schema";
+import { SessionList } from "@/features/security/components/session-list";
+import { MfaPanel } from "@/features/security/components/mfa-panel";
+import { WalletActions } from "@/features/wallet/components/wallet-actions";
+import { WalletVerificationForm } from "@/features/wallet/components/wallet-verification-form";
 
 export const dynamic = "force-dynamic";
 
 const label = (value: string) => value.toLowerCase().replaceAll("_", " ");
 
-export default async function WalletPage() {
+export default async function WalletPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ walletStatus?: string }>;
+}) {
   const current = await getCurrentUser();
   if (!current) redirect("/login?returnTo=%2Fwallet");
+  const { walletStatus } = await searchParams;
 
   const now = new Date();
-  const [walletRecords, identityRows, sessionRecords, activeHolds] = await Promise.all([
+  const [walletRecords, identityRows, sessionRecords, activeHolds, mfaRows] = await Promise.all([
     db
       .select()
       .from(wallets)
@@ -65,8 +80,17 @@ export default async function WalletPage() {
         ),
       )
       .orderBy(desc(securityHolds.createdAt)),
+    db
+      .select({
+        verifiedAt: mfaMethods.verifiedAt,
+        recoveryCodeHashes: mfaMethods.recoveryCodeHashes,
+      })
+      .from(mfaMethods)
+      .where(and(eq(mfaMethods.userId, current.user.id), isNull(mfaMethods.disabledAt)))
+      .limit(1),
   ]);
   const identity = identityRows[0];
+  const mfa = mfaRows[0];
   const verifiedWallets = walletRecords.filter((wallet) => wallet.status === "VERIFIED");
 
   return (
@@ -77,17 +101,26 @@ export default async function WalletPage() {
         description="Review wallet, identity, and active-session records stored for your account."
         icon={WalletCards}
         action={
-          <button
-            className="primary-button"
-            disabled
-            title="Wallet connection is unavailable until the payment integration is implemented"
-          >
-            <WalletCards size={16} /> Wallet connection unavailable
-          </button>
+          <Link className="secondary-button" href="/identity">
+            <ShieldCheck size={16} /> Manage identity
+          </Link>
         }
       />
       <div className="security-layout">
         <div>
+          <WalletVerificationForm
+            initialMessage={
+              walletStatus === "hold"
+                ? "Ownership verified. The payout change is in a 24-hour security hold."
+                : walletStatus === "verified"
+                  ? "Wallet ownership verified."
+                  : walletStatus === "removed"
+                    ? "Wallet removed from active use."
+                    : walletStatus === "updated"
+                      ? "Default wallet selection updated."
+                      : ""
+            }
+          />
           {walletRecords.length ? (
             walletRecords.map((wallet) => (
               <section className="panel wallet-card" key={wallet.id}>
@@ -127,9 +160,9 @@ export default async function WalletPage() {
                   </div>
                 </div>
                 <p className="form-feedback">
-                  Wallet changes are unavailable in this interface. No blockchain balance or payment
-                  capability is asserted by this record.
+                  This ownership record does not assert a blockchain balance or payment capability.
                 </p>
+                <WalletActions wallet={wallet} />
               </section>
             ))
           ) : (
@@ -140,32 +173,17 @@ export default async function WalletPage() {
             </section>
           )}
 
-          <section className="panel security-history">
-            <div className="section-heading">
-              <div>
-                <h2>Active sessions</h2>
-                <p>Current, non-revoked sessions stored for your account</p>
-              </div>
-            </div>
-            {sessionRecords.length ? (
-              sessionRecords.map((session) => (
-                <div key={session.id}>
-                  <span>
-                    <KeyRound size={17} />
-                  </span>
-                  <p>
-                    <strong>{session.userAgent || "Unknown client"}</strong>
-                    <small>
-                      Last recorded {session.lastSeenAt.toLocaleString()} · Expires{" "}
-                      {session.expiresAt.toLocaleString()}
-                    </small>
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className="support-empty">No active session records are available.</p>
-            )}
-          </section>
+          <SessionList
+            initialSessions={sessionRecords.map((session) => ({
+              ...session,
+              current: session.id === current.sessionId,
+            }))}
+          />
+          <MfaPanel
+            initialEnabled={Boolean(mfa?.verifiedAt)}
+            recoveryCodesRemaining={mfa?.recoveryCodeHashes.length ?? 0}
+            passwordConfigured={Boolean(current.user.passwordHash)}
+          />
         </div>
         <aside>
           <section className="panel security-score">
@@ -179,7 +197,9 @@ export default async function WalletPage() {
               </li>
               <li>
                 {identity?.status === "VERIFIED" ? <Check size={14} /> : <Clock3 size={14} />}
-                Identity {identity ? label(identity.status) : "not started"}
+                <Link href="/identity">
+                  Identity {identity ? label(identity.status) : "not started"}
+                </Link>
               </li>
               <li>
                 {verifiedWallets.length ? <Check size={14} /> : <Clock3 size={14} />}
@@ -225,7 +245,7 @@ export default async function WalletPage() {
               <Smartphone size={16} />
               <span>
                 <strong>Two-factor authentication</strong>
-                <small>Unavailable</small>
+                <small>{mfa?.verifiedAt ? "Enabled" : "Not enabled"}</small>
               </span>
             </div>
             <div>

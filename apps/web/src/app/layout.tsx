@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
+import "@/styles/product-experience.css";
 import { RouteTitle } from "@/components/layout/route-title";
 
 export const metadata: Metadata = {
@@ -34,8 +35,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
+        <a className="skip-link" href="#main-content">
+          Skip to main content
+        </a>
         <RouteTitle />
-        {children}
+        <div id="main-content" tabIndex={-1}>
+          {children}
+        </div>
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 import { JOB_CATEGORIES } from "@klaveroq/domain";
 import { z } from "zod";
+import { decodeCursor } from "../../../server/pagination/cursor";
 
 const blankToUndefined = (value: unknown) => (value === "" ? undefined : value);
 const blankToNull = (value: unknown) => (value === "" || value === undefined ? null : value);
@@ -68,22 +69,35 @@ export const portfolioInputSchema = z.object({
   projectRole: z.preprocess(blankToNull, z.string().trim().max(120).nullable()),
 });
 
-export const talentQuerySchema = z.object({
-  query: z.preprocess(blankToUndefined, z.string().trim().max(100).optional()),
-  skill: z.preprocess(blankToUndefined, z.string().trim().max(60).optional()),
-  role: z.preprocess(blankToUndefined, z.string().trim().max(100).optional()),
-  category: z.preprocess(blankToUndefined, z.enum(JOB_CATEGORIES).optional()),
-  availability: z.preprocess(
-    blankToUndefined,
-    z.enum(["AVAILABLE", "LIMITED", "UNAVAILABLE"]).optional(),
-  ),
-  minCompletedJobs: z.preprocess(
-    blankToUndefined,
-    z.coerce.number().int().min(0).max(10_000).default(0),
-  ),
-  sort: z.preprocess(
-    blankToUndefined,
-    z.enum(["reputation", "completed", "recent"]).default("reputation"),
-  ),
-  limit: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(50).default(18)),
-});
+export const talentQuerySchema = z
+  .object({
+    query: z.preprocess(blankToUndefined, z.string().trim().max(100).optional()),
+    skill: z.preprocess(blankToUndefined, z.string().trim().max(60).optional()),
+    role: z.preprocess(blankToUndefined, z.string().trim().max(100).optional()),
+    category: z.preprocess(blankToUndefined, z.enum(JOB_CATEGORIES).optional()),
+    availability: z.preprocess(
+      blankToUndefined,
+      z.enum(["AVAILABLE", "LIMITED", "UNAVAILABLE"]).optional(),
+    ),
+    minCompletedJobs: z.preprocess(
+      blankToUndefined,
+      z.coerce.number().int().min(0).max(10_000).default(0),
+    ),
+    sort: z.preprocess(
+      blankToUndefined,
+      z.enum(["reputation", "completed", "recent"]).default("reputation"),
+    ),
+    cursor: z.preprocess(blankToUndefined, z.string().max(500).optional()),
+    limit: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(50).default(18)),
+  })
+  .superRefine((input, context) => {
+    if (!input.cursor) return;
+    const cursor = decodeCursor(input.cursor);
+    const expectedKind = {
+      reputation: "talent-reputation",
+      completed: "talent-completed",
+      recent: "talent-recent",
+    }[input.sort];
+    if (!cursor || cursor.kind !== expectedKind)
+      context.addIssue({ code: "custom", path: ["cursor"], message: "Invalid pagination cursor." });
+  });

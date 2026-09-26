@@ -63,7 +63,7 @@ export function TicketConversation({
     const file = form.get("file") as File;
     const response = await fetch(`${base}/messages`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
       body: JSON.stringify({
         message: form.get("message"),
         internal: admin && internal,
@@ -96,6 +96,17 @@ export function TicketConversation({
     });
     if (response.ok) await load();
   }
+  async function reopenTicket() {
+    setError("");
+    const response = await fetch(`/api/support/tickets/${ticketId}/reopen`, {
+      method: "POST",
+    });
+    if (response.ok) await load();
+    else {
+      const body = await response.json();
+      setError(body.error?.message ?? "Unable to reopen this case.");
+    }
+  }
   if (!detail) return <div className="support-loading">{error || "Loading support case..."}</div>;
   const attachments = (messageId: string) =>
     detail.attachments.filter((file) => file.messageId === messageId);
@@ -105,9 +116,14 @@ export function TicketConversation({
         <Link className="back-link" href={admin ? "/admin/support" : "/support"}>
           <ArrowLeft size={15} /> Back to cases
         </Link>
-        {!admin && !["CLOSED"].includes(detail.ticket.status) && (
+        {!admin && !["CLOSED", "RESOLVED"].includes(detail.ticket.status) && (
           <button className="secondary-button" onClick={closeTicket}>
             Close case
+          </button>
+        )}
+        {!admin && ["CLOSED", "RESOLVED"].includes(detail.ticket.status) && (
+          <button className="secondary-button" onClick={reopenTicket}>
+            Reopen case
           </button>
         )}
       </div>

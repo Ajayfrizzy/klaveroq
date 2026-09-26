@@ -8,7 +8,7 @@ export function assertSameOrigin(request: Request) {
   if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
   const origin = request.headers.get("origin");
   const expected = new URL(process.env.APP_URL ?? "http://127.0.0.1:3000").origin;
-  if (origin && origin !== expected)
+  if (!origin || origin !== expected)
     throw new ApiError(403, "INVALID_ORIGIN", "The request origin is not allowed.");
 }
 

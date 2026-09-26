@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { ApiError } from "@/server/http/errors";
+import { allowsIdentitySandbox } from "@/server/deployment";
 
 export type IdentityStart = {
   reference: string;
@@ -23,4 +25,11 @@ class SandboxIdentityProvider implements IdentityProvider {
   }
 }
 
-export const identityProvider: IdentityProvider = new SandboxIdentityProvider();
+export function getIdentityProvider(): IdentityProvider {
+  if (allowsIdentitySandbox()) return new SandboxIdentityProvider();
+  throw new ApiError(
+    503,
+    "IDENTITY_PROVIDER_UNAVAILABLE",
+    "Identity verification is not configured for this environment.",
+  );
+}

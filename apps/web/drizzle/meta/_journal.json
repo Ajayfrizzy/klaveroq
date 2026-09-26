@@ -64,6 +64,48 @@
       "when": 1790290774788,
       "tag": "0008_curvy_oracle",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790295859469,
+      "tag": "0009_mean_shadow_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790302481356,
+      "tag": "0010_petite_bruce_banner",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790318303164,
+      "tag": "0011_panoramic_invaders",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790322877455,
+      "tag": "0012_complex_khan",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790324502847,
+      "tag": "0013_classy_ego",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790345998704,
+      "tag": "0014_classy_vengeance",
+      "breakpoints": true
     }
   ]
 }

@@ -42,8 +42,7 @@ async function register(page: Page, email: string, displayName: string) {
       secure: false,
     },
   ]);
-  await page.waitForURL("/");
-  await page.reload();
+  await page.goto("/");
 }
 
 async function completeProfile(page: Page, displayName: string) {
@@ -247,7 +246,9 @@ test("client and workers complete publication, proposals, messaging, award, and 
   const workerCard = client
     .locator(".client-proposals > article")
     .filter({ hasText: "E2E Worker" });
+  await expect(workerCard.locator(".thread-unread-count")).toHaveText("1");
   await workerCard.getByRole("button", { name: "Clarify proposal" }).click();
+  await expect(workerCard.locator(".thread-unread-count")).toHaveCount(0);
   await expect(
     workerCard.getByText(
       "Can you confirm that the responsive review includes the mobile filter layout?",
@@ -264,6 +265,8 @@ test("client and workers complete publication, proposals, messaging, award, and 
   );
   await workerCard.getByRole("button", { name: "Send" }).click();
   expect((await clientMessageResponse).ok()).toBeTruthy();
+  await worker.reload();
+  await expect(worker.locator(".thread-unread-count")).toHaveText("1");
   const shortlistResponse = client.waitForResponse(
     (response) =>
       response.url().includes("/api/marketplace/proposals/") &&
@@ -276,6 +279,7 @@ test("client and workers complete publication, proposals, messaging, award, and 
   client.once("dialog", (dialog) => dialog.accept());
   await workerCard.getByRole("button", { name: "Award proposal" }).click();
   await expect(client).toHaveURL(/\/jobs\/[0-9a-f-]+$/);
+  await expect(client.locator('a[href="/jobs"][aria-current="page"]').first()).toBeVisible();
   const agreementUrl = new URL(client.url()).pathname;
   await expect(
     client.getByText("This is an agreement draft created from the awarded proposal."),

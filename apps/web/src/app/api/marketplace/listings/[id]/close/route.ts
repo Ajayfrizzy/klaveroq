@@ -5,6 +5,7 @@ import { requireUser } from "@/server/auth/session";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
 import { requireListingOwner } from "@/features/marketplace/server/access";
+import { audit } from "@/server/audit";
 
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/marketplace/listings/[id]/close">) => {
@@ -18,6 +19,12 @@ export const POST = withApi(
       .update(jobListings)
       .set({ status: "CLOSED", closedAt: new Date(), updatedAt: new Date() })
       .where(and(eq(jobListings.id, id), eq(jobListings.status, "OPEN")));
+    await audit(request, {
+      actorUserId: user.id,
+      action: "listing.closed",
+      entityType: "job_listing",
+      entityId: id,
+    });
     return Response.json({ data: { id, status: "CLOSED" } });
   },
 );

@@ -1,7 +1,11 @@
 import { JOB_CATEGORIES } from "@klaveroq/domain";
-import { ArrowRight, BriefcaseBusiness, CalendarDays, Search, UsersRound } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, CalendarDays, UsersRound } from "lucide-react";
+import { DiscoveryFilters } from "@/features/marketplace/components/discovery-filters";
+import { SavedSearches } from "@/features/marketplace/components/saved-searches";
+import { getCurrentUser } from "@/server/auth/session";
 import Link from "next/link";
-import { MarketplaceHeader } from "@/features/marketplace/components/marketplace-header";
+import { redirect } from "next/navigation";
+import { MarketplaceLayout } from "@/features/marketplace/components/marketplace-layout";
 import { listPublicListings } from "@/features/marketplace/server/queries";
 import { listingQuerySchema } from "@/features/marketplace/server/schemas";
 export const dynamic = "force-dynamic";
@@ -17,116 +21,122 @@ export default async function DiscoverPage({
       typeof value === "string" ? [[key, value]] : [],
     ),
   );
-  const input = listingQuerySchema.parse(scalar);
+  const parsed = listingQuerySchema.safeParse(scalar);
+  if (!parsed.success) redirect("/discover");
+  const input = parsed.data;
   const result = await listPublicListings(input);
+  const current = await getCurrentUser();
+  const filtered = Boolean(input.query || input.skill || input.category);
   return (
-    <div className="market-page">
-      <MarketplaceHeader />
-      <main>
-        <section className="market-title">
-          <div>
-            <p className="eyebrow">Klaveroq marketplace</p>
-            <h1>Find work built around clear, verifiable milestones</h1>
-            <p>
-              Work with defined deliverables, objective acceptance criteria, required proof, and
-              explicit payment status.
-            </p>
-          </div>
-          <Link className="primary-button" href="/jobs/new/public">
-            Post a job
-          </Link>
+    <MarketplaceLayout>
+      <section className="market-title">
+        <div>
+          <p className="eyebrow">Klaveroq marketplace</p>
+          <h1>Find work built around clear, verifiable milestones</h1>
+          <p>
+            Work with defined deliverables, objective acceptance criteria, required proof, and
+            explicit payment status.
+          </p>
+        </div>
+        <Link className="primary-button" href="/jobs/new/public">
+          Post a job
+        </Link>
+      </section>
+      <DiscoveryFilters key={JSON.stringify(scalar)} query={input.query} count={result.data.length}>
+        <select name="category" defaultValue={input.category ?? ""} aria-label="Category">
+          <option value="">All categories</option>
+          {JOB_CATEGORIES.map((category) => (
+            <option value={category} key={category}>
+              {category.toLowerCase()}
+            </option>
+          ))}
+        </select>
+        <input name="skill" defaultValue={input.skill} placeholder="Skill" aria-label="Skill" />
+        <select name="sort" defaultValue={input.sort} aria-label="Sort">
+          <option value="newest">Newest</option>
+          <option value="budget">Highest budget</option>
+        </select>
+      </DiscoveryFilters>
+      <SavedSearches key={current?.user.id ?? "guest"} scope={current?.user.id ?? "guest"} />
+      {result.data.length ? (
+        <section className="listing-grid">
+          {result.data.map(({ listing, client, proposalCount }) => (
+            <Link className="listing-card" href={`/discover/${listing.id}`} key={listing.id}>
+              <div className="listing-card-top">
+                <span>{listing.category.toLowerCase()}</span>
+                <small>{new Date(listing.publishedAt!).toLocaleDateString()}</small>
+              </div>
+              <h2>{listing.title}</h2>
+              <p>{listing.description}</p>
+              <div className="skill-list">
+                {listing.skills.slice(0, 4).map((skill) => (
+                  <span key={skill}>{skill}</span>
+                ))}
+              </div>
+              <dl>
+                <div>
+                  <dt>Budget</dt>
+                  <dd>
+                    {ckb(listing.budgetMin)}–{ckb(listing.budgetMax)} CKB
+                  </dd>
+                </div>
+                <div>
+                  <dt>
+                    <UsersRound size={14} /> Proposals
+                  </dt>
+                  <dd>{proposalCount}</dd>
+                </div>
+                <div>
+                  <dt>
+                    <CalendarDays size={14} /> Deadline
+                  </dt>
+                  <dd>{new Date(listing.proposalDeadline).toLocaleDateString()}</dd>
+                </div>
+              </dl>
+              <footer>
+                <span className="client-mark">{client.displayName.slice(0, 2).toUpperCase()}</span>
+                <p>
+                  <strong>{client.displayName}</strong>
+                  <small>{client.headline ?? "Klaveroq client"}</small>
+                </p>
+                <ArrowRight size={17} />
+              </footer>
+            </Link>
+          ))}
         </section>
-        <form className="market-filters">
-          <label className="search-field">
-            <Search size={17} />
-            <input
-              name="query"
-              defaultValue={input.query}
-              placeholder="Search jobs, outcomes, or skills"
-            />
-          </label>
-          <select name="category" defaultValue={input.category ?? ""} aria-label="Category">
-            <option value="">All categories</option>
-            {JOB_CATEGORIES.map((category) => (
-              <option value={category} key={category}>
-                {category.toLowerCase()}
-              </option>
-            ))}
-          </select>
-          <input name="skill" defaultValue={input.skill} placeholder="Skill" aria-label="Skill" />
-          <select name="sort" defaultValue={input.sort} aria-label="Sort">
-            <option value="newest">Newest</option>
-            <option value="budget">Highest budget</option>
-          </select>
-          <button className="secondary-button">Apply filters</button>
-        </form>
-        {result.data.length ? (
-          <section className="listing-grid">
-            {result.data.map(({ listing, client, proposalCount }) => (
-              <Link className="listing-card" href={`/discover/${listing.id}`} key={listing.id}>
-                <div className="listing-card-top">
-                  <span>{listing.category.toLowerCase()}</span>
-                  <small>{new Date(listing.publishedAt!).toLocaleDateString()}</small>
-                </div>
-                <h2>{listing.title}</h2>
-                <p>{listing.description}</p>
-                <div className="skill-list">
-                  {listing.skills.slice(0, 4).map((skill) => (
-                    <span key={skill}>{skill}</span>
-                  ))}
-                </div>
-                <dl>
-                  <div>
-                    <dt>Budget</dt>
-                    <dd>
-                      {ckb(listing.budgetMin)}–{ckb(listing.budgetMax)} CKB
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <UsersRound size={14} /> Proposals
-                    </dt>
-                    <dd>{proposalCount}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <CalendarDays size={14} /> Deadline
-                    </dt>
-                    <dd>{new Date(listing.proposalDeadline).toLocaleDateString()}</dd>
-                  </div>
-                </dl>
-                <footer>
-                  <span className="client-mark">
-                    {client.displayName.slice(0, 2).toUpperCase()}
-                  </span>
-                  <p>
-                    <strong>{client.displayName}</strong>
-                    <small>{client.headline ?? "Klaveroq client"}</small>
-                  </p>
-                  <ArrowRight size={17} />
-                </footer>
-              </Link>
-            ))}
-          </section>
-        ) : (
-          <section className="market-empty">
-            <BriefcaseBusiness size={28} />
-            <h2>No matching jobs</h2>
-            <p>Adjust the filters or check back for newly published work.</p>
-          </section>
-        )}
-        {result.nextCursor && (
-          <Link
-            className="secondary-button load-more"
-            href={{
-              pathname: "/discover",
-              query: { ...scalar, cursor: result.nextCursor },
-            }}
-          >
-            Load more
-          </Link>
-        )}
-      </main>
-    </div>
+      ) : (
+        <section className="market-empty">
+          <BriefcaseBusiness size={28} />
+          <h2>{filtered ? "No matching jobs" : "New opportunities start here"}</h2>
+          <p>
+            {filtered
+              ? "Try fewer filters or a broader search."
+              : "There are no open jobs yet. Prepare your profile so clients can discover your work."}
+          </p>
+          <div className="empty-actions">
+            <Link className="primary-button" href={filtered ? "/discover" : "/profile"}>
+              {filtered ? "Clear filters" : "Build your profile"}
+            </Link>
+            <Link className="secondary-button" href="/jobs/new/public">
+              Post a job
+            </Link>
+            <Link className="secondary-button" href="/talent">
+              Find talent
+            </Link>
+          </div>
+        </section>
+      )}
+      {result.nextCursor && (
+        <Link
+          className="secondary-button load-more"
+          href={{
+            pathname: "/discover",
+            query: { ...scalar, cursor: result.nextCursor },
+          }}
+        >
+          Next page
+        </Link>
+      )}
+    </MarketplaceLayout>
   );
 }

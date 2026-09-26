@@ -1,5 +1,6 @@
 import { JOB_CATEGORIES } from "@klaveroq/domain";
 import { z } from "zod";
+import { decodeCursor } from "../../../server/pagination/cursor";
 
 const amount = z.string().regex(/^[1-9][0-9]*$/, "Use a positive integer smallest-unit amount");
 const skills = z
@@ -44,17 +45,25 @@ export const listingUpdateSchema = listingFieldsSchema
       message: "Maximum budget must be at least the minimum.",
     },
   );
-export const listingQuerySchema = z.object({
-  query: z.preprocess(blankToUndefined, z.string().trim().max(100).optional()),
-  category: z.preprocess(blankToUndefined, z.enum(JOB_CATEGORIES).optional()),
-  skill: z.preprocess(blankToUndefined, z.string().trim().max(40).optional()),
-  minBudget: z.preprocess(blankToUndefined, amount.optional()),
-  maxBudget: z.preprocess(blankToUndefined, amount.optional()),
-  deadlineBefore: z.preprocess(blankToUndefined, z.coerce.date().optional()),
-  sort: z.preprocess(blankToUndefined, z.enum(["newest", "budget"]).default("newest")),
-  cursor: z.preprocess(blankToUndefined, z.string().max(100).optional()),
-  limit: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(50).default(12)),
-});
+export const listingQuerySchema = z
+  .object({
+    query: z.preprocess(blankToUndefined, z.string().trim().max(100).optional()),
+    category: z.preprocess(blankToUndefined, z.enum(JOB_CATEGORIES).optional()),
+    skill: z.preprocess(blankToUndefined, z.string().trim().max(40).optional()),
+    minBudget: z.preprocess(blankToUndefined, amount.optional()),
+    maxBudget: z.preprocess(blankToUndefined, amount.optional()),
+    deadlineBefore: z.preprocess(blankToUndefined, z.coerce.date().optional()),
+    sort: z.preprocess(blankToUndefined, z.enum(["newest", "budget"]).default("newest")),
+    cursor: z.preprocess(blankToUndefined, z.string().max(500).optional()),
+    limit: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(50).default(12)),
+  })
+  .superRefine((input, context) => {
+    if (!input.cursor) return;
+    const cursor = decodeCursor(input.cursor);
+    const expectedKind = input.sort === "budget" ? "listing-budget" : "listing-date";
+    if (!cursor || cursor.kind !== expectedKind)
+      context.addIssue({ code: "custom", path: ["cursor"], message: "Invalid pagination cursor." });
+  });
 
 export const proposalMilestoneSchema = z.object({
   title: z.string().trim().min(2).max(120),

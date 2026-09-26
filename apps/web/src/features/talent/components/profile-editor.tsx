@@ -9,6 +9,7 @@ import {
   EyeOff,
   Github,
   Globe2,
+  FileText,
   Pencil,
   Plus,
   Save,
@@ -18,6 +19,12 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { MediaUploader } from "@/features/files/media-uploader";
+import { TagInput } from "@/components/ui/tag-input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { useWorkProtection } from "@/components/ui/use-work-protection";
+
+type Media = { url: string; altText: string; contentType: string };
 
 type Profile = {
   userId: string;
@@ -47,6 +54,8 @@ type PortfolioItem = {
   githubUrl: string | null;
   skills: string[];
   projectRole: string | null;
+  mediaKey?: string | null;
+  media: Media | null;
 };
 
 const commaList = (value: string) =>
@@ -116,9 +125,11 @@ const commonTimezones = [
 
 export function ProfileEditor({
   initialProfile,
+  initialAvatar,
   initialPortfolio,
 }: {
   initialProfile: Profile;
+  initialAvatar: Media | null;
   initialPortfolio: PortfolioItem[];
 }) {
   const router = useRouter();
@@ -127,6 +138,7 @@ export function ProfileEditor({
   const [skillsText, setSkillsText] = useState(initialProfile.skills.join(", "));
   const [languagesText, setLanguagesText] = useState(initialProfile.languages.join(", "));
   const [portfolio, setPortfolio] = useState(initialPortfolio);
+  const [avatar, setAvatar] = useState(initialAvatar);
   const [editing, setEditing] = useState(false);
   const [portfolioForm, setPortfolioForm] = useState(emptyPortfolio);
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
@@ -136,6 +148,30 @@ export function ProfileEditor({
   const [feedbackIsError, setFeedbackIsError] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [canSaveAsPrivate, setCanSaveAsPrivate] = useState(false);
+  const profileChanged =
+    JSON.stringify({
+      ...profile,
+      skills: commaList(skillsText),
+      languages: commaList(languagesText),
+    }) !== JSON.stringify(savedProfile);
+  const {
+    root: workRoot,
+    dirty: workDirty,
+    status: workStatus,
+    markSaved,
+  } = useWorkProtection(
+    JSON.stringify({
+      profile:
+        editing && profileChanged
+          ? { ...profile, skills: commaList(skillsText), languages: commaList(languagesText) }
+          : null,
+      portfolioForm:
+        showPortfolioForm && JSON.stringify(portfolioForm) !== JSON.stringify(emptyPortfolio)
+          ? portfolioForm
+          : null,
+    }),
+    feedbackIsError ? feedback : "",
+  );
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) => {
     setProfile((current) => ({ ...current, [key]: value }));
     setFieldErrors((current) => {
@@ -148,22 +184,23 @@ export function ProfileEditor({
   };
   const fieldError = (name: string) => fieldErrors[name]?.[0];
   const readiness = [
-    { label: "Display name", complete: Boolean(profile.displayName.trim()) },
-    { label: "Professional headline", complete: Boolean(profile.headline?.trim()) },
-    { label: "Primary role", complete: Boolean(profile.primaryRole?.trim()) },
+    { label: "Display name", complete: profile.displayName.trim().length >= 2 },
+    { label: "Professional headline", complete: (profile.headline?.trim().length ?? 0) >= 5 },
+    { label: "Primary role", complete: (profile.primaryRole?.trim().length ?? 0) >= 2 },
     {
       label: "Professional bio",
       complete: Boolean(profile.bio && profile.bio.trim().length >= 40),
     },
     { label: "At least one skill", complete: commaList(skillsText).length > 0 },
     { label: "Experience level", complete: Boolean(profile.experienceLevel) },
-    { label: "Country", complete: Boolean(profile.countryCode) },
-    { label: "Timezone", complete: Boolean(profile.timezone?.trim()) },
+    { label: "Country", complete: profile.countryCode?.trim().length === 2 },
+    { label: "Timezone", complete: (profile.timezone?.trim().length ?? 0) >= 2 },
   ];
   const readyCount = readiness.filter((item) => item.complete).length;
   const profileReady = readyCount === readiness.length;
 
   const cancelProfileEdit = () => {
+    if (workDirty && !confirm("Discard your unsaved profile changes?")) return;
     setProfile(savedProfile);
     setSkillsText(savedProfile.skills.join(", "));
     setLanguagesText(savedProfile.languages.join(", "));
@@ -223,6 +260,7 @@ export function ProfileEditor({
       }
       const updated = body.data as Profile;
       setSavedProfile(updated);
+      markSaved(JSON.stringify({ profile: null, portfolioForm: null }));
       setProfile(updated);
       setSkillsText(updated.skills.join(", "));
       setLanguagesText(updated.languages.join(", "));
@@ -281,8 +319,10 @@ export function ProfileEditor({
       const updated = body.data as PortfolioItem;
       setPortfolio((items) =>
         portfolioId
-          ? items.map((item) => (item.id === portfolioId ? updated : item))
-          : [updated, ...items],
+          ? items.map((item) =>
+              item.id === portfolioId ? { ...updated, media: item.media } : item,
+            )
+          : [{ ...updated, media: null }, ...items],
       );
       cancelPortfolioEdit();
       setFeedback("Portfolio saved.");
@@ -356,11 +396,19 @@ export function ProfileEditor({
   };
 
   return (
-    <div className="talent-editor-stack">
+    <div className="talent-editor-stack" ref={workRoot}>
+      {(editing || showPortfolioForm) && workStatus}
       <section className="panel profile-main">
         <div className="profile-editor-heading">
           <div className="profile-identity compact">
-            <div className="profile-avatar">{profile.displayName.slice(0, 2).toUpperCase()}</div>
+            <div className="profile-avatar">
+              {avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatar.url} alt={avatar.altText} />
+              ) : (
+                profile.displayName.slice(0, 2).toUpperCase()
+              )}
+            </div>
             <div>
               <div>
                 <h2>{profile.displayName}</h2>
@@ -386,250 +434,266 @@ export function ProfileEditor({
           </div>
         </div>
         {feedback && (
-          <p className={`form-feedback ${feedbackIsError ? "error" : "success"}`}>{feedback}</p>
+          <p
+            role={feedbackIsError ? "alert" : "status"}
+            className={`form-feedback ${feedbackIsError ? "error" : "success"}`}
+          >
+            {feedback}
+          </p>
         )}
+        <div className="profile-media-control">
+          <MediaUploader
+            endpoint="/api/profile/avatar"
+            label="profile photo"
+            accept="image/jpeg,image/png,image/webp"
+            initialMedia={avatar}
+            onChange={setAvatar}
+          />
+        </div>
         {editing ? (
-          <form className="profile-edit-form" onSubmit={saveProfile}>
-            <div className="profile-form-section-heading">
-              <h3>Professional identity</h3>
-              <p>How clients will understand your focus and value.</p>
-            </div>
-            <div className="two-fields">
+          <form
+            className="profile-edit-form"
+            onSubmit={saveProfile}
+            onInvalidCapture={(event) => {
+              const section = (event.target as HTMLElement).closest("details");
+              if (section) section.open = true;
+            }}
+          >
+            <nav className="profile-section-nav" aria-label="Profile sections">
+              <a href="#profile-identity">1. Identity</a>
+              <a href="#profile-expertise">2. Expertise</a>
+              <a href="#profile-location">3. Availability</a>
+              <a href="#profile-links">4. Links</a>
+            </nav>
+            <details className="profile-step" id="profile-identity" open>
+              <summary>1. Professional identity</summary>
+              <div className="profile-form-section-heading">
+                <h3>Professional identity</h3>
+                <p>How clients will understand your focus and value.</p>
+              </div>
+              <div className="two-fields">
+                <label>
+                  Display name
+                  <input
+                    value={profile.displayName}
+                    onChange={(event) => set("displayName", event.target.value)}
+                    aria-invalid={Boolean(fieldError("displayName"))}
+                    aria-describedby={fieldError("displayName") ? "display-name-error" : undefined}
+                    required
+                  />
+                  {fieldError("displayName") && (
+                    <small className="field-error" id="display-name-error">
+                      {fieldError("displayName")}
+                    </small>
+                  )}
+                </label>
+                <label>
+                  Primary role
+                  <input
+                    value={profile.primaryRole ?? ""}
+                    onChange={(event) => set("primaryRole", event.target.value || null)}
+                    aria-invalid={Boolean(fieldError("primaryRole"))}
+                  />
+                  {fieldError("primaryRole") && (
+                    <small className="field-error">{fieldError("primaryRole")}</small>
+                  )}
+                </label>
+              </div>
               <label>
-                Display name
+                Professional headline
                 <input
-                  value={profile.displayName}
-                  onChange={(event) => set("displayName", event.target.value)}
-                  aria-invalid={Boolean(fieldError("displayName"))}
-                  aria-describedby={fieldError("displayName") ? "display-name-error" : undefined}
-                  required
+                  value={profile.headline ?? ""}
+                  onChange={(event) => set("headline", event.target.value || null)}
+                  maxLength={160}
+                  aria-invalid={Boolean(fieldError("headline"))}
                 />
-                {fieldError("displayName") && (
-                  <small className="field-error" id="display-name-error">
-                    {fieldError("displayName")}
-                  </small>
+                {fieldError("headline") && (
+                  <small className="field-error">{fieldError("headline")}</small>
                 )}
               </label>
               <label>
-                Primary role
-                <input
-                  value={profile.primaryRole ?? ""}
-                  onChange={(event) => set("primaryRole", event.target.value || null)}
-                  aria-invalid={Boolean(fieldError("primaryRole"))}
+                Bio
+                <textarea
+                  value={profile.bio ?? ""}
+                  onChange={(event) => set("bio", event.target.value || null)}
+                  rows={6}
+                  maxLength={5000}
+                  aria-invalid={Boolean(fieldError("bio"))}
                 />
-                {fieldError("primaryRole") && (
-                  <small className="field-error">{fieldError("primaryRole")}</small>
-                )}
+                {fieldError("bio") && <small className="field-error">{fieldError("bio")}</small>}
               </label>
-            </div>
-            <label>
-              Professional headline
-              <input
-                value={profile.headline ?? ""}
-                onChange={(event) => set("headline", event.target.value || null)}
-                maxLength={160}
-                aria-invalid={Boolean(fieldError("headline"))}
-              />
-              {fieldError("headline") && (
-                <small className="field-error">{fieldError("headline")}</small>
-              )}
-            </label>
-            <label>
-              Bio
-              <textarea
-                value={profile.bio ?? ""}
-                onChange={(event) => set("bio", event.target.value || null)}
-                rows={6}
-                maxLength={5000}
-                aria-invalid={Boolean(fieldError("bio"))}
-              />
-              {fieldError("bio") && <small className="field-error">{fieldError("bio")}</small>}
-            </label>
-            <div className="profile-form-section-heading">
-              <h3>Expertise</h3>
-              <p>Help clients match your experience to their work.</p>
-            </div>
-            <div className="two-fields">
-              <label>
-                Skills
-                <input
+            </details>
+            <details className="profile-step" id="profile-expertise" open>
+              <summary>2. Expertise</summary>
+              <div className="profile-form-section-heading">
+                <h3>Expertise</h3>
+                <p>Help clients match your experience to their work.</p>
+              </div>
+              <div className="two-fields">
+                <TagInput
+                  label="Skills"
                   value={skillsText}
-                  onChange={(event) => {
-                    setSkillsText(event.target.value);
+                  error={fieldError("skills")}
+                  onChange={(value) => {
+                    setSkillsText(value);
                     setFieldErrors((current) => ({ ...current, skills: [] }));
                     setCanSaveAsPrivate(false);
                   }}
-                  placeholder="React, research, product design"
-                  aria-invalid={Boolean(fieldError("skills"))}
                 />
-                {fieldError("skills") && (
-                  <small className="field-error">{fieldError("skills")}</small>
-                )}
-              </label>
-              <label>
-                Languages
-                <input
-                  value={languagesText}
-                  onChange={(event) => setLanguagesText(event.target.value)}
-                  placeholder="English, French"
-                />
-              </label>
-            </div>
-            <fieldset className="category-checks">
-              <legend>Preferred work categories</legend>
-              {JOB_CATEGORIES.map((category) => (
-                <label key={category}>
-                  <input
-                    type="checkbox"
-                    checked={profile.preferredWorkCategories.includes(category)}
-                    onChange={(event) =>
-                      set(
-                        "preferredWorkCategories",
-                        event.target.checked
-                          ? [...profile.preferredWorkCategories, category]
-                          : profile.preferredWorkCategories.filter((item) => item !== category),
-                      )
-                    }
-                  />
-                  {category.toLowerCase()}
+                <TagInput label="Languages" value={languagesText} onChange={setLanguagesText} />
+              </div>
+              <fieldset className="category-checks">
+                <legend>Preferred work categories</legend>
+                {JOB_CATEGORIES.map((category) => (
+                  <label key={category}>
+                    <input
+                      type="checkbox"
+                      checked={profile.preferredWorkCategories.includes(category)}
+                      onChange={(event) =>
+                        set(
+                          "preferredWorkCategories",
+                          event.target.checked
+                            ? [...profile.preferredWorkCategories, category]
+                            : profile.preferredWorkCategories.filter((item) => item !== category),
+                        )
+                      }
+                    />
+                    {category.toLowerCase()}
+                  </label>
+                ))}
+              </fieldset>
+            </details>
+            <details className="profile-step" id="profile-location" open>
+              <summary>3. Availability and location</summary>
+              <div className="profile-form-section-heading">
+                <h3>Availability and location</h3>
+                <p>Set expectations for collaboration and working hours.</p>
+              </div>
+              <div className="three-fields">
+                <label>
+                  Experience level
+                  <select
+                    value={profile.experienceLevel ?? ""}
+                    onChange={(event) => set("experienceLevel", event.target.value || null)}
+                    aria-invalid={Boolean(fieldError("experienceLevel"))}
+                  >
+                    <option value="">Not specified</option>
+                    <option value="ENTRY">Entry</option>
+                    <option value="INTERMEDIATE">Intermediate</option>
+                    <option value="EXPERT">Expert</option>
+                  </select>
+                  {fieldError("experienceLevel") && (
+                    <small className="field-error">{fieldError("experienceLevel")}</small>
+                  )}
                 </label>
-              ))}
-            </fieldset>
-            <div className="profile-form-section-heading">
-              <h3>Availability and location</h3>
-              <p>Set expectations for collaboration and working hours.</p>
-            </div>
-            <div className="three-fields">
-              <label>
-                Experience level
-                <select
-                  value={profile.experienceLevel ?? ""}
-                  onChange={(event) => set("experienceLevel", event.target.value || null)}
-                  aria-invalid={Boolean(fieldError("experienceLevel"))}
-                >
-                  <option value="">Not specified</option>
-                  <option value="ENTRY">Entry</option>
-                  <option value="INTERMEDIATE">Intermediate</option>
-                  <option value="EXPERT">Expert</option>
-                </select>
-                {fieldError("experienceLevel") && (
-                  <small className="field-error">{fieldError("experienceLevel")}</small>
-                )}
-              </label>
-              <label>
-                Years of experience
-                <input
-                  type="number"
-                  min={0}
-                  max={80}
-                  value={profile.yearsExperience ?? ""}
-                  onChange={(event) =>
-                    set("yearsExperience", event.target.value ? Number(event.target.value) : null)
-                  }
-                  aria-invalid={Boolean(fieldError("yearsExperience"))}
-                />
-                {fieldError("yearsExperience") && (
-                  <small className="field-error">{fieldError("yearsExperience")}</small>
-                )}
-              </label>
-              <label>
-                Availability
-                <select
-                  value={profile.availability}
-                  onChange={(event) =>
-                    set("availability", event.target.value as Profile["availability"])
-                  }
-                >
-                  <option value="AVAILABLE">Available</option>
-                  <option value="LIMITED">Limited</option>
-                  <option value="UNAVAILABLE">Unavailable</option>
-                </select>
-              </label>
-            </div>
-            <div className="two-fields">
-              <label>
-                Country
-                <select
-                  value={profile.countryCode ?? ""}
-                  onChange={(event) => set("countryCode", event.target.value || null)}
-                  aria-invalid={Boolean(fieldError("countryCode"))}
-                >
-                  <option value="">Select a country</option>
-                  {profile.countryCode &&
-                    !countries.some(([code]) => code === profile.countryCode) && (
-                      <option value={profile.countryCode}>{profile.countryCode}</option>
-                    )}
-                  {countries.map(([code, name]) => (
-                    <option value={code} key={code}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                {fieldError("countryCode") && (
-                  <small className="field-error">{fieldError("countryCode")}</small>
-                )}
-              </label>
-              <label>
-                Timezone
-                <input
-                  list="klaveroq-timezones"
-                  value={profile.timezone ?? ""}
-                  onChange={(event) => set("timezone", event.target.value || null)}
-                  placeholder="Select your timezone"
-                  aria-invalid={Boolean(fieldError("timezone"))}
-                />
-                <datalist id="klaveroq-timezones">
-                  {commonTimezones.map((timezone) => (
-                    <option value={timezone} key={timezone} />
-                  ))}
-                </datalist>
-                {fieldError("timezone") && (
-                  <small className="field-error">{fieldError("timezone")}</small>
-                )}
-              </label>
-            </div>
-            <div className="profile-form-section-heading">
-              <h3>Online presence</h3>
-              <p>Add links that help clients verify your work.</p>
-            </div>
-            <div className="three-fields">
-              <label>
-                GitHub URL
-                <input
-                  type="url"
-                  value={profile.githubUrl ?? ""}
-                  onChange={(event) => set("githubUrl", event.target.value || null)}
-                  aria-invalid={Boolean(fieldError("githubUrl"))}
-                />
-                {fieldError("githubUrl") && (
-                  <small className="field-error">{fieldError("githubUrl")}</small>
-                )}
-              </label>
-              <label>
-                Website URL
-                <input
-                  type="url"
-                  value={profile.websiteUrl ?? ""}
-                  onChange={(event) => set("websiteUrl", event.target.value || null)}
-                  aria-invalid={Boolean(fieldError("websiteUrl"))}
-                />
-                {fieldError("websiteUrl") && (
-                  <small className="field-error">{fieldError("websiteUrl")}</small>
-                )}
-              </label>
-              <label>
-                LinkedIn URL
-                <input
-                  type="url"
-                  value={profile.linkedinUrl ?? ""}
-                  onChange={(event) => set("linkedinUrl", event.target.value || null)}
-                  aria-invalid={Boolean(fieldError("linkedinUrl"))}
-                />
-                {fieldError("linkedinUrl") && (
-                  <small className="field-error">{fieldError("linkedinUrl")}</small>
-                )}
-              </label>
-            </div>
+                <label>
+                  Years of experience
+                  <input
+                    type="number"
+                    min={0}
+                    max={80}
+                    value={profile.yearsExperience ?? ""}
+                    onChange={(event) =>
+                      set("yearsExperience", event.target.value ? Number(event.target.value) : null)
+                    }
+                    aria-invalid={Boolean(fieldError("yearsExperience"))}
+                  />
+                  {fieldError("yearsExperience") && (
+                    <small className="field-error">{fieldError("yearsExperience")}</small>
+                  )}
+                </label>
+                <label>
+                  Availability
+                  <select
+                    value={profile.availability}
+                    onChange={(event) =>
+                      set("availability", event.target.value as Profile["availability"])
+                    }
+                  >
+                    <option value="AVAILABLE">Available</option>
+                    <option value="LIMITED">Limited</option>
+                    <option value="UNAVAILABLE">Unavailable</option>
+                  </select>
+                </label>
+              </div>
+              <div className="two-fields">
+                <div>
+                  <SearchableSelect
+                    label="Country"
+                    value={profile.countryCode ?? ""}
+                    options={countries}
+                    onChange={(value) => set("countryCode", value || null)}
+                    invalid={Boolean(fieldError("countryCode"))}
+                  />
+                  {fieldError("countryCode") && (
+                    <small className="field-error">{fieldError("countryCode")}</small>
+                  )}
+                </div>
+                <label>
+                  Timezone
+                  <input
+                    list="klaveroq-timezones"
+                    value={profile.timezone ?? ""}
+                    onChange={(event) => set("timezone", event.target.value || null)}
+                    placeholder="Select your timezone"
+                    aria-invalid={Boolean(fieldError("timezone"))}
+                  />
+                  <datalist id="klaveroq-timezones">
+                    {commonTimezones.map((timezone) => (
+                      <option value={timezone} key={timezone} />
+                    ))}
+                  </datalist>
+                  {fieldError("timezone") && (
+                    <small className="field-error">{fieldError("timezone")}</small>
+                  )}
+                </label>
+              </div>
+            </details>
+            <details className="profile-step" id="profile-links" open>
+              <summary>4. Online presence (optional)</summary>
+              <div className="profile-form-section-heading">
+                <h3>Online presence</h3>
+                <p>Add links that help clients verify your work.</p>
+              </div>
+              <div className="three-fields">
+                <label>
+                  GitHub URL
+                  <input
+                    type="url"
+                    value={profile.githubUrl ?? ""}
+                    onChange={(event) => set("githubUrl", event.target.value || null)}
+                    aria-invalid={Boolean(fieldError("githubUrl"))}
+                  />
+                  {fieldError("githubUrl") && (
+                    <small className="field-error">{fieldError("githubUrl")}</small>
+                  )}
+                </label>
+                <label>
+                  Website URL
+                  <input
+                    type="url"
+                    value={profile.websiteUrl ?? ""}
+                    onChange={(event) => set("websiteUrl", event.target.value || null)}
+                    aria-invalid={Boolean(fieldError("websiteUrl"))}
+                  />
+                  {fieldError("websiteUrl") && (
+                    <small className="field-error">{fieldError("websiteUrl")}</small>
+                  )}
+                </label>
+                <label>
+                  LinkedIn URL
+                  <input
+                    type="url"
+                    value={profile.linkedinUrl ?? ""}
+                    onChange={(event) => set("linkedinUrl", event.target.value || null)}
+                    aria-invalid={Boolean(fieldError("linkedinUrl"))}
+                  />
+                  {fieldError("linkedinUrl") && (
+                    <small className="field-error">{fieldError("linkedinUrl")}</small>
+                  )}
+                </label>
+              </div>
+            </details>
             <div className="profile-save-actions">
               <button className="primary-button" disabled={busy}>
                 <Save size={16} /> {busy ? "Saving..." : "Save profile"}
@@ -887,6 +951,19 @@ export function ProfileEditor({
           {portfolio.length ? (
             portfolio.map((item) => (
               <article key={item.id}>
+                {item.media &&
+                  (item.media.contentType === "application/pdf" ? (
+                    <a className="portfolio-media-file" href={item.media.url}>
+                      <FileText size={18} /> View project document
+                    </a>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className="portfolio-media-preview"
+                      src={item.media.url}
+                      alt={item.media.altText}
+                    />
+                  ))}
                 <div>
                   <h3>{item.title}</h3>
                   <span>{item.projectRole || "Project contributor"}</span>
@@ -929,6 +1006,20 @@ export function ProfileEditor({
                     </button>
                   </div>
                 </footer>
+                <MediaUploader
+                  endpoint={`/api/profile/portfolio/${item.id}/media`}
+                  label="project media"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  altRequired
+                  initialMedia={item.media}
+                  onChange={(media) =>
+                    setPortfolio((items) =>
+                      items.map((candidate) =>
+                        candidate.id === item.id ? { ...candidate, media } : candidate,
+                      ),
+                    )
+                  }
+                />
               </article>
             ))
           ) : (

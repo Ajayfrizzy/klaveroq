@@ -1,0 +1,51 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: klaveroq_test
+          POSTGRES_PASSWORD: klaveroq_test
+          POSTGRES_DB: klaveroq_test
+        ports:
+          - 55434:5432
+        options: >-
+          --health-cmd "pg_isready -U klaveroq_test -d klaveroq_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://klaveroq_test:klaveroq_test@127.0.0.1:55434/klaveroq_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:e2e --workspace=@klaveroq/web
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: apps/web/test-results
+          retention-days: 7

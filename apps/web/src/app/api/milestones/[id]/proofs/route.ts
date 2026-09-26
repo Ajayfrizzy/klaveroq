@@ -1,4 +1,4 @@
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { proofSubmissions, revisionRequests, milestones } from "@/server/db/schema";
@@ -31,6 +31,19 @@ export const POST = withApi(
       .where(eq(proofSubmissions.milestoneId, id));
     const reviewDeadline = new Date(Date.now() + milestone.reviewPeriodDays * 86_400_000);
     const [proof] = await db.transaction(async (tx) => {
+      const [claimed] = await tx
+        .update(milestones)
+        .set({ status: "UNDER_REVIEW", updatedAt: new Date() })
+        .where(
+          and(eq(milestones.id, id), inArray(milestones.status, ["ACTIVE", "REVISION_REQUESTED"])),
+        )
+        .returning({ id: milestones.id });
+      if (!claimed)
+        throw new ApiError(
+          409,
+          "MILESTONE_STATE_INVALID",
+          "Another proof submission already changed this milestone.",
+        );
       const created = await tx
         .insert(proofSubmissions)
         .values({
@@ -42,10 +55,6 @@ export const POST = withApi(
           reviewDeadline,
         })
         .returning();
-      await tx
-        .update(milestones)
-        .set({ status: "UNDER_REVIEW", updatedAt: new Date() })
-        .where(eq(milestones.id, id));
       await tx
         .update(revisionRequests)
         .set({ resolvedAt: new Date() })

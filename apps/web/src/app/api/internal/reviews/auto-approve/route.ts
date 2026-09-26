@@ -2,6 +2,7 @@ import { and, eq, lt } from "drizzle-orm";
 import { db } from "@/server/db";
 import { jobs, milestones, operations, proofSubmissions, reviews } from "@/server/db/schema";
 import { ApiError, withApi } from "@/server/http/errors";
+import { audit } from "@/server/audit";
 
 export const POST = withApi(async (request: Request) => {
   if (
@@ -18,6 +19,7 @@ export const POST = withApi(async (request: Request) => {
       and(eq(milestones.status, "UNDER_REVIEW"), lt(proofSubmissions.reviewDeadline, new Date())),
     );
   let processed = 0;
+  const processedMilestones: string[] = [];
   for (const row of expired)
     await db.transaction(async (tx) => {
       const updated = await tx
@@ -47,6 +49,13 @@ export const POST = withApi(async (request: Request) => {
         })
         .onConflictDoNothing();
       processed++;
+      processedMilestones.push(row.milestone.id);
+    });
+  for (const milestoneId of processedMilestones)
+    await audit(request, {
+      action: "internal.milestone_auto_approved",
+      entityType: "milestone",
+      entityId: milestoneId,
     });
   return Response.json({ data: { processed } });
 });

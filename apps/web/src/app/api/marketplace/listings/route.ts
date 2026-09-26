@@ -8,7 +8,7 @@ import { listingInputSchema, listingQuerySchema } from "@/features/marketplace/s
 import { listPublicListings } from "@/features/marketplace/server/queries";
 import { audit } from "@/server/audit";
 import { eq } from "drizzle-orm";
-import { ApiError } from "@/server/http/errors";
+import { requireIdempotencyKey, scopedIdempotencyKey } from "@/server/http/idempotency";
 
 export const GET = withApi(async (request: Request) => {
   const url = new URL(request.url);
@@ -26,10 +26,11 @@ export const GET = withApi(async (request: Request) => {
 export const POST = withApi(async (request: Request) => {
   assertSameOrigin(request);
   const { user } = await requireUser();
-  const suppliedKey = request.headers.get("idempotency-key");
-  if (!suppliedKey || suppliedKey.length > 100)
-    throw new ApiError(400, "IDEMPOTENCY_KEY_REQUIRED", "Provide a valid Idempotency-Key header.");
-  const idempotencyKey = `create-listing:${user.id}:${suppliedKey}`;
+  const idempotencyKey = scopedIdempotencyKey(
+    "create-listing",
+    user.id,
+    requireIdempotencyKey(request),
+  );
   const [prior] = await db
     .select()
     .from(operations)

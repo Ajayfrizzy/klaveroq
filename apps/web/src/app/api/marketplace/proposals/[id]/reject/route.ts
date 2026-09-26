@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/server/db";
-import { jobListings, notifications, proposals } from "@/server/db/schema";
+import { jobListings, proposals } from "@/server/db/schema";
 import { requireUser } from "@/server/auth/session";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
 import { audit } from "@/server/audit";
+import { notifyUser } from "@/server/notifications/service";
 
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/marketplace/proposals/[id]/reject">) => {
@@ -29,13 +30,15 @@ export const POST = withApi(
         .update(proposals)
         .set({ status: "REJECTED", decidedAt: new Date(), updatedAt: new Date() })
         .where(and(eq(proposals.id, id), eq(proposals.status, "SUBMITTED")));
-      await tx.insert(notifications).values({
-        userId: record.proposal.workerUserId,
-        type: "PROPOSAL_REJECTED",
-        title: "Proposal update",
-        body: `Your proposal for ${record.listing.title} was not selected.`,
-        href: `/discover/${record.listing.id}`,
-      });
+    });
+    await notifyUser({
+      userId: record.proposal.workerUserId,
+      type: "PROPOSAL_REJECTED",
+      category: "PROPOSAL",
+      title: "Proposal update",
+      body: `Your proposal for ${record.listing.title} was not selected.`,
+      href: `/discover/${record.listing.id}`,
+      dedupeKey: `proposal-rejected:${id}`,
     });
     await audit(request, {
       actorUserId: user.id,

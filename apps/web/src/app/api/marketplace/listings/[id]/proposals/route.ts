@@ -1,12 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/server/db";
-import {
-  jobListings,
-  notifications,
-  operations,
-  proposalMilestones,
-  proposals,
-} from "@/server/db/schema";
+import { jobListings, operations, proposalMilestones, proposals } from "@/server/db/schema";
 import { requireUser } from "@/server/auth/session";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
@@ -19,6 +13,8 @@ import {
 import { proposalInputSchema } from "@/features/marketplace/server/schemas";
 import { audit } from "@/server/audit";
 import { getProposalEvaluations } from "@/features/marketplace/server/queries";
+import { notifyUser } from "@/server/notifications/service";
+import { requireIdempotencyKey, scopedIdempotencyKey } from "@/server/http/idempotency";
 
 function isDuplicateProposal(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -42,13 +38,7 @@ export const GET = withApi(
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/marketplace/listings/[id]/proposals">) => {
     assertSameOrigin(request);
-    const key = request.headers.get("idempotency-key");
-    if (!key || key.length > 60)
-      throw new ApiError(
-        400,
-        "IDEMPOTENCY_KEY_REQUIRED",
-        "Provide a valid Idempotency-Key header.",
-      );
+    const key = requireIdempotencyKey(request, 60);
     const { id } = await context.params;
     const { user } = await requireUser();
     await requireProposalEligibility(user.id, user.emailVerifiedAt);
@@ -64,7 +54,7 @@ export const POST = withApi(
       );
     if (BigInt(input.totalBid) < listing.budgetMin || BigInt(input.totalBid) > listing.budgetMax)
       throw new ApiError(400, "BID_OUTSIDE_BUDGET", "The bid must be within the listing budget.");
-    const operationKey = `proposal:${user.id}:${key}`;
+    const operationKey = scopedIdempotencyKey("proposal", user.id, key);
     const [prior] = await db
       .select()
       .from(operations)
@@ -110,13 +100,6 @@ export const POST = withApi(
           status: "CONFIRMED",
           metadata: { proposalId: created.id, listingId: id },
         });
-        await tx.insert(notifications).values({
-          userId: listing.clientUserId,
-          type: "PROPOSAL_RECEIVED",
-          title: "New proposal received",
-          body: `A worker submitted a proposal for ${listing.title}.`,
-          href: `/discover/${id}`,
-        });
         return created;
       })
       .catch((error: unknown) => {
@@ -134,6 +117,15 @@ export const POST = withApi(
       entityType: "proposal",
       entityId: proposal.id,
       metadata: { listingId: id },
+    });
+    await notifyUser({
+      userId: listing.clientUserId,
+      type: "PROPOSAL_RECEIVED",
+      category: "PROPOSAL",
+      title: "New proposal received",
+      body: `A worker submitted a proposal for ${listing.title}.`,
+      href: `/discover/${id}`,
+      dedupeKey: `proposal-received:${proposal.id}`,
     });
     return Response.json({ data: serialize(proposal) }, { status: 201 });
   },

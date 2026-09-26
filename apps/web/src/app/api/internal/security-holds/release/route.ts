@@ -2,6 +2,7 @@ import { and, eq, isNull, lte } from "drizzle-orm";
 import { db } from "@/server/db";
 import { securityHolds, wallets } from "@/server/db/schema";
 import { ApiError, withApi } from "@/server/http/errors";
+import { audit } from "@/server/audit";
 
 export const POST = withApi(async (request: Request) => {
   if (
@@ -20,6 +21,7 @@ export const POST = withApi(async (request: Request) => {
       ),
     );
   let released = 0;
+  const releasedHolds: string[] = [];
   for (const hold of holds)
     await db.transaction(async (tx) => {
       const walletId = hold.reason.split(" ").at(-1);
@@ -43,6 +45,13 @@ export const POST = withApi(async (request: Request) => {
         .set({ releasedAt: new Date() })
         .where(eq(securityHolds.id, hold.id));
       released++;
+      releasedHolds.push(hold.id);
+    });
+  for (const holdId of releasedHolds)
+    await audit(request, {
+      action: "internal.security_hold_released",
+      entityType: "security_hold",
+      entityId: holdId,
     });
   return Response.json({ data: { released } });
 });

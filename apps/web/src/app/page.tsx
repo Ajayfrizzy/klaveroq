@@ -1,22 +1,13 @@
-import {
-  ArrowRight,
-  Check,
-  CircleDollarSign,
-  Clock3,
-  Compass,
-  Plus,
-  ShieldCheck,
-  UserRound,
-  UsersRound,
-  WalletCards,
-} from "lucide-react";
+import { ArrowRight, Check, Clock3, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getCurrentUser } from "@/server/auth/session";
 import { getDashboardData } from "@/features/dashboard/server/queries";
-import { formatAssetAmount, presentAssetTotals } from "@/features/dashboard/server/metrics";
+import { formatAssetAmount } from "@/features/dashboard/server/metrics";
+import { IntentPanel } from "@/features/dashboard/intent-panel";
+import { getMissingPublicationFields } from "@/features/talent/server/publication";
 
 export const dynamic = "force-dynamic";
 
@@ -25,22 +16,10 @@ export default async function DashboardPage() {
   if (!current) redirect("/login");
   const data = await getDashboardData(current.user.id, Boolean(current.user.emailVerifiedAt));
   const displayName = current.profile?.displayName?.split(" ")[0] || "there";
-  const profileRequirements = current.profile
-    ? [
-        Boolean(current.profile.displayName?.trim()),
-        Boolean(current.profile.headline?.trim() || current.profile.primaryRole?.trim()),
-        Boolean(current.profile.bio?.trim()),
-        current.profile.skills.some((skill) => skill.trim()),
-      ]
-    : [];
-  const profileComplete = profileRequirements.length > 0 && profileRequirements.every(Boolean);
-  const primaryStartAction = !profileComplete
-    ? { href: "/profile", label: "Complete profile", icon: <UserRound size={16} /> }
-    : !current.profile?.isPublic
-      ? { href: "/profile", label: "Publish profile", icon: <ShieldCheck size={16} /> }
-      : { href: "/discover", label: "Find work", icon: <Compass size={16} /> };
+  const profileComplete = Boolean(
+    current.profile && getMissingPublicationFields(current.profile).length === 0,
+  );
   const allChecksRecorded = Object.values(data.verification).every(Boolean);
-  const released = presentAssetTotals(data.financials.released, "No confirmed releases this month");
 
   return (
     <AppShell>
@@ -52,34 +31,11 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {data.isFirstTimeUser && (
-        <section className="first-user-panel" aria-labelledby="welcome-title">
-          <div>
-            <p className="eyebrow">Start here</p>
-            <h2 id="welcome-title">Welcome to Klaveroq</h2>
-            <p>
-              Build a trusted professional profile, discover opportunities or talent, and work
-              through clear, verifiable milestones.
-            </p>
-          </div>
-          <div className="first-user-actions">
-            <Link className="primary-button" href={primaryStartAction.href}>
-              {primaryStartAction.icon} {primaryStartAction.label}
-            </Link>
-            {primaryStartAction.href !== "/discover" && (
-              <Link className="secondary-button" href="/discover">
-                <Compass size={16} /> Find work
-              </Link>
-            )}
-            <Link className="secondary-button" href="/talent">
-              <UsersRound size={16} /> Find talent
-            </Link>
-            <Link className="secondary-button" href="/jobs/new/public">
-              <Plus size={16} /> Post a job
-            </Link>
-          </div>
-        </section>
-      )}
+      <IntentPanel
+        userId={current.user.id}
+        profileReady={profileComplete}
+        published={Boolean(current.profile?.isPublic)}
+      />
 
       <section className="readiness-strip" aria-labelledby="readiness-title">
         <div className="readiness-icon">
@@ -88,18 +44,18 @@ export default async function DashboardPage() {
         <div className="readiness-copy">
           <div>
             <h2 id="readiness-title">
-              {allChecksRecorded ? "Account checks recorded" : "Account checks incomplete"}
+              {allChecksRecorded ? "Account verification complete" : "Finish account verification"}
             </h2>
             {allChecksRecorded && (
               <span className="verified-label">
-                <Check size={13} /> Recorded
+                <Check size={13} /> Verified
               </span>
             )}
           </div>
           <p>
             {allChecksRecorded
-              ? "Email, identity, and wallet verification records exist. Payment protection is not connected."
-              : "Review the remaining account records. Payment protection is not connected."}
+              ? "Email, identity, and wallet ownership are verified."
+              : "Review your email, identity, and wallet verification."}
           </p>
         </div>
         <div className="readiness-items">
@@ -130,29 +86,18 @@ export default async function DashboardPage() {
           note="Across client and worker roles"
         />
         <Metric
-          icon={<CircleDollarSign size={20} />}
-          tone="green"
-          label="Secured in jobs"
-          value="Unavailable"
-          note="Payment integration is not connected"
-        />
-        <Metric
           icon={<Clock3 size={20} />}
           tone="amber"
           label="Pending actions"
           value={String(data.pendingActionCount)}
-          note={
-            data.pendingActionCount ? "Items genuinely waiting on you" : "Nothing waiting on you"
-          }
-        />
-        <Metric
-          icon={<WalletCards size={20} />}
-          tone="blue"
-          label="Released this month"
-          value={released.value}
-          note={released.note}
+          note={data.pendingActionCount ? "Items waiting on you" : "Nothing waiting on you"}
         />
       </section>
+
+      <p className="payment-availability">
+        Payment integration is not connected. Funding and payouts are unavailable.{" "}
+        <Link href="/payments">View payment status</Link>
+      </p>
 
       <div className="dashboard-grid">
         <section className="panel jobs-panel">
@@ -243,7 +188,7 @@ export default async function DashboardPage() {
         <div className="section-heading">
           <div>
             <h2>Recent activity</h2>
-            <p>Authorized events across your workspace</p>
+            <p>Updates across your workspace</p>
           </div>
           <Link href="/activity">
             Full activity <ArrowRight size={15} />

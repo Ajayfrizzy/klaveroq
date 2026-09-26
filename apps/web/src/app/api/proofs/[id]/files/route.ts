@@ -5,7 +5,9 @@ import { requireUser } from "@/server/auth/session";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
 import { MAX_PROOF_BYTES, MAX_PROOF_FILES, storePrivateFile } from "@/server/files/storage";
+import { deletePrivateFile } from "@/server/files/storage";
 import { serialize } from "@/server/serialize";
+import { audit } from "@/server/audit";
 
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/proofs/[id]/files">) => {
@@ -39,21 +41,39 @@ export const POST = withApi(
         "PROOF_LIMIT_EXCEEDED",
         "A proof may contain at most 10 files and 100 MB total.",
       );
-    const stored = await Promise.all(files.map(storePrivateFile));
-    const rows = await db
-      .insert(proofFiles)
-      .values(
-        files.map((file, index) => ({
-          proofSubmissionId: id,
-          storageKey: stored[index].storageKey,
-          originalName: file.name.slice(0, 255),
-          contentType: file.type,
-          sizeBytes: stored[index].sizeBytes,
-          sha256: stored[index].sha256,
-          scanStatus: "CLEAN",
-        })),
-      )
-      .returning();
+    const stored: Awaited<ReturnType<typeof storePrivateFile>>[] = [];
+    try {
+      for (const file of files) stored.push(await storePrivateFile(file));
+    } catch (error) {
+      await Promise.all(stored.map((item) => deletePrivateFile(item.storageKey)));
+      throw error;
+    }
+    let rows;
+    try {
+      rows = await db
+        .insert(proofFiles)
+        .values(
+          files.map((file, index) => ({
+            proofSubmissionId: id,
+            ...stored[index],
+            originalName: file.name.slice(0, 255),
+          })),
+        )
+        .returning();
+    } catch (error) {
+      await Promise.all(stored.map((item) => deletePrivateFile(item.storageKey)));
+      throw error;
+    }
+    await audit(request, {
+      actorUserId: user.id,
+      action: "proof.files_uploaded",
+      entityType: "proof",
+      entityId: id,
+      metadata: {
+        fileCount: rows.length,
+        sizeBytes: stored.reduce((sum, item) => sum + item.sizeBytes, 0),
+      },
+    });
     return Response.json({ data: serialize(rows) }, { status: 201 });
   },
 );

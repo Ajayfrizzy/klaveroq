@@ -16,10 +16,12 @@ export function ProposalThread({
   proposalId,
   currentUserId,
   closed = false,
+  initialUnreadCount = 0,
 }: {
   proposalId: string;
   currentUserId: string;
   closed?: boolean;
+  initialUnreadCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -27,6 +29,7 @@ export function ProposalThread({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
 
   const load = async () => {
     setOpen(true);
@@ -35,8 +38,10 @@ export function ProposalThread({
     setError("");
     const response = await fetch(`/api/marketplace/proposals/${proposalId}/messages`);
     const result = await response.json();
-    if (response.ok) setMessages(result.data);
-    else setError(result.error?.message ?? "Clarification thread could not be loaded.");
+    if (response.ok) {
+      setMessages(result.data);
+      setUnreadCount(0);
+    } else setError(result.error?.message ?? "Clarification thread could not be loaded.");
     setLoading(false);
   };
 
@@ -73,6 +78,7 @@ export function ProposalThread({
     return (
       <button type="button" className="secondary-button thread-open" onClick={load}>
         <MessageSquareText size={15} /> Clarify proposal
+        {unreadCount > 0 && <span className="thread-unread-count">{unreadCount}</span>}
       </button>
     );
 

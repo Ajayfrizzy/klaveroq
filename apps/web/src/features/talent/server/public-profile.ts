@@ -1,8 +1,10 @@
-import type { portfolioItems, profiles } from "@/server/db/schema";
+import type { mediaFiles, portfolioItems, profiles } from "@/server/db/schema";
 
 export type ProfileRecord = typeof profiles.$inferSelect;
 
-export function toPublicTalentProfile(profile: ProfileRecord) {
+type MediaRecord = typeof mediaFiles.$inferSelect;
+
+export function toPublicTalentProfile(profile: ProfileRecord, avatar?: MediaRecord) {
   return {
     userId: profile.userId,
     displayName: profile.displayName,
@@ -20,12 +22,17 @@ export function toPublicTalentProfile(profile: ProfileRecord) {
     githubUrl: profile.githubUrl,
     websiteUrl: profile.websiteUrl,
     linkedinUrl: profile.linkedinUrl,
+    avatarUrl: avatar ? `/api/media/avatar/${profile.userId}` : null,
+    avatarAltText: avatar?.altText ?? null,
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,
   };
 }
 
-export function toPublicPortfolioItem(item: typeof portfolioItems.$inferSelect) {
+export function toPublicPortfolioItem(
+  item: typeof portfolioItems.$inferSelect,
+  media?: MediaRecord,
+) {
   return {
     id: item.id,
     title: item.title,
@@ -34,6 +41,9 @@ export function toPublicPortfolioItem(item: typeof portfolioItems.$inferSelect) 
     githubUrl: item.githubUrl,
     skills: item.skills,
     projectRole: item.projectRole,
+    mediaUrl: media ? `/api/media/portfolio/${item.id}` : null,
+    mediaAltText: media?.altText ?? null,
+    mediaContentType: media?.contentType ?? null,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };

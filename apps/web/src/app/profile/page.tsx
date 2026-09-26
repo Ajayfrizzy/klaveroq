@@ -6,8 +6,8 @@ import { ProfileEditor } from "@/features/talent/components/profile-editor";
 import { getReputationSummary } from "@/features/reputation/server/queries";
 import { getCurrentUser } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { portfolioItems } from "@/server/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { mediaFiles, portfolioItems } from "@/server/db/schema";
+import { desc, eq, inArray } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,16 @@ export default async function ProfilePage() {
       .orderBy(desc(portfolioItems.createdAt)),
     getReputationSummary(current.user.id),
   ]);
+  const mediaKeys = [current.profile.avatarKey, ...portfolio.map((item) => item.mediaKey)].filter(
+    (key): key is string => Boolean(key),
+  );
+  const mediaRows = mediaKeys.length
+    ? await db.select().from(mediaFiles).where(inArray(mediaFiles.storageKey, mediaKeys))
+    : [];
+  const mediaByKey = new Map(mediaRows.map((media) => [media.storageKey, media]));
+  const avatarMedia = current.profile.avatarKey
+    ? mediaByKey.get(current.profile.avatarKey)
+    : undefined;
   return (
     <AppShell>
       <PageHeader
@@ -31,7 +41,31 @@ export default async function ProfilePage() {
         icon={UserRound}
       />
       <div className="profile-layout">
-        <ProfileEditor initialProfile={current.profile} initialPortfolio={portfolio} />
+        <ProfileEditor
+          initialProfile={current.profile}
+          initialAvatar={
+            avatarMedia
+              ? {
+                  url: `/api/media/avatar/${current.user.id}`,
+                  altText: avatarMedia.altText,
+                  contentType: avatarMedia.contentType,
+                }
+              : null
+          }
+          initialPortfolio={portfolio.map((item) => {
+            const media = item.mediaKey ? mediaByKey.get(item.mediaKey) : undefined;
+            return {
+              ...item,
+              media: media
+                ? {
+                    url: `/api/media/portfolio/${item.id}`,
+                    altText: media.altText,
+                    contentType: media.contentType,
+                  }
+                : null,
+            };
+          })}
+        />
         <aside>
           <section className="panel reputation-card">
             <h2>Verified Klaveroq reputation</h2>

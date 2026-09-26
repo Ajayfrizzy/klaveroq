@@ -1,5 +1,5 @@
 "use client";
-import { Bell, CheckCheck, Settings2 } from "lucide-react";
+import { Bell, Check, CheckCheck, Mail, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -11,11 +11,27 @@ type Notification = {
   readAt?: string;
   createdAt: string;
 };
+type Preferences = {
+  proposalEmails: boolean;
+  messageEmails: boolean;
+  jobEmails: boolean;
+  disputeEmails: boolean;
+  supportEmails: boolean;
+};
+const preferenceLabels: Array<[keyof Preferences, string]> = [
+  ["proposalEmails", "Proposal updates"],
+  ["messageEmails", "Proposal messages"],
+  ["jobEmails", "Job invitations and awards"],
+  ["disputeEmails", "Dispute updates"],
+  ["supportEmails", "Support replies"],
+];
 export function NotificationInbox() {
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [preferences, setPreferences] = useState<Preferences | null>(null);
   const load = useCallback(async () => {
     try {
       const response = await fetch("/api/notifications");
@@ -53,6 +69,43 @@ export function NotificationInbox() {
       setBusy(false);
     }
   }
+  async function setRead(id: string, read: boolean) {
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, readAt: read ? new Date().toISOString() : undefined } : item,
+      ),
+    );
+    const response = await fetch(`/api/notifications/${id}/read`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ read }),
+      keepalive: true,
+    });
+    if (!response.ok) await load();
+    window.dispatchEvent(new Event("notifications:changed"));
+  }
+  async function openSettings() {
+    const next = !showSettings;
+    setShowSettings(next);
+    if (!next || preferences) return;
+    const response = await fetch("/api/notifications/preferences");
+    const body = await response.json();
+    if (response.ok) setPreferences(body.data);
+    else setError(body.error?.message ?? "Notification preferences could not be loaded.");
+  }
+  async function savePreferences(next: Preferences) {
+    setPreferences(next);
+    const response = await fetch("/api/notifications/preferences", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    });
+    if (!response.ok) {
+      const body = await response.json();
+      setError(body.error?.message ?? "Notification preferences could not be saved.");
+      setPreferences(null);
+    }
+  }
   return (
     <>
       <PageHeader
@@ -71,15 +124,45 @@ export function NotificationInbox() {
             </button>
             <button
               className="icon-button bordered"
-              aria-label="Notification settings unavailable"
-              title="Notification preferences are not available yet"
-              disabled
+              aria-label="Notification preferences"
+              aria-expanded={showSettings}
+              title="Notification preferences"
+              onClick={openSettings}
             >
               <Settings2 size={17} />
             </button>
           </div>
         }
       />
+      {showSettings && (
+        <section className="panel notification-preferences" aria-label="Email preferences">
+          <div>
+            <Mail size={18} />
+            <span>
+              <strong>Email preferences</strong>
+              <small>Security and account-protection messages are always delivered.</small>
+            </span>
+          </div>
+          {preferences ? (
+            <div className="preference-options">
+              {preferenceLabels.map(([key, label]) => (
+                <label key={key}>
+                  <input
+                    type="checkbox"
+                    checked={preferences[key]}
+                    onChange={(event) =>
+                      void savePreferences({ ...preferences, [key]: event.target.checked })
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p>Loading preferences...</p>
+          )}
+        </section>
+      )}
       <section className="panel notifications-list">
         {error && (
           <p className="form-feedback error" role="alert">
@@ -101,7 +184,7 @@ export function NotificationInbox() {
           </div>
         )}
         {items.map((item) => {
-          const content = (
+          const message = (
             <>
               <span className="notification-icon">
                 <Bell size={17} />
@@ -111,16 +194,30 @@ export function NotificationInbox() {
                 <p>{item.body}</p>
                 <small>{new Date(item.createdAt).toLocaleString()}</small>
               </div>
-              {!item.readAt && <span className="unread-dot" aria-hidden="true" />}
             </>
           );
-          return item.href ? (
-            <Link className={item.readAt ? "" : "unread"} href={item.href} key={item.id}>
-              {content}
-            </Link>
-          ) : (
+          return (
             <article className={item.readAt ? "" : "unread"} key={item.id}>
-              {content}
+              {item.href ? (
+                <Link
+                  className="notification-main"
+                  href={item.href}
+                  onClick={() => void setRead(item.id, true)}
+                >
+                  {message}
+                </Link>
+              ) : (
+                <div className="notification-main">{message}</div>
+              )}
+              <button
+                className="icon-button notification-read-toggle"
+                aria-label={item.readAt ? `Mark ${item.title} unread` : `Mark ${item.title} read`}
+                title={item.readAt ? "Mark unread" : "Mark read"}
+                onClick={() => void setRead(item.id, Boolean(!item.readAt))}
+              >
+                <Check size={14} />
+              </button>
+              {!item.readAt && <span className="unread-dot" aria-hidden="true" />}
             </article>
           );
         })}

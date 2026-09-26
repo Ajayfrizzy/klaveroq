@@ -10,9 +10,11 @@ import {
   validOAuthTransaction,
 } from "@/server/auth/google";
 import { db } from "@/server/db";
-import { authIdentities, profiles, users } from "@/server/db/schema";
+import { authIdentities, notifications, profiles, users } from "@/server/db/schema";
 import { createSession } from "@/server/auth/session";
 import { ApiError } from "@/server/http/errors";
+import { activeMfaMethod, issueMfaLoginChallenge } from "@/server/auth/mfa";
+import { audit } from "@/server/audit";
 
 const googleKeys = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
 const appUrl = () => process.env.APP_URL ?? "http://127.0.0.1:3000";
@@ -192,7 +194,30 @@ async function callback(request: Request) {
     return created.id;
   });
 
+  if (await activeMfaMethod(userId)) {
+    const token = await issueMfaLoginChallenge(userId, returnTo);
+    const challengeUrl = new URL("/login", appUrl());
+    challengeUrl.searchParams.set("mfaToken", token);
+    if (returnTo !== "/") challengeUrl.searchParams.set("returnTo", returnTo);
+    return Response.redirect(challengeUrl);
+  }
   await createSession(userId, request);
+  await Promise.all([
+    db.insert(notifications).values({
+      userId,
+      type: "SECURITY_NEW_SESSION",
+      title: "New sign-in",
+      body: "A new session signed in with Google.",
+      href: "/wallet",
+    }),
+    audit(request, {
+      actorUserId: userId,
+      action: "session.created",
+      entityType: "user",
+      entityId: userId,
+      metadata: { provider: "google" },
+    }),
+  ]);
   return Response.redirect(new URL(returnTo, appUrl()));
 }
 

@@ -9,6 +9,7 @@ import {
 import { feeQuoteSchema } from "@/features/jobs/server/schemas";
 import { withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
+import { audit } from "@/server/audit";
 
 export const POST = withApi(async (request: Request) => {
   assertSameOrigin(request);
@@ -31,6 +32,13 @@ export const POST = withApi(async (request: Request) => {
       expiresAt,
     })
     .returning();
+  await audit(request, {
+    actorUserId: user.id,
+    action: "fee_quote.created",
+    entityType: "fee_quote",
+    entityId: quote.id,
+    metadata: { asset: input.asset, policyVersion: fees.policyVersion },
+  });
   return Response.json(
     { data: { id: quote.id, ...serializeFees(fees), asset: input.asset, expiresAt } },
     { status: 201 },

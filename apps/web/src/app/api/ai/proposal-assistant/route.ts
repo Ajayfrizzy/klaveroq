@@ -62,7 +62,7 @@ export const POST = withApi(async (request: Request) => {
     entityType: "proposal_draft",
     metadata: {
       listingId: input.listingId,
-      provider: process.env.MARKETPLACE_AI_PROVIDER ?? "mock",
+      provider: process.env.MARKETPLACE_AI_PROVIDER ?? "template",
     },
   });
   return Response.json({ data: suggestion });

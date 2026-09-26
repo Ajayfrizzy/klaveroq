@@ -5,6 +5,7 @@ import { requireUser } from "@/server/auth/session";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
 import { requireListingOwner } from "@/features/marketplace/server/access";
+import { audit } from "@/server/audit";
 
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/marketplace/listings/[id]/cancel">) => {
@@ -18,6 +19,13 @@ export const POST = withApi(
       .update(jobListings)
       .set({ status: "CANCELLED", closedAt: new Date(), updatedAt: new Date() })
       .where(and(eq(jobListings.id, id), inArray(jobListings.status, ["DRAFT", "OPEN", "CLOSED"])));
+    await audit(request, {
+      actorUserId: user.id,
+      action: "listing.cancelled",
+      entityType: "job_listing",
+      entityId: id,
+      metadata: { previousStatus: listing.status },
+    });
     return Response.json({ data: { id, status: "CANCELLED" } });
   },
 );

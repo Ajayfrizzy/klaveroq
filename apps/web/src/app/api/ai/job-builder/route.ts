@@ -14,7 +14,7 @@ export const POST = withApi(async (request: Request) => {
     actorUserId: user.id,
     action: "ai.job_draft_generated",
     entityType: "job_listing_draft",
-    metadata: { provider: process.env.MARKETPLACE_AI_PROVIDER ?? "mock" },
+    metadata: { provider: process.env.MARKETPLACE_AI_PROVIDER ?? "template" },
   });
   return Response.json({ data: suggestion });
 });

@@ -6,6 +6,7 @@ import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
 import { calculateFees } from "@/features/payments/server/fee-engine";
 import { audit } from "@/server/audit";
+import { notifyUser } from "@/server/notifications/service";
 
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/jobs/[id]/confirm">) => {
@@ -25,8 +26,8 @@ export const POST = withApi(
         "Only an awarded agreement draft can be confirmed.",
       );
     const fees = calculateFees(job.subtotal);
-    await db.transaction(async (tx) => {
-      await tx
+    const confirmed = await db.transaction(async (tx) => {
+      const [updated] = await tx
         .update(jobs)
         .set({
           status: "INVITED",
@@ -35,7 +36,10 @@ export const POST = withApi(
           networkReserve: fees.networkReserve,
           updatedAt: new Date(),
         })
-        .where(and(eq(jobs.id, id), eq(jobs.status, "DRAFT")));
+        .where(and(eq(jobs.id, id), eq(jobs.status, "DRAFT")))
+        .returning({ id: jobs.id });
+      if (!updated)
+        throw new ApiError(409, "JOB_STATE_CONFLICT", "The agreement draft was already confirmed.");
       await tx
         .insert(operations)
         .values({
@@ -46,6 +50,7 @@ export const POST = withApi(
           status: "CONFIRMED",
         })
         .onConflictDoNothing();
+      return updated;
     });
     await audit(request, {
       actorUserId: user.id,
@@ -53,6 +58,16 @@ export const POST = withApi(
       entityType: "job",
       entityId: id,
     });
+    if (confirmed && job.workerUserId)
+      await notifyUser({
+        userId: job.workerUserId,
+        type: "AGREEMENT_INVITED",
+        category: "JOB",
+        title: `Agreement invitation: ${job.title}`,
+        body: "The client confirmed your agreement draft. Review the invitation and its current funding status.",
+        href: `/jobs/${id}`,
+        dedupeKey: `agreement-invited:${id}:${job.workerUserId}`,
+      });
     return Response.json({ data: { jobId: id, status: "INVITED" } });
   },
 );

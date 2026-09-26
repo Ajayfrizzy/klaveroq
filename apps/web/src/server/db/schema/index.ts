@@ -8,6 +8,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -200,6 +201,7 @@ export const profiles = pgTable(
     index("profiles_talent_role_idx").on(table.primaryRole),
     index("profiles_talent_availability_idx").on(table.availability),
     index("profiles_talent_country_idx").on(table.countryCode),
+    index("profiles_public_updated_idx").on(table.isPublic, table.updatedAt, table.userId),
     index("profiles_skills_gin_idx").using("gin", table.skills),
     index("profiles_categories_gin_idx").using("gin", table.preferredWorkCategories),
     check(
@@ -228,6 +230,30 @@ export const portfolioItems = pgTable(
   (table) => [
     index("portfolio_items_user_idx").on(table.userId, table.createdAt),
     index("portfolio_items_skills_gin_idx").using("gin", table.skills),
+  ],
+);
+
+export const mediaFiles = pgTable(
+  "media_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 30 }).notNull(),
+    storageKey: text("storage_key").notNull(),
+    originalName: varchar("original_name", { length: 255 }).notNull(),
+    contentType: varchar("content_type", { length: 120 }).notNull(),
+    sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+    sha256: varchar("sha256", { length: 64 }).notNull(),
+    scanStatus: varchar("scan_status", { length: 30 }).default("PENDING").notNull(),
+    altText: varchar("alt_text", { length: 500 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("media_file_storage_key_unique").on(table.storageKey),
+    index("media_file_owner_idx").on(table.ownerUserId, table.createdAt),
+    check("media_file_size_valid", sql`${table.sizeBytes} > 0 AND ${table.sizeBytes} <= 26214400`),
   ],
 );
 
@@ -284,6 +310,48 @@ export const verificationTokens = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [uniqueIndex("verification_token_hash_unique").on(table.tokenHash)],
+);
+
+export const authRateLimits = pgTable(
+  "auth_rate_limits",
+  {
+    action: varchar("action", { length: 40 }).notNull(),
+    keyHash: varchar("key_hash", { length: 64 }).notNull(),
+    windowStartedAt: timestamp("window_started_at", { withTimezone: true }).defaultNow().notNull(),
+    attempts: integer("attempts").default(1).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.action, table.keyHash] })],
+);
+
+export const mfaMethods = pgTable("mfa_methods", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  secretEncrypted: text("secret_encrypted").notNull(),
+  recoveryCodeHashes: jsonb("recovery_code_hashes").$type<string[]>().default([]).notNull(),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  disabledAt: timestamp("disabled_at", { withTimezone: true }),
+  ...timestamps,
+});
+
+export const mfaLoginChallenges = pgTable(
+  "mfa_login_challenges",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    returnTo: text("return_to"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("mfa_login_challenge_token_unique").on(table.tokenHash),
+    index("mfa_login_challenge_user_idx").on(table.userId),
+  ],
 );
 
 export const identityVerifications = pgTable(
@@ -397,6 +465,7 @@ export const jobs = pgTable(
     uniqueIndex("jobs_reference_unique").on(table.reference),
     index("jobs_client_idx").on(table.clientUserId),
     index("jobs_worker_idx").on(table.workerUserId),
+    index("jobs_worker_status_idx").on(table.workerUserId, table.status),
     check(
       "jobs_amounts_nonnegative",
       sql`${table.subtotal} >= 0 AND ${table.clientFee} >= 0 AND ${table.networkReserve} >= 0`,
@@ -492,7 +561,8 @@ export const jobListings = pgTable(
   },
   (table) => [
     index("job_listings_client_idx").on(table.clientUserId),
-    index("job_listings_discovery_idx").on(table.status, table.publishedAt),
+    index("job_listings_discovery_idx").on(table.status, table.publishedAt, table.id),
+    index("job_listings_budget_discovery_idx").on(table.status, table.budgetMax, table.id),
     check(
       "job_listing_budget_valid",
       sql`${table.budgetMin} > 0 AND ${table.budgetMax} >= ${table.budgetMin}`,
@@ -594,6 +664,23 @@ export const proposalMessages = pgTable(
     index("proposal_messages_thread_idx").on(table.proposalId, table.createdAt),
     index("proposal_messages_sender_idx").on(table.senderUserId, table.createdAt),
     check("proposal_message_body_length", sql`char_length(${table.body}) BETWEEN 1 AND 2000`),
+  ],
+);
+
+export const proposalThreadReads = pgTable(
+  "proposal_thread_reads",
+  {
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.proposalId, table.userId] }),
+    index("proposal_thread_reads_user_idx").on(table.userId, table.lastReadAt),
   ],
 );
 
@@ -739,6 +826,47 @@ export const disputeEvidence = pgTable("dispute_evidence", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const disputeFiles = pgTable(
+  "dispute_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    evidenceId: uuid("evidence_id")
+      .notNull()
+      .references(() => disputeEvidence.id, { onDelete: "cascade" }),
+    storageKey: text("storage_key").notNull(),
+    originalName: varchar("original_name", { length: 255 }).notNull(),
+    contentType: varchar("content_type", { length: 120 }).notNull(),
+    sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+    sha256: varchar("sha256", { length: 64 }).notNull(),
+    scanStatus: varchar("scan_status", { length: 30 }).default("PENDING").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("dispute_file_storage_key_unique").on(table.storageKey),
+    index("dispute_file_evidence_idx").on(table.evidenceId),
+    check(
+      "dispute_file_size_valid",
+      sql`${table.sizeBytes} > 0 AND ${table.sizeBytes} <= 26214400`,
+    ),
+  ],
+);
+
+export const disputeEvents = pgTable(
+  "dispute_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    disputeId: uuid("dispute_id")
+      .notNull()
+      .references(() => disputes.id, { onDelete: "cascade" }),
+    actorUserId: uuid("actor_user_id").references(() => users.id),
+    type: varchar("type", { length: 50 }).notNull(),
+    detail: text("detail").notNull(),
+    metadata: jsonb("metadata").default({}).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("dispute_event_history_idx").on(table.disputeId, table.createdAt)],
+);
+
 export const disputeDecisions = pgTable(
   "dispute_decisions",
   {
@@ -749,16 +877,23 @@ export const disputeDecisions = pgTable(
     decidedBy: uuid("decided_by")
       .notNull()
       .references(() => users.id),
+    requiredApproverId: uuid("required_approver_id").references(() => users.id),
     approvedBy: uuid("approved_by").references(() => users.id),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
     workerShareBps: integer("worker_share_bps").notNull(),
     clientRefundBps: integer("client_refund_bps").notNull(),
     rationale: text("rationale").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
+    uniqueIndex("dispute_decision_dispute_unique").on(table.disputeId),
     check(
       "dispute_split_complete",
       sql`${table.workerShareBps} >= 0 AND ${table.clientRefundBps} >= 0 AND ${table.workerShareBps} + ${table.clientRefundBps} = 10000`,
+    ),
+    check(
+      "dispute_decision_distinct_approvers",
+      sql`${table.decidedBy} <> ${table.requiredApproverId}`,
     ),
   ],
 );
@@ -895,8 +1030,53 @@ export const notifications = pgTable(
     title: varchar("title", { length: 160 }).notNull(),
     body: text("body").notNull(),
     href: text("href"),
+    dedupeKey: varchar("dedupe_key", { length: 200 }),
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [index("notification_user_idx").on(table.userId, table.createdAt)],
+  (table) => [
+    index("notification_user_idx").on(table.userId, table.createdAt),
+    uniqueIndex("notification_user_dedupe_unique").on(table.userId, table.dedupeKey),
+  ],
+);
+
+export const notificationPreferences = pgTable("notification_preferences", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  proposalEmails: boolean("proposal_emails").default(true).notNull(),
+  messageEmails: boolean("message_emails").default(true).notNull(),
+  jobEmails: boolean("job_emails").default(true).notNull(),
+  disputeEmails: boolean("dispute_emails").default(true).notNull(),
+  supportEmails: boolean("support_emails").default(true).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const notificationDeliveries = pgTable(
+  "notification_deliveries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .references(() => notifications.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    channel: varchar("channel", { length: 20 }).default("EMAIL").notNull(),
+    recipient: varchar("recipient", { length: 320 }).notNull(),
+    subject: varchar("subject", { length: 200 }).notNull(),
+    textBody: text("text_body").notNull(),
+    htmlBody: text("html_body").notNull(),
+    dedupeKey: varchar("dedupe_key", { length: 200 }).notNull(),
+    status: varchar("status", { length: 20 }).default("PENDING").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).defaultNow().notNull(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("notification_delivery_dedupe_unique").on(table.channel, table.dedupeKey),
+    index("notification_delivery_retry_idx").on(table.status, table.nextAttemptAt),
+  ],
 );

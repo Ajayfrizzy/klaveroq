@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoutButton } from "@/components/ui/logout-button";
 
 const primary = [
@@ -37,9 +37,47 @@ const secondary = [
   { label: "Support", href: "/support", icon: CircleHelp },
 ];
 
+const matchesPath = (pathname: string, href: string) =>
+  href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const sidebar = sidebarRef.current;
+    const menuButton = menuButtonRef.current;
+    const controls = () =>
+      Array.from(sidebar?.querySelectorAll<HTMLElement>("a, button") ?? []).filter(
+        (element) => element.getClientRects().length > 0,
+      );
+    controls()[0]?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key !== "Tab") return;
+      const items = controls();
+      const first = items[0];
+      const last = items.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      }
+      if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKey);
+      menuButton?.focus();
+    };
+  }, [menuOpen]);
   const [account, setAccount] = useState<{ displayName: string; email: string } | null>(null);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
@@ -101,9 +139,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const nav = (items: typeof primary) =>
     items.map(({ label, href, icon: Icon }) => {
-      const active = pathname === href;
+      const active = matchesPath(pathname, href);
       return (
         <Link
+          aria-current={active ? "page" : undefined}
           className={`nav-link ${active ? "active" : ""}`}
           href={href}
           key={href}
@@ -117,7 +156,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
+      <aside
+        ref={sidebarRef}
+        className={`sidebar ${menuOpen ? "open" : ""}`}
+        id="app-sidebar"
+        aria-label="Workspace menu"
+      >
         <div className="brand-row">
           <Link className="brand" href="/" aria-label="Klaveroq home">
             <span className="brand-mark">
@@ -134,7 +178,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <Link className="create-button" href="/jobs/new" onClick={() => setMenuOpen(false)}>
-          <Plus size={18} /> Create job
+          <Plus size={18} /> Hire someone
         </Link>
         <p className="nav-group-label">Workspace</p>
         <nav className="sidebar-nav" aria-label="Main navigation">
@@ -168,9 +212,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <button className="scrim" onClick={() => setMenuOpen(false)} aria-label="Close menu" />
       )}
 
-      <div className="main-column">
+      <div className="main-column" inert={menuOpen ? true : undefined}>
         <header className="topbar">
           <button
+            ref={menuButtonRef}
+            aria-controls="app-sidebar"
+            aria-expanded={menuOpen}
             className="icon-button mobile-menu"
             onClick={() => setMenuOpen(true)}
             aria-label="Open menu"
@@ -206,12 +253,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="page-content">{children}</main>
         <nav className="bottom-nav" aria-label="Mobile navigation">
           {primary.slice(0, 4).map(({ label, href, icon: Icon }) => (
-            <Link className={pathname === href ? "active" : ""} href={href} key={href}>
+            <Link
+              aria-current={matchesPath(pathname, href) ? "page" : undefined}
+              className={matchesPath(pathname, href) ? "active" : ""}
+              href={href}
+              key={href}
+            >
               <Icon size={20} />
               <span>{label}</span>
             </Link>
           ))}
-          <Link className={pathname === "/profile" ? "active" : ""} href="/profile">
+          <Link
+            aria-current={matchesPath(pathname, "/profile") ? "page" : undefined}
+            className={matchesPath(pathname, "/profile") ? "active" : ""}
+            href="/profile"
+          >
             <UserRound size={20} />
             <span>Profile</span>
           </Link>

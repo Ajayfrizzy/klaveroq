@@ -1,14 +1,6 @@
 import { and, desc, eq, gt, or } from "drizzle-orm";
 import { db } from "@/server/db";
-import {
-  feeQuotes,
-  jobs,
-  milestones,
-  notifications,
-  operations,
-  profiles,
-  users,
-} from "@/server/db/schema";
+import { feeQuotes, jobs, milestones, operations, profiles, users } from "@/server/db/schema";
 import { requireUser } from "@/server/auth/session";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
@@ -16,6 +8,8 @@ import { createJobSchema } from "@/features/jobs/server/schemas";
 import { serialize } from "@/server/serialize";
 import { audit } from "@/server/audit";
 import { createJobReference } from "@/server/references";
+import { notifyUser } from "@/server/notifications/service";
+import { requireIdempotencyKey, scopedIdempotencyKey } from "@/server/http/idempotency";
 
 export const GET = withApi(async () => {
   const { user } = await requireUser();
@@ -32,10 +26,11 @@ export const POST = withApi(async (request: Request) => {
   const current = await requireUser();
   const { user } = current;
   const input = createJobSchema.parse(await request.json());
-  const suppliedKey = request.headers.get("idempotency-key");
-  if (!suppliedKey || suppliedKey.length > 100)
-    throw new ApiError(400, "IDEMPOTENCY_KEY_REQUIRED", "Provide a valid Idempotency-Key header.");
-  const idempotencyKey = `create-job:${user.id}:${suppliedKey}`;
+  const idempotencyKey = scopedIdempotencyKey(
+    "create-job",
+    user.id,
+    requireIdempotencyKey(request),
+  );
   const [prior] = await db
     .select()
     .from(operations)
@@ -137,14 +132,16 @@ export const POST = withApi(async (request: Request) => {
       status: "CONFIRMED",
       metadata: { reference },
     });
-    await tx.insert(notifications).values({
-      userId: worker.id,
-      type: "JOB_INVITATION",
-      title: "New job invitation",
-      body: `${current.profile?.displayName ?? user.email} invited you to review ${input.title}.`,
-      href: `/jobs/${created.id}`,
-    });
     return created;
+  });
+  await notifyUser({
+    userId: worker.id,
+    type: "JOB_INVITATION",
+    category: "JOB",
+    title: "New job invitation",
+    body: `${current.profile?.displayName ?? user.email} invited you to review ${input.title}.`,
+    href: `/jobs/${job.id}`,
+    dedupeKey: `job-invitation:${job.id}`,
   });
   await audit(request, {
     actorUserId: user.id,

@@ -16,7 +16,7 @@ Trusted work marketplace for talent discovery, verifiable milestones, and protec
 
 ```bash
 npm install
-cp .env.example apps/web/.env
+cp .env.example .env
 docker compose up -d postgres
 npm run db:migrate
 npm run dev
@@ -25,9 +25,8 @@ npm run dev
 The web application runs at `http://127.0.0.1:3000` by default. Use that exact origin for browser
 access, `APP_URL`, and the Google OAuth redirect URI; do not mix it with `localhost`.
 
-Register fresh client and worker accounts at `/register`. The normal setup does not seed the six
-demonstration accounts. Run the guarded seed command only when demonstration data is explicitly
-needed.
+Register fresh client and worker accounts at `/register`. Normal setup starts with an empty
+marketplace and never creates demonstration accounts or records.
 
 ## Useful commands
 
@@ -41,7 +40,6 @@ npm run test:integration --workspace=@klaveroq/web  # Real API/PostgreSQL transa
 npm run test:e2e --workspace=@klaveroq/web          # Chromium desktop and mobile journeys
 npm run db:generate  # Generate a Drizzle migration
 npm run db:migrate   # Apply database migrations
-KLAVEROQ_ALLOW_LOCAL_SEED=1 npm run db:seed:demo  # Explicitly create local-only demo data
 ```
 
 ## Repository map
@@ -52,7 +50,7 @@ apps/web/src/
 ├── components/
 │   ├── layout/          Application shell and page-level layout
 │   └── ui/              Reusable, feature-independent UI
-├── features/            UI, fixtures, validation, and services by product feature
+├── features/            UI, validation, and services by product feature
 ├── server/              Shared server infrastructure and compatibility exports
 ├── styles/              Global styles and design tokens
 packages/domain/src/     Framework-independent domain types and rules
@@ -65,19 +63,25 @@ See [the source organization guide](apps/web/src/README.md) before adding a new 
 
 ## Environment
 
-Copy `.env.example` to `apps/web/.env`. The example contains safe local defaults for PostgreSQL, session configuration, testnet CKB, sandbox identity verification, and local file storage. Google OAuth values are optional for local development.
+Copy `.env.example` to the repository-root `.env`. Next.js and Drizzle load that file when commands
+run through the web workspace. An existing `apps/web/.env` takes precedence for backward
+compatibility. The example contains safe local defaults for PostgreSQL, session configuration,
+local email delivery, testnet CKB, sandbox identity verification, and local file storage. Google
+OAuth values are optional for local development.
 
 Do not commit `apps/web/.env` or other files containing credentials.
 
-### Data and preview fixtures
+For hosted email delivery, set `EMAIL_PROVIDER=resend`, `EMAIL_FROM`, and `RESEND_API_KEY`. The
+`local` provider sends no external mail and exposes verification/recovery links only outside
+production. `AUTH_EXPOSE_LOCAL_TOKENS=1` is reserved for the isolated browser-test server and must
+never be configured in a hosted environment. Set a unique, high-entropy `SESSION_SECRET` in every
+hosted environment.
+
+### Runtime data
 
 Hosted environments always use `DATABASE_URL`. If the database is missing or unavailable, the
-request fails visibly instead of falling back to sample records. Fixture modules are retained only
-for isolated local tests and are not imported by customer-facing routes.
-
-`KLAVEROQ_PREVIEW_MODE=1` is accepted only outside production and CI. The seed command has a second
-guard: it requires `KLAVEROQ_ALLOW_LOCAL_SEED=1` and a loopback `DATABASE_URL`. It refuses production
-or remote databases.
+request fails visibly instead of falling back to sample records. Runtime source code does not ship
+with preview records or a demonstration-data seeder.
 
 The local PostgreSQL database and volume now use Klaveroq identifiers. Developers with the old
 development volume can reset it with `docker compose down -v` before running `docker compose up -d`.
@@ -95,24 +99,9 @@ npm run test:e2e --workspace=@klaveroq/web
 
 The service is `klaveroq_test` on `127.0.0.1:55434` and stores data in container `tmpfs`. Before a
 suite, `scripts/reset-test-db.mjs` refuses non-loopback or non-test database names, resets only that
-database, and reapplies migrations. Tests create uniquely named accounts and do not run the demo
-seeder. Playwright starts the application at `http://127.0.0.1:3199` with separate Next.js build
+database, and reapplies migrations. Tests create uniquely named accounts only in that disposable
+database. Playwright starts the application at `http://127.0.0.1:3199` with separate Next.js build
 artifacts, so it can coexist with a development server.
-
-## Demo accounts
-
-Password: `KlaveroqDemo!2026`
-
-- `client@klaveroq.local`
-- `worker@klaveroq.local`
-- `designer@klaveroq.local`
-- `writer@klaveroq.local`
-- `admin@klaveroq.local`
-- `support@klaveroq.local`
-
-These accounts exist only after the explicitly guarded local seed command. Never configure them in
-a hosted database. See [the seeded-data cleanup procedure](SEEDED_DATA_CLEANUP.md) before
-removing any suspected demo records from an existing environment.
 
 ## Google OAuth
 
@@ -137,6 +126,6 @@ have been tested in that environment.
 - Do not edit files under `drizzle/` manually. Generate migrations with `npm run db:generate`.
 
 Marketplace assistance uses the server-side provider boundary in `features/ai`. Local development
-defaults to the safe mock provider; generated job and proposal drafts are always editable and are
-never published or submitted automatically. PactAgent remains the infrastructure boundary for
-escrow, settlement, and proof-processing capabilities.
+defaults to a deterministic template provider; generated job and proposal drafts are always
+editable and are never published or submitted automatically. PactAgent remains the infrastructure
+boundary for escrow, settlement, and proof-processing capabilities.

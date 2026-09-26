@@ -13,14 +13,9 @@ import { audit } from "@/server/audit";
 export const GET = withApi(
   async (_request: Request, context: RouteContext<"/api/marketplace/listings/[id]">) => {
     const { id } = await context.params;
-    const record = await getPublicListing(id);
     const current = await getCurrentUser();
-    if (
-      !record ||
-      (["DRAFT", "CANCELLED"].includes(record.listing.status) &&
-        record.listing.clientUserId !== current?.user.id)
-    )
-      throw new ApiError(404, "LISTING_NOT_FOUND", "Listing was not found.");
+    const record = await getPublicListing(id, current?.user.id);
+    if (!record) throw new ApiError(404, "LISTING_NOT_FOUND", "Listing was not found.");
     const { clientUserId: _clientUserId, awardedJobId: _awardedJobId, ...listing } = record.listing;
     void _clientUserId;
     void _awardedJobId;

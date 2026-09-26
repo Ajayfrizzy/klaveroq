@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, Info, Plus, Send, Sparkles, Trash2, X } from "
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useWorkProtection } from "@/components/ui/use-work-protection";
 
 type Milestone = {
   id: string;
@@ -71,6 +72,11 @@ export function ProposalComposer({
   const [busy, setBusy] = useState(false);
   const [assistantBusy, setAssistantBusy] = useState(false);
   const [assistantNote, setAssistantNote] = useState("");
+  const {
+    root: workRoot,
+    status: workStatus,
+    markSaved,
+  } = useWorkProtection(JSON.stringify({ coverLetter, items }), errors.join(" "));
   const minBudget = BigInt(budgetMin);
   const maxBudget = BigInt(budgetMax);
   const total = useMemo(
@@ -207,6 +213,7 @@ export function ProposalComposer({
       );
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message ?? "Proposal could not be saved.");
+      markSaved();
       router.refresh();
     } catch (reason) {
       setErrors([reason instanceof Error ? reason.message : "Proposal could not be saved."]);
@@ -305,6 +312,7 @@ export function ProposalComposer({
 
   return (
     <form className="proposal-form" onSubmit={review} noValidate>
+      <div ref={workRoot}>{workStatus}</div>
       <div className="section-heading">
         <div>
           <h2>{existing ? "Edit your proposal" : "Submit a proposal"}</h2>
@@ -342,13 +350,18 @@ export function ProposalComposer({
             maxLength={5000}
             rows={6}
             value={coverLetter}
+            aria-invalid={errors.length > 0 && coverLetter.trim().length < 40}
             onChange={(event) => {
               setCoverLetter(event.target.value);
               setErrors([]);
             }}
             placeholder="Explain your approach, relevant experience, and what you will deliver."
           />
-          <small>{coverLetter.length}/5,000 characters · Minimum 40</small>
+          <small>
+            {errors.length > 0 && coverLetter.trim().length < 40
+              ? "Explain your approach in at least 40 characters."
+              : `${coverLetter.length}/5,000 characters · Minimum 40`}
+          </small>
         </label>
         <div className="proposal-guidance">
           <Info size={16} />
@@ -379,6 +392,7 @@ export function ProposalComposer({
                 required
                 minLength={2}
                 value={item.title}
+                aria-invalid={errors.length > 0 && item.title.trim().length < 2}
                 onChange={(event) => update(item.id, "title", event.target.value)}
                 placeholder="e.g. Research and wireframes"
               />
@@ -390,6 +404,7 @@ export function ProposalComposer({
                 minLength={10}
                 rows={3}
                 value={item.description}
+                aria-invalid={errors.length > 0 && item.description.trim().length < 10}
                 onChange={(event) => update(item.id, "description", event.target.value)}
                 placeholder="Describe the outcome the client will receive."
               />
@@ -402,6 +417,7 @@ export function ProposalComposer({
                 minLength={5}
                 rows={3}
                 value={item.acceptanceCriteria}
+                aria-invalid={errors.length > 0 && item.acceptanceCriteria.trim().length < 5}
                 onChange={(event) => update(item.id, "acceptanceCriteria", event.target.value)}
                 placeholder="State the objective conditions the client can use to approve this milestone."
               />
@@ -415,6 +431,7 @@ export function ProposalComposer({
                     required
                     inputMode="decimal"
                     value={item.amount}
+                    aria-invalid={errors.length > 0 && (toUnits(item.amount) ?? 0n) <= 0n}
                     onChange={(event) => update(item.id, "amount", event.target.value)}
                     placeholder="0"
                   />
@@ -445,6 +462,7 @@ export function ProposalComposer({
                 required
                 minLength={5}
                 value={item.evidenceRequirements}
+                aria-invalid={errors.length > 0 && item.evidenceRequirements.trim().length < 5}
                 onChange={(event) => update(item.id, "evidenceRequirements", event.target.value)}
                 placeholder="e.g. Preview URL, source commit, and test report"
               />

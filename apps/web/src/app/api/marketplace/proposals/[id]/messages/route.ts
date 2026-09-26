@@ -1,12 +1,15 @@
 import { asc, eq } from "drizzle-orm";
 import { audit } from "@/server/audit";
+import { requireIdempotencyKey, scopedIdempotencyKey } from "@/server/http/idempotency";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { notifications, operations, profiles, proposalMessages } from "@/server/db/schema";
+import { operations, profiles, proposalMessages, proposalThreadReads } from "@/server/db/schema";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
 import { requireProposalParticipant } from "@/features/marketplace/server/access";
 import { proposalMessageInputSchema } from "@/features/marketplace/server/schemas";
+import { enforceAuthRateLimit } from "@/server/auth/rate-limit";
+import { notifyUser } from "@/server/notifications/service";
 
 export const GET = withApi(
   async (_request: Request, context: { params: Promise<{ id: string }> }) => {
@@ -26,6 +29,13 @@ export const GET = withApi(
       .innerJoin(profiles, eq(proposalMessages.senderUserId, profiles.userId))
       .where(eq(proposalMessages.proposalId, id))
       .orderBy(asc(proposalMessages.createdAt));
+    await db
+      .insert(proposalThreadReads)
+      .values({ proposalId: id, userId: user.id, lastReadAt: new Date() })
+      .onConflictDoUpdate({
+        target: [proposalThreadReads.proposalId, proposalThreadReads.userId],
+        set: { lastReadAt: new Date() },
+      });
     return Response.json({ data: messages });
   },
 );
@@ -36,16 +46,11 @@ export const POST = withApi(
     const { id } = await context.params;
     const { user } = await requireUser();
     const record = await requireProposalParticipant(id, user.id);
-    if (record.proposal.status !== "SUBMITTED")
-      throw new ApiError(409, "THREAD_CLOSED", "This pre-hire clarification thread is closed.");
-    const suppliedKey = request.headers.get("idempotency-key");
-    if (!suppliedKey || suppliedKey.length > 100)
-      throw new ApiError(
-        400,
-        "IDEMPOTENCY_KEY_REQUIRED",
-        "Provide a valid Idempotency-Key header.",
-      );
-    const idempotencyKey = `proposal-message:${user.id}:${suppliedKey}`;
+    const idempotencyKey = scopedIdempotencyKey(
+      "proposal-message",
+      user.id,
+      requireIdempotencyKey(request),
+    );
     const [prior] = await db
       .select()
       .from(operations)
@@ -63,6 +68,15 @@ export const POST = withApi(
         .limit(1);
       if (existing) return Response.json({ data: existing, idempotentReplay: true });
     }
+    if (record.proposal.status !== "SUBMITTED")
+      throw new ApiError(409, "THREAD_CLOSED", "This pre-hire clarification thread is closed.");
+    await enforceAuthRateLimit({
+      action: "proposal-message",
+      limit: 30,
+      request,
+      subject: user.id,
+      windowMs: 60 * 60 * 1000,
+    });
     const input = proposalMessageInputSchema.parse(await request.json());
     const recipientUserId =
       user.id === record.listing.clientUserId
@@ -73,13 +87,6 @@ export const POST = withApi(
         .insert(proposalMessages)
         .values({ proposalId: id, senderUserId: user.id, body: input.body })
         .returning();
-      await tx.insert(notifications).values({
-        userId: recipientUserId,
-        type: "PROPOSAL_MESSAGE",
-        title: "New proposal clarification",
-        body: `A participant sent a message about ${record.listing.title}.`,
-        href: `/discover/${record.listing.id}`,
-      });
       await tx.insert(operations).values({
         initiatedBy: user.id,
         type: "SEND_PROPOSAL_MESSAGE",
@@ -88,6 +95,15 @@ export const POST = withApi(
         metadata: { messageId: created.id, proposalId: id },
       });
       return created;
+    });
+    await notifyUser({
+      userId: recipientUserId,
+      type: "PROPOSAL_MESSAGE",
+      category: "MESSAGE",
+      title: "New proposal clarification",
+      body: `A participant sent a message about ${record.listing.title}.`,
+      href: `/discover/${record.listing.id}`,
+      dedupeKey: `proposal-message:${message.id}`,
     });
     await audit(request, {
       actorUserId: user.id,

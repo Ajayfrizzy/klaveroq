@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { jobs, operations } from "@/server/db/schema";
 import { ApiError, withApi } from "@/server/http/errors";
+import { audit } from "@/server/audit";
 
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/internal/jobs/[id]/sandbox-fund">) => {
@@ -36,6 +37,12 @@ export const POST = withApi(
           externalReference: `sandbox:${id}`,
         })
         .onConflictDoNothing();
+    });
+    await audit(request, {
+      action: "internal.sandbox_funding_confirmed",
+      entityType: "job",
+      entityId: id,
+      metadata: { environment: "sandbox" },
     });
     return Response.json({ data: { jobId: id, status: "FUNDED_AWAITING_ACCEPTANCE" } });
   },

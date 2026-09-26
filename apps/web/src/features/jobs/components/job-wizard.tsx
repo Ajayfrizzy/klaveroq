@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useWorkProtection } from "@/components/ui/use-work-protection";
 
 const steps = ["Job details", "Milestones", "Invite worker", "Review"];
 const emptyMilestone = (index: number): MilestoneDraft => ({
@@ -49,6 +50,14 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
   const [errors, setErrors] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const {
+    root: workRoot,
+    status: workStatus,
+    markSaved,
+  } = useWorkProtection(
+    JSON.stringify({ title, description, worker, milestones, termsAccepted }),
+    errors.join(" "),
+  );
   const subtotal = useMemo(
     () => milestones.reduce((sum, item) => sum + Number(item.amount || 0), 0),
     [milestones],
@@ -144,6 +153,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
       const jobBody = await jobResponse.json();
       if (!jobResponse.ok)
         throw new Error(jobBody.error?.message ?? "The job could not be created.");
+      markSaved();
       router.push(`/jobs/${jobBody.data.id}`);
       router.refresh();
     } catch (error) {
@@ -154,7 +164,8 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
   };
 
   return (
-    <div className="wizard-page">
+    <div className="wizard-page" ref={workRoot}>
+      {workStatus}
       <div className="wizard-heading">
         <Link className="back-link" href="/">
           <ArrowLeft size={17} /> Overview
@@ -201,22 +212,32 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                 Job title
                 <input
                   value={title}
+                  aria-invalid={errors.length > 0 && title.trim().length < 5}
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="e.g. Ecommerce checkout redesign"
                   maxLength={90}
                 />
-                <small>{title.length}/90 characters</small>
+                <small>
+                  {errors.length > 0 && title.trim().length < 5
+                    ? "Enter at least 5 characters."
+                    : `${title.length}/90 characters`}
+                </small>
               </label>
               <label>
                 Scope and expected outcome
                 <textarea
                   value={description}
+                  aria-invalid={errors.length > 0 && description.trim().length < 20}
                   onChange={(event) => setDescription(event.target.value)}
                   placeholder="Describe what will be delivered, what is not included, and how success will be assessed."
                   rows={7}
                   maxLength={1600}
                 />
-                <small>{description.length}/1,600 characters</small>
+                <small>
+                  {errors.length > 0 && description.trim().length < 20
+                    ? "Describe the outcome in at least 20 characters."
+                    : `${description.length}/1,600 characters`}
+                </small>
               </label>
               <div className="inline-notice">
                 <ShieldCheck size={18} />
@@ -263,6 +284,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                       Milestone title
                       <input
                         value={milestone.title}
+                        aria-invalid={errors.length > 0 && !milestone.title.trim()}
                         onChange={(event) =>
                           updateMilestone(milestone.id, "title", event.target.value)
                         }
@@ -273,7 +295,8 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                       <div className="amount-input">
                         <input
                           type="number"
-                          min="0"
+                          min="0.01"
+                          aria-invalid={errors.length > 0 && milestone.amount <= 0}
                           step="0.01"
                           value={milestone.amount || ""}
                           onChange={(event) =>
@@ -289,6 +312,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                     <textarea
                       rows={3}
                       value={milestone.description}
+                      aria-invalid={errors.length > 0 && !milestone.description.trim()}
                       onChange={(event) =>
                         updateMilestone(milestone.id, "description", event.target.value)
                       }
@@ -300,6 +324,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                     <textarea
                       rows={3}
                       value={milestone.acceptanceCriteria}
+                      aria-invalid={errors.length > 0 && !milestone.acceptanceCriteria.trim()}
                       onChange={(event) =>
                         updateMilestone(milestone.id, "acceptanceCriteria", event.target.value)
                       }
@@ -312,6 +337,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                       <input
                         type="date"
                         value={milestone.dueDate}
+                        aria-invalid={errors.length > 0 && !milestone.dueDate}
                         onChange={(event) =>
                           updateMilestone(milestone.id, "dueDate", event.target.value)
                         }
@@ -321,6 +347,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                       Required proof
                       <input
                         value={milestone.evidence}
+                        aria-invalid={errors.length > 0 && !milestone.evidence.trim()}
                         onChange={(event) =>
                           updateMilestone(milestone.id, "evidence", event.target.value)
                         }

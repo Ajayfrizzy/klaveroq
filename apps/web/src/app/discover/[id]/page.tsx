@@ -15,11 +15,12 @@ import { db } from "@/server/db";
 import { jobListingMilestones, proposalMilestones, proposals } from "@/server/db/schema";
 import { getCurrentUser } from "@/server/auth/session";
 import { getProposalEvaluations, getPublicListing } from "@/features/marketplace/server/queries";
-import { MarketplaceHeader } from "@/features/marketplace/components/marketplace-header";
+import { MarketplaceLayout } from "@/features/marketplace/components/marketplace-layout";
 import { ProposalComposer } from "@/features/marketplace/components/proposal-composer";
 import { ClientProposals } from "@/features/marketplace/components/client-proposals";
 import { ProposalThread } from "@/features/marketplace/components/proposal-thread";
 import { getReputationSummary } from "@/features/reputation/server/queries";
+import { getProposalUnreadCounts } from "@/features/marketplace/server/unread";
 export const dynamic = "force-dynamic";
 const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
@@ -56,6 +57,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     | undefined;
   let clientRecords: React.ComponentProps<typeof ClientProposals>["records"] = [];
   let workerProposalId: string | undefined;
+  let workerUnreadMessageCount = 0;
   if (current && !owner) {
     const [proposal] = await db
       .select()
@@ -63,6 +65,10 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       .where(and(eq(proposals.listingId, id), eq(proposals.workerUserId, current.user.id)))
       .limit(1);
     workerProposalId = proposal?.id;
+    if (proposal) {
+      const unread = await getProposalUnreadCounts([proposal.id], current.user.id);
+      workerUnreadMessageCount = unread.get(proposal.id) ?? 0;
+    }
     if (proposal?.status === "SUBMITTED")
       ownProposal = {
         ...proposal,
@@ -77,6 +83,10 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   }
   if (owner) {
     const rows = await getProposalEvaluations(id);
+    const unread = await getProposalUnreadCounts(
+      rows.map((item) => item.proposal.id),
+      current!.user.id,
+    );
     clientRecords = rows.map((item) => ({
       proposal: {
         ...item.proposal,
@@ -85,6 +95,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
       worker: item.worker,
       reputation: item.reputation,
       portfolioPreview: item.portfolioPreview,
+      unreadMessageCount: unread.get(item.proposal.id) ?? 0,
       milestones: item.milestones.map((milestone) => ({
         ...milestone,
         amount: milestone.amount.toString(),
@@ -92,156 +103,154 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
     }));
   }
   return (
-    <div className="market-page">
-      <MarketplaceHeader />
-      <main>
-        <Link className="back-link" href="/discover">
-          <ArrowLeft size={16} /> Back to discovery
-        </Link>
-        <div className="listing-detail-layout">
-          <article className="listing-detail">
-            <div className="listing-detail-head">
-              <span>{record.listing.category.toLowerCase()}</span>
-              <span className={`listing-status state-${record.listing.status.toLowerCase()}`}>
-                {record.listing.status.toLowerCase()}
-              </span>
-              <h1>{record.listing.title}</h1>
-              <p className="listing-skills-label">Required skills</p>
-              <div className="skill-list">
-                {record.listing.skills.map((skill) => (
-                  <span key={skill}>{skill}</span>
-                ))}
-              </div>
+    <MarketplaceLayout>
+      <Link className="back-link" href="/discover">
+        <ArrowLeft size={16} /> Back to discovery
+      </Link>
+      <div className="listing-detail-layout">
+        <article className="listing-detail">
+          <div className="listing-detail-head">
+            <span>{record.listing.category.toLowerCase()}</span>
+            <span className={`listing-status state-${record.listing.status.toLowerCase()}`}>
+              {record.listing.status.toLowerCase()}
+            </span>
+            <h1>{record.listing.title}</h1>
+            <p className="listing-skills-label">Required skills</p>
+            <div className="skill-list">
+              {record.listing.skills.map((skill) => (
+                <span key={skill}>{skill}</span>
+              ))}
             </div>
-            <section>
-              <h2>Scope and expected outcome</h2>
-              <p>{record.listing.description}</p>
-            </section>
-            {listingMilestones.length > 0 && (
-              <section className="listing-outcomes">
-                <h2>Verifiable milestone expectations</h2>
-                <ol>
-                  {listingMilestones.map((milestone) => (
-                    <li key={milestone.id}>
-                      <span>{milestone.sequence}</span>
-                      <div>
-                        <strong>{milestone.title}</strong>
-                        <p>{milestone.deliverable}</p>
-                        <small>
-                          <strong>How success will be confirmed</strong>
-                          {milestone.acceptanceCriteria}
-                        </small>
-                        <small>
-                          <strong>Proof required</strong>
-                          {milestone.evidenceRequirements}
-                        </small>
-                      </div>
-                      <b>Day {milestone.deliveryDays}</b>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            )}
-            <section className="client-public">
-              <span className="client-mark">
-                {record.client.displayName.slice(0, 2).toUpperCase()}
-              </span>
-              <div>
-                <h2>{record.client.displayName}</h2>
-                <p>
-                  {record.client.headline || "Klaveroq client"}
-                  {record.client.countryCode
-                    ? ` · ${countryNames.of(record.client.countryCode) ?? record.client.countryCode}`
-                    : ""}
-                </p>
-                {clientReputation &&
-                  (clientReputation.identityVerified || clientReputation.reviewCount > 0) && (
-                    <div className="client-trust" aria-label="Client trust signals">
-                      {clientReputation.identityVerified && (
-                        <span>
-                          <BadgeCheck size={13} /> Identity verified
-                        </span>
-                      )}
-                      {clientReputation.reviewCount > 0 && (
-                        <span>
-                          <Star size={13} /> {clientReputation.averageRating?.toFixed(1)} from{" "}
-                          {clientReputation.reviewCount} verified{" "}
-                          {clientReputation.reviewCount === 1 ? "review" : "reviews"}
-                        </span>
-                      )}
+          </div>
+          <section>
+            <h2>Scope and expected outcome</h2>
+            <p>{record.listing.description}</p>
+          </section>
+          {listingMilestones.length > 0 && (
+            <section className="listing-outcomes">
+              <h2>Verifiable milestone expectations</h2>
+              <ol>
+                {listingMilestones.map((milestone) => (
+                  <li key={milestone.id}>
+                    <span>{milestone.sequence}</span>
+                    <div>
+                      <strong>{milestone.title}</strong>
+                      <p>{milestone.deliverable}</p>
+                      <small>
+                        <strong>How success will be confirmed</strong>
+                        {milestone.acceptanceCriteria}
+                      </small>
+                      <small>
+                        <strong>Proof required</strong>
+                        {milestone.evidenceRequirements}
+                      </small>
                     </div>
-                  )}
-                <small>{record.client.bio}</small>
-              </div>
+                    <b>Day {milestone.deliveryDays}</b>
+                  </li>
+                ))}
+              </ol>
             </section>
-            {owner && (
-              <section className="owner-proposals">
-                <div className="section-heading">
-                  <div>
-                    <h2>Proposals</h2>
-                    <p>Sealed terms visible only to you.</p>
-                  </div>
-                  <span>{record.proposalCount}</span>
-                </div>
-                <ClientProposals records={clientRecords} currentUserId={current!.user.id} />
-              </section>
-            )}
-          </article>
-          <aside className="listing-sidebar">
-            <section className="listing-facts">
-              <div>
-                <CircleDollarSign size={18} />
-                <span>Budget</span>
-                <strong>
-                  {ckb(record.listing.budgetMin)}–{ckb(record.listing.budgetMax)} CKB
-                </strong>
-              </div>
-              <div>
-                <CalendarDays size={18} />
-                <span>Proposal deadline</span>
-                <strong>{new Date(record.listing.proposalDeadline).toLocaleDateString()}</strong>
-              </div>
-              <div>
-                <UsersRound size={18} />
-                <span>Proposals</span>
-                <strong>{record.proposalCount}</strong>
-              </div>
+          )}
+          <section className="client-public">
+            <span className="client-mark">
+              {record.client.displayName.slice(0, 2).toUpperCase()}
+            </span>
+            <div>
+              <h2>{record.client.displayName}</h2>
               <p>
-                <LockKeyhole size={15} /> Proposal details are sealed.
+                {record.client.headline || "Klaveroq client"}
+                {record.client.countryCode
+                  ? ` · ${countryNames.of(record.client.countryCode) ?? record.client.countryCode}`
+                  : ""}
               </p>
+              {clientReputation &&
+                (clientReputation.identityVerified || clientReputation.reviewCount > 0) && (
+                  <div className="client-trust" aria-label="Client trust signals">
+                    {clientReputation.identityVerified && (
+                      <span>
+                        <BadgeCheck size={13} /> Identity verified
+                      </span>
+                    )}
+                    {clientReputation.reviewCount > 0 && (
+                      <span>
+                        <Star size={13} /> {clientReputation.averageRating?.toFixed(1)} from{" "}
+                        {clientReputation.reviewCount} verified{" "}
+                        {clientReputation.reviewCount === 1 ? "review" : "reviews"}
+                      </span>
+                    )}
+                  </div>
+                )}
+              <small>{record.client.bio}</small>
+            </div>
+          </section>
+          {owner && (
+            <section className="owner-proposals">
+              <div className="section-heading">
+                <div>
+                  <h2>Proposals</h2>
+                  <p>Sealed terms visible only to you.</p>
+                </div>
+                <span>{record.proposalCount}</span>
+              </div>
+              <ClientProposals records={clientRecords} currentUserId={current!.user.id} />
             </section>
-            {!owner && canSubmit && (
-              <ProposalComposer
-                listingId={id}
-                signedIn={Boolean(current)}
-                existing={ownProposal}
-                budgetMin={record.listing.budgetMin.toString()}
-                budgetMax={record.listing.budgetMax.toString()}
-              />
-            )}
-            {!owner && workerProposalId && current && (
-              <ProposalThread
-                proposalId={workerProposalId}
-                currentUserId={current.user.id}
-                closed={!ownProposal}
-              />
-            )}
-            {owner && (
-              <section className="owner-note">
-                <UserRound size={18} />
-                <strong>You posted this job</strong>
-                <p>Review sealed proposals on this page.</p>
-              </section>
-            )}
-            {!canSubmit && !owner && (
-              <section className="owner-note">
-                <strong>Proposals closed</strong>
-                <p>This listing is no longer accepting proposals.</p>
-              </section>
-            )}
-          </aside>
-        </div>
-      </main>
-    </div>
+          )}
+        </article>
+        <aside className="listing-sidebar">
+          <section className="listing-facts">
+            <div>
+              <CircleDollarSign size={18} />
+              <span>Budget</span>
+              <strong>
+                {ckb(record.listing.budgetMin)}–{ckb(record.listing.budgetMax)} CKB
+              </strong>
+            </div>
+            <div>
+              <CalendarDays size={18} />
+              <span>Proposal deadline</span>
+              <strong>{new Date(record.listing.proposalDeadline).toLocaleDateString()}</strong>
+            </div>
+            <div>
+              <UsersRound size={18} />
+              <span>Proposals</span>
+              <strong>{record.proposalCount}</strong>
+            </div>
+            <p>
+              <LockKeyhole size={15} /> Proposal details are sealed.
+            </p>
+          </section>
+          {!owner && canSubmit && (
+            <ProposalComposer
+              listingId={id}
+              signedIn={Boolean(current)}
+              existing={ownProposal}
+              budgetMin={record.listing.budgetMin.toString()}
+              budgetMax={record.listing.budgetMax.toString()}
+            />
+          )}
+          {!owner && workerProposalId && current && (
+            <ProposalThread
+              proposalId={workerProposalId}
+              currentUserId={current.user.id}
+              closed={!ownProposal}
+              initialUnreadCount={workerUnreadMessageCount}
+            />
+          )}
+          {owner && (
+            <section className="owner-note">
+              <UserRound size={18} />
+              <strong>You posted this job</strong>
+              <p>Review sealed proposals on this page.</p>
+            </section>
+          )}
+          {!canSubmit && !owner && (
+            <section className="owner-note">
+              <strong>Proposals closed</strong>
+              <p>This listing is no longer accepting proposals.</p>
+            </section>
+          )}
+        </aside>
+      </div>
+    </MarketplaceLayout>
   );
 }

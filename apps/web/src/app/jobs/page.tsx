@@ -1,12 +1,13 @@
 import { ArrowRight, BriefcaseBusiness, Compass, Filter, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { db } from "@/server/db";
-import { jobListings, jobs, profiles, proposals } from "@/server/db/schema";
+import { jobListings, jobs, milestones, profiles, proposals } from "@/server/db/schema";
+import { agreementNextAction } from "@/features/jobs/next-action";
 import { getCurrentUser } from "@/server/auth/session";
 import {
   agreementStatuses,
@@ -61,14 +62,50 @@ export default async function JobsPage({
           .where(and(...agreementConditions))
           .orderBy(desc(jobs.updatedAt))
       : [];
+  const listingConditions = [eq(jobListings.clientUserId, userId)];
+  const milestoneRows = agreements.length
+    ? await db
+        .select({ jobId: milestones.jobId, status: milestones.status })
+        .from(milestones)
+        .where(
+          inArray(
+            milestones.jobId,
+            agreements.map((job) => job.id),
+          ),
+        )
+    : [];
+  const milestonesByJob = new Map<string, string[]>();
+  for (const item of milestoneRows)
+    milestonesByJob.set(item.jobId, [...(milestonesByJob.get(item.jobId) ?? []), item.status]);
+  if (query) {
+    const pattern = `%${query}%`;
+    listingConditions.push(
+      or(
+        ilike(jobListings.title, pattern),
+        ilike(jobListings.description, pattern),
+        sql`${jobListings.skills}::text ILIKE ${pattern}`,
+      )!,
+    );
+  }
   const listings =
     view === "listings" && userId
       ? await db
           .select()
           .from(jobListings)
-          .where(eq(jobListings.clientUserId, userId))
+          .where(and(...listingConditions))
           .orderBy(desc(jobListings.updatedAt))
       : [];
+  const proposalConditions = [eq(proposals.workerUserId, userId)];
+  if (query) {
+    const pattern = `%${query}%`;
+    proposalConditions.push(
+      or(
+        ilike(jobListings.title, pattern),
+        ilike(profiles.displayName, pattern),
+        ilike(proposals.coverLetter, pattern),
+      )!,
+    );
+  }
   const bids =
     view === "proposals" && userId
       ? await db
@@ -76,7 +113,7 @@ export default async function JobsPage({
           .from(proposals)
           .innerJoin(jobListings, eq(proposals.listingId, jobListings.id))
           .innerJoin(profiles, eq(jobListings.clientUserId, profiles.userId))
-          .where(eq(proposals.workerUserId, userId))
+          .where(and(...proposalConditions))
           .orderBy(desc(proposals.updatedAt))
       : [];
   return (
@@ -88,7 +125,7 @@ export default async function JobsPage({
         icon={BriefcaseBusiness}
         action={
           <Link className="primary-button" href="/jobs/new">
-            <Plus size={17} /> Create job
+            <Plus size={17} /> Hire someone
           </Link>
         }
       />
@@ -145,6 +182,12 @@ export default async function JobsPage({
             {agreements.length ? (
               agreements.map((job) => {
                 const role = job.clientUserId === userId ? "CLIENT" : "WORKER";
+                const statuses = milestonesByJob.get(job.id) ?? [];
+                const next = agreementNextAction(
+                  job.status,
+                  role === "CLIENT" ? "client" : "worker",
+                  statuses,
+                );
                 return (
                   <Link className="data-row job-data-row" href={`/jobs/${job.id}`} key={job.id}>
                     <div className="entity-cell">
@@ -160,8 +203,11 @@ export default async function JobsPage({
                     <strong>
                       {ckb(job.subtotal)} {job.asset}
                     </strong>
-                    <span>Open for milestones</span>
-                    <span>View agreement</span>
+                    <span>
+                      {statuses.filter((status) => status === "RELEASED").length} of{" "}
+                      {statuses.length} released
+                    </span>
+                    <span>{next.title}</span>
                     <ArrowRight size={17} />
                   </Link>
                 );
@@ -181,74 +227,130 @@ export default async function JobsPage({
         </>
       )}
       {view === "listings" && (
-        <section className="panel workspace-market-list">
-          {listings.length ? (
-            listings.map((listing) => (
-              <Link
-                href={
-                  listing.status === "DRAFT"
-                    ? `/jobs/new/public?draft=${listing.id}`
-                    : `/discover/${listing.id}`
-                }
-                key={listing.id}
-              >
-                <div>
-                  <strong>{listing.title}</strong>
-                  <small>
-                    {listing.category.toLowerCase()} · Updated{" "}
-                    {listing.updatedAt.toLocaleDateString()}
-                  </small>
-                </div>
-                <span className={`listing-status state-${listing.status.toLowerCase()}`}>
-                  {listing.status.toLowerCase()}
-                </span>
-                <b>
-                  {ckb(listing.budgetMin)}–{ckb(listing.budgetMax)} CKB
-                </b>
-                <ArrowRight size={17} />
+        <>
+          <form className="toolbar">
+            <input type="hidden" name="view" value="listings" />
+            <label className="search-field">
+              <Search size={17} />
+              <input
+                name="query"
+                defaultValue={query}
+                aria-label="Search my listings"
+                placeholder="Search listings or skills"
+              />
+            </label>
+            <button className="secondary-button" type="submit">
+              <Search size={16} /> Search
+            </button>
+            {query && (
+              <Link className="clear-filters" href="/jobs?view=listings">
+                Clear search
               </Link>
-            ))
-          ) : (
-            <div className="market-empty account-empty">
-              <BriefcaseBusiness size={26} />
-              <h2>No jobs yet</h2>
-              <p>Post a job to start comparing proposals from Klaveroq professionals.</p>
-              <Link className="primary-button" href="/jobs/new/public">
-                <Plus size={16} /> Post a job
-              </Link>
-            </div>
-          )}
-        </section>
+            )}
+          </form>
+          <section className="panel workspace-market-list">
+            {listings.length ? (
+              listings.map((listing) => (
+                <Link
+                  href={
+                    listing.status === "DRAFT"
+                      ? `/jobs/new/public?draft=${listing.id}`
+                      : `/discover/${listing.id}`
+                  }
+                  key={listing.id}
+                >
+                  <div>
+                    <strong>{listing.title}</strong>
+                    <small>
+                      {listing.category.toLowerCase()} · Updated{" "}
+                      {listing.updatedAt.toLocaleDateString()}
+                    </small>
+                  </div>
+                  <span className={`listing-status state-${listing.status.toLowerCase()}`}>
+                    {listing.status.toLowerCase()}
+                  </span>
+                  <b>
+                    {ckb(listing.budgetMin)}–{ckb(listing.budgetMax)} CKB
+                  </b>
+                  <ArrowRight size={17} />
+                </Link>
+              ))
+            ) : (
+              <div className="market-empty account-empty">
+                <BriefcaseBusiness size={26} />
+                <h2>{query ? "No matching listings" : "No jobs yet"}</h2>
+                <p>
+                  {query
+                    ? "Adjust or clear the search to see your other listings."
+                    : "Post a job to start comparing proposals from Klaveroq professionals."}
+                </p>
+                {!query && (
+                  <Link className="primary-button" href="/jobs/new/public">
+                    <Plus size={16} /> Post a job
+                  </Link>
+                )}
+              </div>
+            )}
+          </section>
+        </>
       )}
       {view === "proposals" && (
-        <section className="panel workspace-market-list">
-          {bids.length ? (
-            bids.map(({ proposal, listing, clientName }) => (
-              <Link href={`/discover/${listing.id}`} key={proposal.id}>
-                <div>
-                  <strong>{listing.title}</strong>
-                  <small>
-                    {clientName} · Updated {proposal.updatedAt.toLocaleDateString()}
-                  </small>
-                </div>
-                <span className={`proposal-state state-${proposal.status.toLowerCase()}`}>
-                  {proposal.status.toLowerCase()}
-                </span>
-                <b>{ckb(proposal.totalBid)} CKB</b>
-                <ArrowRight size={17} />
+        <>
+          <form className="toolbar">
+            <input type="hidden" name="view" value="proposals" />
+            <label className="search-field">
+              <Search size={17} />
+              <input
+                name="query"
+                defaultValue={query}
+                aria-label="Search my proposals"
+                placeholder="Search proposals or clients"
+              />
+            </label>
+            <button className="secondary-button" type="submit">
+              <Search size={16} /> Search
+            </button>
+            {query && (
+              <Link className="clear-filters" href="/jobs?view=proposals">
+                Clear search
               </Link>
-            ))
-          ) : (
-            <div className="market-empty account-empty">
-              <Compass size={26} />
-              <h2>No proposals yet</h2>
-              <p>Browse opportunities that match your skills and submit your first proposal.</p>
-              <Link className="primary-button" href="/discover">
-                <Compass size={16} /> Find work
-              </Link>
-            </div>
-          )}
-        </section>
+            )}
+          </form>
+          <section className="panel workspace-market-list">
+            {bids.length ? (
+              bids.map(({ proposal, listing, clientName }) => (
+                <Link href={`/discover/${listing.id}`} key={proposal.id}>
+                  <div>
+                    <strong>{listing.title}</strong>
+                    <small>
+                      {clientName} · Updated {proposal.updatedAt.toLocaleDateString()}
+                    </small>
+                  </div>
+                  <span className={`proposal-state state-${proposal.status.toLowerCase()}`}>
+                    {proposal.status.toLowerCase()}
+                  </span>
+                  <b>{ckb(proposal.totalBid)} CKB</b>
+                  <ArrowRight size={17} />
+                </Link>
+              ))
+            ) : (
+              <div className="market-empty account-empty">
+                <Compass size={26} />
+                <h2>{query ? "No matching proposals" : "No proposals yet"}</h2>
+                <p>
+                  {query
+                    ? "Adjust or clear the search to see your other proposals."
+                    : "Browse opportunities that match your skills and submit your first proposal."}
+                </p>
+                {!query && (
+                  <Link className="primary-button" href="/discover">
+                    <Compass size={16} /> Find work
+                  </Link>
+                )}
+              </div>
+            )}
+          </section>
+        </>
       )}
     </AppShell>
   );

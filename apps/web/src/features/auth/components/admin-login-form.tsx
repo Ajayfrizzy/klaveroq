@@ -6,12 +6,12 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { initialAuthCredentials } from "@/features/auth/defaults";
 
-export function AdminLoginForm() {
+export function AdminLoginForm({ initialError = "" }: { initialError?: string }) {
   const router = useRouter();
   const defaults = initialAuthCredentials();
   const [email, setEmail] = useState(defaults.email);
   const [password, setPassword] = useState(defaults.password);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
   const [busy, setBusy] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -28,10 +28,8 @@ export function AdminLoginForm() {
       setBusy(false);
       return;
     }
-    if (!["SUPPORT", "SUPER_ADMIN"].includes(body.data?.user?.systemRole)) {
-      setError(
-        "This account does not have administration access. Sign in with a support administrator account.",
-      );
+    if (!["SUPPORT", "DISPUTE_ADMIN", "SUPER_ADMIN"].includes(body.data?.user?.systemRole)) {
+      setError("This account does not have operations-console access.");
       setBusy(false);
       return;
     }
@@ -48,8 +46,8 @@ export function AdminLoginForm() {
           <strong>Klaveroq</strong>
           <small>Operations console</small>
         </div>
-        <h1>Support administration</h1>
-        <p>Review customer cases, coordinate responses, and resolve operational issues.</p>
+        <h1>Operations administration</h1>
+        <p>Review authorized support cases and dispute decisions.</p>
         <ul>
           <li>
             <Headphones size={16} /> Dedicated support queue
@@ -63,7 +61,7 @@ export function AdminLoginForm() {
         <form onSubmit={submit}>
           <p className="eyebrow">Administration</p>
           <h2>Sign in to operations</h2>
-          <p>Use an authorized support or super administrator account.</p>
+          <p>Use an authorized operations administrator account.</p>
           <label>
             Email
             <input

@@ -1,11 +1,12 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/server/db";
-import { securityHolds, walletChallenges, wallets } from "@/server/db/schema";
+import { notifications, securityHolds, walletChallenges, wallets } from "@/server/db/schema";
 import { requireUser } from "@/server/auth/session";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin, sha256 } from "@/server/http/security";
 import { verifyCkbWallet } from "@/server/wallet/verify";
+import { audit } from "@/server/audit";
 
 export const POST = withApi(async (request: Request) => {
   assertSameOrigin(request);
@@ -112,7 +113,23 @@ export const POST = withApi(async (request: Request) => {
         reason: `Default payout wallet change to ${wallet.id}`,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       });
+    await tx.insert(notifications).values({
+      userId: user.id,
+      type: "SECURITY_WALLET_VERIFIED",
+      title: "Wallet ownership verified",
+      body: payoutChange
+        ? "Your payout wallet change is in a 24-hour security hold."
+        : `A ${challenge.network} wallet was verified for your account.`,
+      href: "/wallet",
+    });
     return wallet;
+  });
+  await audit(request, {
+    actorUserId: user.id,
+    action: "wallet.verified",
+    entityType: "wallet",
+    entityId: result.id,
+    metadata: { network: result.network, purpose: result.purpose, payoutChange },
   });
   return Response.json({
     data: result,

@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useWorkProtection } from "@/components/ui/use-work-protection";
 
 type ListingMilestone = {
   id: string;
@@ -95,6 +96,24 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
   const [draftNeedsUpdate, setDraftNeedsUpdate] = useState(Boolean(initialDraft));
   const [saved, setSaved] = useState(Boolean(initialDraft));
   const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const {
+    root: workRoot,
+    dirty: workDirty,
+    status: workStatus,
+    markSaved,
+  } = useWorkProtection(
+    JSON.stringify({
+      title,
+      description,
+      category,
+      skills,
+      budgetMin,
+      budgetMax,
+      proposalDeadline,
+      milestones,
+    }),
+    error,
+  );
 
   const skillItems = skills
     .split(",")
@@ -239,6 +258,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
       setDraftId(body.data.id);
       setDraftNeedsUpdate(false);
       setSaved(true);
+      markSaved();
       router.replace(`/jobs/new/public?draft=${body.data.id}`);
       router.refresh();
     } catch (reason) {
@@ -290,6 +310,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
           body.error?.message ?? "The job could not be published. Your draft is saved; try again.",
         );
       }
+      markSaved();
       router.push(`/discover/${listingId}`);
       router.refresh();
     } catch (reason) {
@@ -300,7 +321,8 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
   };
 
   return (
-    <div className="wizard-page listing-create">
+    <div className="wizard-page listing-create" ref={workRoot}>
+      {workStatus}
       <div className="wizard-heading">
         <Link className="back-link" href="/jobs/new">
           <ArrowLeft size={17} /> Creation options
@@ -448,12 +470,18 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                   Scope and expected outcome
                   <textarea
                     value={description}
+                    aria-invalid={Boolean(error) && description.trim().length < 40}
                     onChange={(event) => setDescription(event.target.value)}
                     minLength={40}
                     maxLength={5000}
                     rows={7}
                     placeholder="Describe the work, expected outcome, important constraints, and what success should look like."
                   />
+                  {error && description.trim().length < 40 && (
+                    <small className="field-error">
+                      Describe the outcome in at least 40 characters.
+                    </small>
+                  )}
                 </label>
                 <div className="assistant-row">
                   <small>Start with a rough brief or complete every field manually.</small>
@@ -478,6 +506,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                 Job title
                 <input
                   value={title}
+                  aria-invalid={Boolean(error) && title.trim().length < 5}
                   onChange={(event) => setTitle(event.target.value)}
                   minLength={5}
                   maxLength={90}
@@ -669,7 +698,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
               {error}
             </p>
           )}
-          {saved && !error && <p className="form-feedback success">Draft saved.</p>}
+          {saved && !error && !workDirty && <p className="form-feedback success">Draft saved.</p>}
           <div className="wizard-actions">
             <button type="button" className="secondary-button" onClick={saveDraft} disabled={busy}>
               {busy ? "Saving..." : "Save draft"}

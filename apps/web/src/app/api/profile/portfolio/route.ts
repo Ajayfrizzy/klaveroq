@@ -2,18 +2,20 @@ import { audit } from "@/server/audit";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { operations, portfolioItems } from "@/server/db/schema";
-import { ApiError, withApi } from "@/server/http/errors";
+import { withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
 import { portfolioInputSchema } from "@/features/talent/server/schemas";
 import { eq } from "drizzle-orm";
+import { requireIdempotencyKey, scopedIdempotencyKey } from "@/server/http/idempotency";
 
 export const POST = withApi(async (request: Request) => {
   assertSameOrigin(request);
   const { user } = await requireUser();
-  const suppliedKey = request.headers.get("idempotency-key");
-  if (!suppliedKey || suppliedKey.length > 100)
-    throw new ApiError(400, "IDEMPOTENCY_KEY_REQUIRED", "Provide a valid Idempotency-Key header.");
-  const idempotencyKey = `create-portfolio:${user.id}:${suppliedKey}`;
+  const idempotencyKey = scopedIdempotencyKey(
+    "create-portfolio",
+    user.id,
+    requireIdempotencyKey(request),
+  );
   const [prior] = await db
     .select()
     .from(operations)

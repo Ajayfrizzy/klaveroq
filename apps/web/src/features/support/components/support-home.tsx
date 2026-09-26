@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useWorkProtection } from "@/components/ui/use-work-protection";
 import { PageHeader } from "@/components/layout/page-header";
 
 type Ticket = {
@@ -35,6 +36,8 @@ export function SupportHome() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [draftValue, setDraftValue] = useState("");
+  const { root: workRoot, status: workStatus, markSaved } = useWorkProtection(draftValue, error);
   const load = useCallback(async () => {
     const response = await fetch("/api/support/tickets");
     const body = await response.json();
@@ -48,26 +51,38 @@ export function SupportHome() {
   }, [load]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setSubmitting(true);
     setError("");
     setSuccess("");
-    const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/support/tickets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        category: form.get("category"),
-        subject: form.get("subject"),
-        referenceId: form.get("referenceId"),
-        message: form.get("message"),
-      }),
-    });
-    const body = await response.json();
-    setSubmitting(false);
-    if (!response.ok) return setError(body.error?.message ?? "Unable to create the support case.");
-    event.currentTarget.reset();
-    setSuccess(`${body.data.reference} was created. Our support team can now review it.`);
-    await load();
+    const form = new FormData(formElement);
+    try {
+      const response = await fetch("/api/support/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: form.get("category"),
+          subject: form.get("subject"),
+          referenceId: form.get("referenceId"),
+          message: form.get("message"),
+        }),
+      });
+      const body = await response.json();
+      setSubmitting(false);
+      if (!response.ok)
+        return setError(body.error?.message ?? "Unable to create the support case.");
+      formElement.reset();
+      setDraftValue("");
+      markSaved("");
+      setSuccess(`${body.data.reference} was created. Our support team can now review it.`);
+      await load();
+    } catch {
+      setError(
+        "Your case could not be sent. Check your connection and try again; your message is still here.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
   return (
     <>
@@ -168,7 +183,13 @@ export function SupportHome() {
           <h2>Contact support</h2>
           <p>Include the relevant job or transaction ID so the team can investigate quickly.</p>
         </div>
-        <form onSubmit={submit}>
+        <form
+          onSubmit={submit}
+          onChange={(event) =>
+            setDraftValue(JSON.stringify(Array.from(new FormData(event.currentTarget).entries())))
+          }
+        >
+          <div ref={workRoot}>{workStatus}</div>
           <label>
             Topic
             <select name="category" required>
@@ -205,8 +226,16 @@ export function SupportHome() {
               placeholder="Describe what happened and what you expected."
             />
           </label>
-          {error && <p className="form-feedback error">{error}</p>}
-          {success && <p className="form-feedback success">{success}</p>}
+          {error && (
+            <p className="form-feedback error" role="alert">
+              {error}
+            </p>
+          )}
+          {success && (
+            <p className="form-feedback success" role="status">
+              {success}
+            </p>
+          )}
           <button className="primary-button" disabled={submitting}>
             {submitting ? "Submitting..." : "Submit case"}
           </button>

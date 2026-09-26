@@ -1,4 +1,4 @@
-import { Bell, Headphones, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { Bell, Headphones, LayoutDashboard, Scale, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { getCurrentUser } from "@/server/auth/session";
 import { LogoutButton } from "@/components/ui/logout-button";
@@ -8,10 +8,11 @@ export async function AdminShell({
   active,
 }: {
   children: React.ReactNode;
-  active: "dashboard" | "support";
+  active: "dashboard" | "support" | "disputes";
 }) {
   const current = await getCurrentUser();
   const name = current?.profile?.displayName ?? "Support administrator";
+  const role = current?.user.systemRole;
   const initials = name
     .split(" ")
     .map((part) => part[0])
@@ -32,12 +33,33 @@ export async function AdminShell({
         </Link>
         <p>Workspace</p>
         <nav>
-          <Link className={active === "dashboard" ? "active" : ""} href="/admin">
-            <LayoutDashboard size={18} /> Overview
-          </Link>
-          <Link className={active === "support" ? "active" : ""} href="/admin/support">
-            <Headphones size={18} /> Support queue
-          </Link>
+          {["SUPPORT", "SUPER_ADMIN"].includes(role ?? "") && (
+            <>
+              <Link
+                aria-current={active === "dashboard" ? "page" : undefined}
+                className={active === "dashboard" ? "active" : ""}
+                href="/admin"
+              >
+                <LayoutDashboard size={18} /> Overview
+              </Link>
+              <Link
+                aria-current={active === "support" ? "page" : undefined}
+                className={active === "support" ? "active" : ""}
+                href="/admin/support"
+              >
+                <Headphones size={18} /> Support queue
+              </Link>
+            </>
+          )}
+          {["DISPUTE_ADMIN", "SUPER_ADMIN"].includes(role ?? "") && (
+            <Link
+              aria-current={active === "disputes" ? "page" : undefined}
+              className={active === "disputes" ? "active" : ""}
+              href="/admin/disputes"
+            >
+              <Scale size={18} /> Disputes
+            </Link>
+          )}
         </nav>
         <div className="admin-operator">
           <span>{initials}</span>
@@ -52,7 +74,7 @@ export async function AdminShell({
         <header className="admin-topbar">
           <div>
             <strong>Operations console</strong>
-            <span>Support and account administration</span>
+            <span>Restricted operational administration</span>
           </div>
           <Link href="/notifications" aria-label="Admin notifications">
             <Bell size={18} />

@@ -2,11 +2,12 @@ import { eq } from "drizzle-orm";
 import { audit } from "@/server/audit";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { portfolioItems } from "@/server/db/schema";
+import { mediaFiles, portfolioItems } from "@/server/db/schema";
 import { withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
 import { requirePortfolioOwner } from "@/features/talent/server/access";
 import { portfolioInputSchema } from "@/features/talent/server/schemas";
+import { deletePrivateFile } from "@/server/files/storage";
 
 export const PATCH = withApi(
   async (request: Request, context: { params: Promise<{ id: string }> }) => {
@@ -35,8 +36,13 @@ export const DELETE = withApi(
     assertSameOrigin(request);
     const { id } = await context.params;
     const { user } = await requireUser();
-    await requirePortfolioOwner(id, user.id);
-    await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
+    const item = await requirePortfolioOwner(id, user.id);
+    await db.transaction(async (tx) => {
+      await tx.delete(portfolioItems).where(eq(portfolioItems.id, id));
+      if (item.mediaKey)
+        await tx.delete(mediaFiles).where(eq(mediaFiles.storageKey, item.mediaKey));
+    });
+    if (item.mediaKey) await deletePrivateFile(item.mediaKey);
     await audit(request, {
       actorUserId: user.id,
       action: "portfolio.deleted",

@@ -4,7 +4,6 @@ import {
   jobListings,
   jobs,
   milestones,
-  notifications,
   operations,
   proposalMilestones,
   proposals,
@@ -17,6 +16,7 @@ import { serialize } from "@/server/serialize";
 import { calculateFees } from "@/features/payments/server/fee-engine";
 import { audit } from "@/server/audit";
 import { createJobReference } from "@/server/references";
+import { notifyUser } from "@/server/notifications/service";
 
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/marketplace/proposals/[id]/award">) => {
@@ -143,25 +143,30 @@ export const POST = withApi(
         status: "CONFIRMED",
         metadata: { proposalId: id, listingId: record.listing.id },
       });
-      await tx.insert(notifications).values({
-        userId: record.proposal.workerUserId,
-        type: "PROPOSAL_ACCEPTED",
-        title: "Proposal accepted",
-        body: `Your proposal for ${record.listing.title} was selected.`,
-        href: `/jobs/${created.id}`,
-      });
-      if (losers.length)
-        await tx.insert(notifications).values(
-          losers.map((loser) => ({
-            userId: loser.userId,
-            type: "PROPOSAL_REJECTED",
-            title: "Proposal update",
-            body: `Another proposal was selected for ${record.listing.title}.`,
-            href: `/discover/${record.listing.id}`,
-          })),
-        );
       return created;
     });
+    await notifyUser({
+      userId: record.proposal.workerUserId,
+      type: "PROPOSAL_ACCEPTED",
+      category: "JOB",
+      title: "Proposal accepted",
+      body: `Your proposal for ${record.listing.title} was selected.`,
+      href: `/jobs/${job.id}`,
+      dedupeKey: `proposal-accepted:${id}`,
+    });
+    await Promise.all(
+      losers.map((loser) =>
+        notifyUser({
+          userId: loser.userId,
+          type: "PROPOSAL_REJECTED",
+          category: "PROPOSAL",
+          title: "Proposal update",
+          body: `Another proposal was selected for ${record.listing.title}.`,
+          href: `/discover/${record.listing.id}`,
+          dedupeKey: `proposal-not-selected:${record.listing.id}:${loser.userId}`,
+        }),
+      ),
+    );
     await audit(request, {
       actorUserId: user.id,
       action: "proposal.awarded",

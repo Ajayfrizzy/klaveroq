@@ -18,6 +18,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [mfaToken, setMfaToken] = useState(searchParams.get("mfaToken") ?? "");
+  const [mfaCode, setMfaCode] = useState("");
   const oauthError = searchParams.get("oauthError");
   const returnTo = safeReturnTo(searchParams.get("returnTo"));
   const googleHref = googleOAuthHref(returnTo);
@@ -30,11 +32,23 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          mode === "register" ? { email, password, displayName } : { email, password },
+          mode === "register" ? { email, password, displayName } : { email, password, returnTo },
         ),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message ?? "Authentication failed.");
+      if (mode === "register") {
+        const params = new URLSearchParams({ email });
+        params.set("sent", body.data?.emailSent ? "1" : "0");
+        if (body.data?.verificationToken) params.set("localToken", body.data.verificationToken);
+        router.push(`/verify-email?${params.toString()}`);
+        router.refresh();
+        return;
+      }
+      if (body.data?.mfaRequired) {
+        setMfaToken(body.data.mfaToken);
+        return;
+      }
       router.push(
         returnTo !== "/"
           ? returnTo
@@ -49,6 +63,80 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       setBusy(false);
     }
   };
+  const completeMfa = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/auth/mfa/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: mfaToken, code: mfaCode }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error?.message ?? "Two-factor authentication failed.");
+      const destination =
+        body.data?.returnTo && body.data.returnTo !== "/"
+          ? body.data.returnTo
+          : ["SUPPORT", "SUPER_ADMIN"].includes(body.data?.user?.systemRole)
+            ? "/admin"
+            : "/";
+      router.push(destination);
+      router.refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Two-factor authentication failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (mode === "login" && mfaToken)
+    return (
+      <main className="auth-page">
+        <section className="auth-panel auth-status-panel">
+          <Link className="auth-brand" href="/">
+            <span>
+              <ShieldCheck size={21} />
+            </span>{" "}
+            Klaveroq
+          </Link>
+          <p className="eyebrow">Account security</p>
+          <h1>Two-factor authentication</h1>
+          <p>Enter the six-digit code from your authenticator app or one unused recovery code.</p>
+          <form onSubmit={completeMfa}>
+            <label>
+              Authentication code
+              <input
+                required
+                autoComplete="one-time-code"
+                minLength={6}
+                maxLength={40}
+                value={mfaCode}
+                onChange={(event) => setMfaCode(event.target.value)}
+              />
+            </label>
+            {error && (
+              <div className="form-errors" role="alert">
+                {error}
+              </div>
+            )}
+            <button className="primary-button" disabled={busy}>
+              {busy ? "Verifying..." : "Verify and sign in"}
+            </button>
+          </form>
+          <button
+            className="secondary-button"
+            onClick={() => {
+              setMfaToken("");
+              setMfaCode("");
+              setError("");
+            }}
+          >
+            Back to sign in
+          </button>
+        </section>
+      </main>
+    );
   return (
     <main className="auth-page">
       <section className="auth-panel">
@@ -128,6 +216,10 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <small>
           {mode === "login" ? (
             <>
+              <Link href="/forgot-password">Forgot password?</Link>
+              <span className="auth-link-separator" aria-hidden="true">
+                ·
+              </span>
               Need an account? <Link href="/register">Register</Link>
             </>
           ) : (

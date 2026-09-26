@@ -1,9 +1,14 @@
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/server/db";
-import { users, verificationTokens } from "@/server/db/schema";
+import { users } from "@/server/db/schema";
 import { withApi } from "@/server/http/errors";
-import { assertSameOrigin, randomToken, sha256 } from "@/server/http/security";
+import { assertSameOrigin } from "@/server/http/security";
+import { enforceAuthRateLimit } from "@/server/auth/rate-limit";
+import { issueAuthToken } from "@/server/auth/tokens";
+import { sendPasswordResetEmail } from "@/server/email";
+import { audit } from "@/server/audit";
+import { allowsLocalAuthDelivery } from "@/server/auth/local-mode";
 
 export const POST = withApi(async (request: Request) => {
   assertSameOrigin(request);
@@ -15,6 +20,13 @@ export const POST = withApi(async (request: Request) => {
         .transform((value) => value.toLowerCase()),
     })
     .parse(await request.json());
+  await enforceAuthRateLimit({
+    action: "password_reset",
+    limit: 3,
+    request,
+    subject: email,
+    windowMs: 60 * 60_000,
+  });
   const [user] = await db
     .select({ id: users.id })
     .from(users)
@@ -22,15 +34,23 @@ export const POST = withApi(async (request: Request) => {
     .limit(1);
   let token: string | undefined;
   if (user) {
-    token = randomToken();
-    await db.insert(verificationTokens).values({
-      userId: user.id,
-      purpose: "RESET_PASSWORD",
-      tokenHash: sha256(token),
-      expiresAt: new Date(Date.now() + 60 * 60_000),
+    token = await issueAuthToken(user.id, "RESET_PASSWORD");
+    try {
+      await sendPasswordResetEmail(email, token);
+    } catch (error) {
+      console.error("Password reset email delivery failed.", error);
+    }
+    await audit(request, {
+      actorUserId: user.id,
+      action: "account.password_reset_requested",
+      entityType: "user",
+      entityId: user.id,
     });
   }
   return Response.json({
-    data: { accepted: true, resetToken: process.env.NODE_ENV === "production" ? undefined : token },
+    data: {
+      accepted: true,
+      resetToken: allowsLocalAuthDelivery() ? token : undefined,
+    },
   });
 });

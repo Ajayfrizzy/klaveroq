@@ -3,6 +3,7 @@ import { canModifyPortfolio, canViewTalentProfile } from "./authorization";
 import { assertProfileCanBePublished, getMissingPublicationFields } from "./publication";
 import { toPublicPortfolioItem, toPublicTalentProfile, type ProfileRecord } from "./public-profile";
 import { portfolioInputSchema, profileInputSchema, talentQuerySchema } from "./schemas";
+import { encodeCursor } from "../../../server/pagination/cursor";
 
 describe("talent profiles", () => {
   it("projects only intentional public profile fields", () => {
@@ -89,6 +90,20 @@ describe("talent profiles", () => {
     expect(() =>
       portfolioInputSchema.parse({ title: "x", description: "short", skills: [] }),
     ).toThrow();
+  });
+
+  it("accepts only a cursor matching the requested talent sort", () => {
+    const id = "00000000-0000-4000-8000-000000000001";
+    const completed = encodeCursor({ kind: "talent-completed", completed: 3, id });
+    expect(talentQuerySchema.parse({ sort: "completed", cursor: completed }).cursor).toBe(
+      completed,
+    );
+    expect(() => talentQuerySchema.parse({ cursor: completed })).toThrow(
+      /Invalid pagination cursor/,
+    );
+    expect(() => talentQuerySchema.parse({ cursor: "malformed" })).toThrow(
+      /Invalid pagination cursor/,
+    );
   });
 
   it("accepts bounded partial private-profile edits without inventing defaults", () => {

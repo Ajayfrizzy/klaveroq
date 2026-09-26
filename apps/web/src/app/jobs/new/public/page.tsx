@@ -4,6 +4,7 @@ import { ListingWizard, type ListingDraft } from "@/features/marketplace/compone
 import { getCurrentUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { jobListingMilestones, jobListings } from "@/server/db/schema";
+import { MarketplaceLayout } from "@/features/marketplace/components/marketplace-layout";
 
 export default async function PublicJobPage({
   searchParams,
@@ -50,5 +51,9 @@ export default async function PublicJobPage({
       })),
     };
   }
-  return <ListingWizard initialDraft={initialDraft} />;
+  return (
+    <MarketplaceLayout>
+      <ListingWizard initialDraft={initialDraft} />
+    </MarketplaceLayout>
+  );
 }

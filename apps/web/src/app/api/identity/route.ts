@@ -3,9 +3,10 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { identityVerifications } from "@/server/db/schema";
 import { requireUser } from "@/server/auth/session";
-import { identityProvider } from "@/server/identity/provider";
+import { getIdentityProvider } from "@/server/identity/provider";
 import { withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
+import { audit } from "@/server/audit";
 
 export const GET = withApi(async () => {
   const { user } = await requireUser();
@@ -28,7 +29,11 @@ export const POST = withApi(async (request: Request) => {
         .transform((value) => value.toUpperCase()),
     })
     .parse(await request.json());
-  const started = await identityProvider.start({ userId: user.id, email: user.email, countryCode });
+  const started = await getIdentityProvider().start({
+    userId: user.id,
+    email: user.email,
+    countryCode,
+  });
   const [record] = await db
     .insert(identityVerifications)
     .values({
@@ -40,5 +45,15 @@ export const POST = withApi(async (request: Request) => {
       riskLevel: "LOW",
     })
     .returning();
-  return Response.json({ data: { ...record, redirectUrl: started.redirectUrl } }, { status: 201 });
+  await audit(request, {
+    actorUserId: user.id,
+    action: "identity.started",
+    entityType: "identity_verification",
+    entityId: record.id,
+    metadata: { provider: record.provider, countryCode },
+  });
+  const redirectUrl = started.redirectUrl
+    ? `${started.redirectUrl}${started.redirectUrl.includes("?") ? "&" : "?"}verificationId=${record.id}`
+    : undefined;
+  return Response.json({ data: { ...record, redirectUrl } }, { status: 201 });
 });

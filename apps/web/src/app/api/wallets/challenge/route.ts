@@ -4,6 +4,7 @@ import { walletChallenges } from "@/server/db/schema";
 import { requireUser } from "@/server/auth/session";
 import { withApi } from "@/server/http/errors";
 import { assertSameOrigin, randomToken, sha256 } from "@/server/http/security";
+import { audit } from "@/server/audit";
 
 export const POST = withApi(async (request: Request) => {
   assertSameOrigin(request);
@@ -34,5 +35,12 @@ export const POST = withApi(async (request: Request) => {
       expiresAt,
     })
     .returning();
+  await audit(request, {
+    actorUserId: user.id,
+    action: "wallet.challenge_created",
+    entityType: "wallet_challenge",
+    entityId: challenge.id,
+    metadata: { network: input.network },
+  });
   return Response.json({ data: { id: challenge.id, message, nonce, expiresAt } }, { status: 201 });
 });

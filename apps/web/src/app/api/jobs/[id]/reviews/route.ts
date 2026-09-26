@@ -48,7 +48,10 @@ export const POST = withApi(
         rating: input.rating,
         comment: input.comment || null,
       })
+      .onConflictDoNothing()
       .returning();
+    if (!review)
+      throw new ApiError(409, "REVIEW_ALREADY_SUBMITTED", "You already reviewed this engagement.");
     await audit(request, {
       actorUserId: user.id,
       action: "marketplace.review_created",

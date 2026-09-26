@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/server/db";
 import {
@@ -12,6 +12,7 @@ import { requireUser } from "@/server/auth/session";
 import { requireMilestoneParticipant } from "@/features/jobs/server/access";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
+import { audit } from "@/server/audit";
 
 const schema = z.discriminatedUnion("decision", [
   z.object({ decision: z.literal("APPROVE"), reason: z.string().max(2000).optional() }),
@@ -46,6 +47,26 @@ export const POST = withApi(
         "Two revision rounds have already been used. Approve the work or open a dispute.",
       );
     await db.transaction(async (tx) => {
+      const nextStatus =
+        input.decision === "REQUEST_REVISION" ? "REVISION_REQUESTED" : "RELEASE_PENDING";
+      const [claimed] = await tx
+        .update(milestones)
+        .set({
+          status: nextStatus,
+          revisionCount:
+            input.decision === "REQUEST_REVISION"
+              ? milestone.revisionCount + 1
+              : milestone.revisionCount,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(milestones.id, id), eq(milestones.status, "UNDER_REVIEW")))
+        .returning({ id: milestones.id });
+      if (!claimed)
+        throw new ApiError(
+          409,
+          "MILESTONE_STATE_INVALID",
+          "Another review already changed this milestone.",
+        );
       await tx.insert(reviews).values({
         milestoneId: id,
         proofSubmissionId: proof.id,
@@ -61,19 +82,7 @@ export const POST = withApi(
           reason: input.reason,
           responseDueAt: new Date(Date.now() + 3 * 86_400_000),
         });
-        await tx
-          .update(milestones)
-          .set({
-            status: "REVISION_REQUESTED",
-            revisionCount: milestone.revisionCount + 1,
-            updatedAt: new Date(),
-          })
-          .where(eq(milestones.id, id));
       } else {
-        await tx
-          .update(milestones)
-          .set({ status: "RELEASE_PENDING", updatedAt: new Date() })
-          .where(eq(milestones.id, id));
         await tx.insert(operations).values({
           jobId: job.id,
           milestoneId: id,
@@ -86,6 +95,14 @@ export const POST = withApi(
           metadata: { proofId: proof.id },
         });
       }
+    });
+    await audit(request, {
+      actorUserId: user.id,
+      action:
+        input.decision === "APPROVE" ? "milestone.proof_approved" : "milestone.revision_requested",
+      entityType: "milestone",
+      entityId: id,
+      metadata: { jobId: job.id, proofId: proof.id, decision: input.decision },
     });
     return Response.json({
       data: {

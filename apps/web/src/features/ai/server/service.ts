@@ -1,15 +1,15 @@
 import { ApiError } from "@/server/http/errors";
 import { jobBuilderOutputSchema, proposalAssistantOutputSchema } from "../schemas";
 import type { ProposalAssistantContext } from "../types";
-import { MockMarketplaceAiProvider } from "./mock-provider";
+import { TemplateMarketplaceAiProvider } from "./template-provider";
 import type { MarketplaceAiProvider } from "./provider";
 
 const providers: Record<string, MarketplaceAiProvider> = {
-  mock: new MockMarketplaceAiProvider(),
+  template: new TemplateMarketplaceAiProvider(),
 };
 
 function provider() {
-  const name = process.env.MARKETPLACE_AI_PROVIDER ?? "mock";
+  const name = process.env.MARKETPLACE_AI_PROVIDER ?? "template";
   const selected = providers[name];
   if (!selected)
     throw new ApiError(503, "AI_PROVIDER_UNAVAILABLE", "Marketplace assistance is unavailable.");

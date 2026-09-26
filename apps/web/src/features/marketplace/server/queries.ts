@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import {
   jobListings,
@@ -11,6 +11,7 @@ import { getReputationSummaries } from "@/features/reputation/server/queries";
 import { toPublicPortfolioItem } from "@/features/talent/server/public-profile";
 import type { z } from "zod";
 import type { listingQuerySchema } from "./schemas";
+import { decodeCursor, encodeCursor } from "@/server/pagination/cursor";
 
 export async function listPublicListings(input: z.infer<typeof listingQuerySchema>) {
   const conditions = [eq(jobListings.status, "OPEN"), gt(jobListings.proposalDeadline, new Date())];
@@ -27,12 +28,23 @@ export async function listPublicListings(input: z.infer<typeof listingQuerySchem
   if (input.maxBudget) conditions.push(lte(jobListings.budgetMin, BigInt(input.maxBudget)));
   if (input.deadlineBefore)
     conditions.push(lte(jobListings.proposalDeadline, input.deadlineBefore));
-  if (input.cursor)
-    conditions.push(
-      input.sort === "budget"
-        ? lte(jobListings.budgetMax, BigInt(input.cursor))
-        : lte(jobListings.publishedAt, new Date(input.cursor)),
-    );
+  if (input.cursor) {
+    const cursor = decodeCursor(input.cursor)!;
+    if (cursor.kind === "listing-budget")
+      conditions.push(
+        or(
+          lt(jobListings.budgetMax, BigInt(cursor.value)),
+          and(eq(jobListings.budgetMax, BigInt(cursor.value)), lt(jobListings.id, cursor.id)),
+        )!,
+      );
+    if (cursor.kind === "listing-date")
+      conditions.push(
+        or(
+          lt(jobListings.publishedAt, new Date(cursor.value)),
+          and(eq(jobListings.publishedAt, new Date(cursor.value)), lt(jobListings.id, cursor.id)),
+        )!,
+      );
+  }
   const proposalCounts = db
     .select({ listingId: proposals.listingId, value: count(proposals.id).as("proposal_count") })
     .from(proposals)
@@ -66,13 +78,21 @@ export async function listPublicListings(input: z.infer<typeof listingQuerySchem
     nextCursor:
       hasMore && last
         ? input.sort === "budget"
-          ? last.listing.budgetMax.toString()
-          : last.listing.publishedAt?.toISOString()
+          ? encodeCursor({
+              kind: "listing-budget",
+              value: last.listing.budgetMax.toString(),
+              id: last.listing.id,
+            })
+          : encodeCursor({
+              kind: "listing-date",
+              value: last.listing.publishedAt!.toISOString(),
+              id: last.listing.id,
+            })
         : null,
   };
 }
 
-export async function getPublicListing(id: string) {
+export async function getPublicListing(id: string, ownerUserId?: string) {
   const proposalCounts = db
     .select({ listingId: proposals.listingId, value: count(proposals.id).as("proposal_count") })
     .from(proposals)
@@ -93,7 +113,15 @@ export async function getPublicListing(id: string) {
     .from(jobListings)
     .innerJoin(profiles, eq(jobListings.clientUserId, profiles.userId))
     .leftJoin(proposalCounts, eq(jobListings.id, proposalCounts.listingId))
-    .where(eq(jobListings.id, id))
+    .where(
+      and(
+        eq(jobListings.id, id),
+        or(
+          inArray(jobListings.status, ["OPEN", "CLOSED", "AWARDED"]),
+          ownerUserId ? eq(jobListings.clientUserId, ownerUserId) : undefined,
+        ),
+      ),
+    )
     .limit(1);
   return record;
 }
@@ -149,18 +177,30 @@ export async function getProposalEvaluations(listingId: string) {
           left.skills.filter((skill) => requiredSkills.has(skill)).length,
       ),
     );
-  return Promise.all(
-    rows.map(async (row) => ({
-      ...row,
-      reputation: reputations.get(row.worker.userId)!,
-      portfolioPreview: (portfolioByWorker.get(row.worker.userId) ?? [])
-        .slice(0, 2)
-        .map(toPublicPortfolioItem),
-      milestones: await db
+  const milestoneRows = rows.length
+    ? await db
         .select()
         .from(proposalMilestones)
-        .where(eq(proposalMilestones.proposalId, row.proposal.id))
-        .orderBy(asc(proposalMilestones.sequence)),
-    })),
-  );
+        .where(
+          inArray(
+            proposalMilestones.proposalId,
+            rows.map((row) => row.proposal.id),
+          ),
+        )
+        .orderBy(asc(proposalMilestones.proposalId), asc(proposalMilestones.sequence))
+    : [];
+  const milestonesByProposal = new Map<string, typeof milestoneRows>();
+  for (const milestone of milestoneRows) {
+    const items = milestonesByProposal.get(milestone.proposalId) ?? [];
+    items.push(milestone);
+    milestonesByProposal.set(milestone.proposalId, items);
+  }
+  return rows.map((row) => ({
+    ...row,
+    reputation: reputations.get(row.worker.userId)!,
+    portfolioPreview: (portfolioByWorker.get(row.worker.userId) ?? [])
+      .slice(0, 2)
+      .map((item) => toPublicPortfolioItem(item)),
+    milestones: milestonesByProposal.get(row.proposal.id) ?? [],
+  }));
 }

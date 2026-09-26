@@ -1,4 +1,10 @@
-docs
+docs/*
+!docs/AUDIT_MATRIX.md
+!docs/DATA_RETENTION.md
+!docs/OPERATIONS.md
+!docs/RELEASE_CHECKLIST.md
+!docs/SECURITY_REVIEW.md
+!docs/STAGING_PROVIDER_CHECKLIST.md
 node_modules/
 .next/
 .next-e2e/

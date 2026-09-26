@@ -22,5 +22,6 @@ export const loginSchema = z.object({
     .email()
     .transform((value) => value.toLowerCase()),
   password: z.string().min(1).max(128),
+  returnTo: z.string().max(2048).optional(),
 });
 export const resetPasswordSchema = z.object({ token: z.string().min(20), password });

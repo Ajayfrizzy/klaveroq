@@ -5,6 +5,7 @@ import {
   listingUpdateSchema,
   proposalInputSchema,
 } from "./schemas";
+import { encodeCursor } from "../../../server/pagination/cursor";
 
 const listing = {
   title: "Build an analytics dashboard",
@@ -60,6 +61,17 @@ describe("marketplace schemas", () => {
         limit: "",
       }),
     ).toEqual({ sort: "newest", limit: 12 });
+  });
+  it("accepts only a cursor matching the requested listing sort", () => {
+    const id = "00000000-0000-4000-8000-000000000001";
+    const newest = encodeCursor({ kind: "listing-date", value: new Date().toISOString(), id });
+    expect(listingQuerySchema.parse({ cursor: newest }).cursor).toBe(newest);
+    expect(() => listingQuerySchema.parse({ sort: "budget", cursor: newest })).toThrow(
+      /Invalid pagination cursor/,
+    );
+    expect(() => listingQuerySchema.parse({ cursor: "not-a-cursor" })).toThrow(
+      /Invalid pagination cursor/,
+    );
   });
   it("accepts milestones whose total and duration match", () => {
     expect(

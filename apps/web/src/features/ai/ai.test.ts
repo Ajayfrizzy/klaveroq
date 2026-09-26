@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { jobBuilderInputSchema, proposalAssistantInputSchema } from "./schemas";
-import { MockMarketplaceAiProvider } from "./server/mock-provider";
+import { TemplateMarketplaceAiProvider } from "./server/template-provider";
 
 describe("marketplace AI assistance", () => {
   it("validates workflow-specific requests", () => {
@@ -13,7 +13,7 @@ describe("marketplace AI assistance", () => {
   });
 
   it("references only matching Klaveroq portfolio data in proposal suggestions", async () => {
-    const suggestion = await new MockMarketplaceAiProvider().buildProposal({
+    const suggestion = await new TemplateMarketplaceAiProvider().buildProposal({
       listing: {
         title: "Build a React dashboard",
         description: "Build a responsive analytics dashboard.",

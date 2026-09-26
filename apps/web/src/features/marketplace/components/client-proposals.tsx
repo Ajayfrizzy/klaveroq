@@ -51,6 +51,7 @@ type Record = {
     amount: string;
     deliveryDays: number;
   }>;
+  unreadMessageCount: number;
 };
 
 export function ClientProposals({
@@ -232,6 +233,7 @@ export function ClientProposals({
               proposalId={record.proposal.id}
               currentUserId={currentUserId}
               closed={record.proposal.status !== "SUBMITTED"}
+              initialUnreadCount={record.unreadMessageCount}
             />
           </div>
           {record.proposal.status === "SUBMITTED" && (

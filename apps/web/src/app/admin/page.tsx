@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/server/auth/session";
 export default async function AdminPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/admin/login");
+  if (current.user.systemRole === "DISPUTE_ADMIN") redirect("/admin/disputes");
   if (!["SUPPORT", "SUPER_ADMIN"].includes(current.user.systemRole))
     redirect("/admin/login?unauthorized=1");
   return (

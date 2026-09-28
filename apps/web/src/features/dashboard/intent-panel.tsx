@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { preferenceRequest, useAccountPreferences } from "@/features/preferences/client";
 import Link from "next/link";
 
 export function IntentPanel({
-  userId,
   profileReady,
   published,
 }: {
@@ -12,19 +12,11 @@ export function IntentPanel({
   profileReady: boolean;
   published: boolean;
 }) {
-  const [intent, setIntent] = useState("both");
-  const key = `klaveroq:intent:${userId}`;
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
-        const saved = localStorage.getItem(key);
-        if (saved && ["hire", "work", "both"].includes(saved)) setIntent(saved);
-      } catch {
-        /* Preference is optional. */
-      }
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [key]);
+  const { data, error: loadError, reload } = useAccountPreferences(true);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [choice, setChoice] = useState<string | null>(null);
+  const intent = choice ?? data?.workspaceFocus ?? "both";
   const workLabel = !profileReady
     ? "Complete profile"
     : !published
@@ -49,12 +41,23 @@ export function IntentPanel({
             className="secondary-button"
             aria-pressed={intent === value}
             aria-label={label}
-            onClick={() => {
-              setIntent(value);
+            disabled={!data || busy}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              setChoice(value);
               try {
-                localStorage.setItem(key, value);
-              } catch {
-                /* Keep the current choice. */
+                await preferenceRequest("", "PATCH", { workspaceFocus: value });
+                await reload();
+              } catch (reason) {
+                setError(
+                  reason instanceof Error
+                    ? reason.message
+                    : "Could not save your preference. Try again.",
+                );
+              } finally {
+                setChoice(null);
+                setBusy(false);
               }
             }}
           >
@@ -88,7 +91,15 @@ export function IntentPanel({
           {intent === "work" ? "Browse opportunities" : "Find talent"}
         </Link>
       </div>
-      <small>Your focus is remembered on this device.</small>
+      <small>Your workspace preference follows your Klaveroq account.</small>
+      {(error || loadError) && (
+        <p role="alert">
+          {error || loadError}{" "}
+          <button className="secondary-button" onClick={() => void reload()}>
+            Retry loading preferences
+          </button>
+        </p>
+      )}
     </section>
   );
 }

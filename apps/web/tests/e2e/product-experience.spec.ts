@@ -200,6 +200,9 @@ test("shortlists persist and comparison uses current public data", async ({ page
   await page.goto(`/talent?query=${encodeURIComponent(prefix)}`);
   await page.getByRole("button", { name: `Shortlist ${names[0]}`, exact: true }).click();
   await page.getByRole("button", { name: `Shortlist ${names[1]}`, exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: `Shortlist ${names[1]}`, exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await page.reload();
   await expect(
     page.getByRole("button", { name: `Shortlist ${names[0]}`, exact: true }),
@@ -214,7 +217,7 @@ test("shortlists persist and comparison uses current public data", async ({ page
   await sql`update profiles set is_public = false where user_id = ${ids[0]}`;
   await sql.end();
   await page.getByRole("button", { name: "View shortlist & compare" }).click();
-  await expect(page.getByRole("table")).toContainText("Profile unavailable");
+  await expect(page.getByRole("table")).toContainText("Profile no longer available");
   await expect(page.getByRole("table")).not.toContainText(names[0]);
 });
 

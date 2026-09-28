@@ -8,6 +8,7 @@ import {
   proofSubmissions,
 } from "@/server/db/schema";
 import { calculateReputation } from "./metrics";
+import { trustedIdentityProviders } from "@/server/identity/provider";
 
 export type ReputationSummary = {
   averageRating: number | null;
@@ -50,6 +51,7 @@ export async function getReputationSummaries(userIds: string[]) {
         and(
           inArray(identityVerifications.userId, uniqueIds),
           eq(identityVerifications.status, "VERIFIED"),
+          inArray(identityVerifications.provider, trustedIdentityProviders()),
         ),
       ),
   ]);

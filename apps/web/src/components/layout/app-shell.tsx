@@ -1,4 +1,5 @@
 "use client";
+import { DevicePreferenceImport } from "@/features/preferences/client";
 
 import {
   Activity,
@@ -100,7 +101,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       menuButton?.focus();
     };
   }, [menuOpen]);
-  const [account, setAccount] = useState<{ displayName: string; email: string } | null>(null);
+  const [account, setAccount] = useState<{ id: string; displayName: string; email: string } | null>(
+    null,
+  );
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
@@ -128,6 +131,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           );
         if (active && body.data)
           setAccount({
+            id: body.data.user.id,
             displayName: body.data.profile?.displayName || body.data.user.email.split("@")[0],
             email: body.data.user.email,
           });
@@ -338,7 +342,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
         </header>
-        <main className="page-content">{children}</main>
+        <main className="page-content">
+          {account && <DevicePreferenceImport key={account.id} userId={account.id} />}
+          {children}
+        </main>
         <nav className="bottom-nav" aria-label="Mobile navigation">
           {primary.slice(0, 4).map(({ label, href, icon: Icon }) => (
             <Link

@@ -3,6 +3,7 @@
 import { AlertCircle, CheckCircle2, Clock3, ExternalLink, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { betaIdentityDescription } from "@/server/identity/config";
 
 type IdentityRecord = {
   id?: string;
@@ -40,7 +41,13 @@ const copy: Record<string, { title: string; body: string }> = {
   },
 };
 
-export function IdentityPanel({ record }: { record: IdentityRecord }) {
+export function IdentityPanel({
+  record,
+  availability,
+}: {
+  record: IdentityRecord;
+  availability: { available: boolean; intentionallyDisabledForBeta: boolean };
+}) {
   const router = useRouter();
   const [countryCode, setCountryCode] = useState(record.countryCode ?? "NG");
   const [busy, setBusy] = useState(false);
@@ -78,6 +85,21 @@ export function IdentityPanel({ record }: { record: IdentityRecord }) {
       : record.status === "PENDING"
         ? Clock3
         : AlertCircle;
+  if (!availability.available)
+    return (
+      <section className="panel identity-panel">
+        <h2>
+          {availability.intentionallyDisabledForBeta
+            ? "Not available during community beta"
+            : "Identity verification unavailable"}
+        </h2>
+        <p>
+          {availability.intentionallyDisabledForBeta
+            ? betaIdentityDescription
+            : "Identity verification is not available in this environment."}
+        </p>
+      </section>
+    );
   return (
     <section className="panel identity-panel">
       <div className="identity-panel-heading">

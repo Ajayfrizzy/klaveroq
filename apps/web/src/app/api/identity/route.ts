@@ -3,7 +3,11 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { identityVerifications } from "@/server/db/schema";
 import { requireUser } from "@/server/auth/session";
-import { getIdentityProvider } from "@/server/identity/provider";
+import {
+  getIdentityProvider,
+  identityAvailability,
+  trustedIdentityProviders,
+} from "@/server/identity/provider";
 import { withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
 import { audit } from "@/server/audit";
@@ -16,11 +20,23 @@ export const GET = withApi(async () => {
     .where(eq(identityVerifications.userId, user.id))
     .orderBy(desc(identityVerifications.createdAt))
     .limit(1);
-  return Response.json({ data: record ?? { status: "NOT_STARTED", tier: 0 } });
+  const availability = identityAvailability();
+  return Response.json({
+    data: {
+      ...(record ?? { status: "NOT_STARTED", tier: 0 }),
+      ...(record?.status === "VERIFIED" && !trustedIdentityProviders().includes(record.provider)
+        ? { status: "NOT_STARTED", tier: 0 }
+        : {}),
+      ...availability,
+      recordProvider:
+        record && trustedIdentityProviders().includes(record.provider) ? record.provider : null,
+    },
+  });
 });
 export const POST = withApi(async (request: Request) => {
   assertSameOrigin(request);
   const { user } = await requireUser();
+  const provider = getIdentityProvider();
   const { countryCode } = z
     .object({
       countryCode: z
@@ -29,7 +45,7 @@ export const POST = withApi(async (request: Request) => {
         .transform((value) => value.toUpperCase()),
     })
     .parse(await request.json());
-  const started = await getIdentityProvider().start({
+  const started = await provider.start({
     userId: user.id,
     email: user.email,
     countryCode,

@@ -1,5 +1,11 @@
 /** Presentation only: the canonical action and identifiers stay in the audit record. */
 const descriptions: Record<string, string> = {
+  "preferences.focus_updated": "You changed your workspace focus.",
+  "preferences.search_saved": "You saved a marketplace search.",
+  "preferences.search_removed": "You removed a saved search.",
+  "preferences.talent_saved": "You added a profile to your shortlist.",
+  "preferences.talent_removed": "You removed a profile from your shortlist.",
+  "preferences.device_imported": "You saved device preferences to your account.",
   "account.registered": "You created your account.",
   "account.email_verified": "You verified your email address.",
   "account.email_verification_resent": "You requested another verification email.",

@@ -21,6 +21,62 @@ const timestamps = {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 };
 
+export const userPreferences = pgTable(
+  "user_preferences",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    workspaceFocus: varchar("workspace_focus", { length: 4 }).notNull().default("both"),
+    ...timestamps,
+  },
+  (t) => [
+    check("user_preferences_focus_check", sql`${t.workspaceFocus} in ('hire', 'work', 'both')`),
+  ],
+);
+
+export const savedSearches = pgTable(
+  "saved_searches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    scope: varchar("scope", { length: 8 }).notNull(),
+    name: varchar("name", { length: 60 }).notNull(),
+    query: varchar("query", { length: 2048 }).notNull(),
+    slot: integer("slot").notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    check("saved_searches_scope_check", sql`${t.scope} in ('discover', 'talent')`),
+    check("saved_searches_slot_check", sql`${t.slot} between 0 and 7`),
+    check("saved_searches_name_check", sql`length(trim(${t.name})) > 0`),
+    uniqueIndex("saved_searches_slot_unique").on(t.userId, t.scope, t.slot),
+    uniqueIndex("saved_searches_query_unique").on(t.userId, t.scope, t.query),
+  ],
+);
+
+export const talentShortlistItems = pgTable(
+  "talent_shortlist_items",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    talentUserId: uuid("talent_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    slot: integer("slot").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.talentUserId] }),
+    uniqueIndex("talent_shortlist_slot_unique").on(t.userId, t.slot),
+    check("talent_shortlist_slot_check", sql`${t.slot} between 0 and 2`),
+    check("talent_shortlist_not_self", sql`${t.userId} <> ${t.talentUserId}`),
+  ],
+);
+
 export const accountStatusEnum = pgEnum("account_status", [
   "PENDING_EMAIL_VERIFICATION",
   "ACTIVE",

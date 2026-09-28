@@ -69,7 +69,11 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
       .select({ id: identityVerifications.id })
       .from(identityVerifications)
       .where(
-        and(eq(identityVerifications.userId, userId), eq(identityVerifications.status, "VERIFIED")),
+        and(
+          eq(identityVerifications.userId, userId),
+          eq(identityVerifications.status, "VERIFIED"),
+          inArray(identityVerifications.provider, trustedIdentityProviders()),
+        ),
       )
       .limit(1),
     db
@@ -269,3 +273,4 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
     })),
   };
 }
+import { trustedIdentityProviders } from "@/server/identity/provider";

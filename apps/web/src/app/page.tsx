@@ -9,6 +9,7 @@ import { formatAssetAmount } from "@/features/dashboard/server/metrics";
 import { IntentPanel } from "@/features/dashboard/intent-panel";
 import { getMissingPublicationFields } from "@/features/talent/server/publication";
 import { formatEventTime } from "@/features/activity/presentation";
+import { identityConfiguration } from "@/server/identity/config";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function DashboardPage() {
     current.profile && getMissingPublicationFields(current.profile).length === 0,
   );
   const allChecksRecorded = Object.values(data.verification).every(Boolean);
+  const betaIdentityDisabled = identityConfiguration().betaDisabled;
 
   return (
     <AppShell>
@@ -56,7 +58,9 @@ export default async function DashboardPage() {
           <p>
             {allChecksRecorded
               ? "Email, identity, and wallet ownership are verified."
-              : "Review your email, identity, and wallet verification."}
+              : betaIdentityDisabled
+                ? "Review your email and wallet verification. Identity checks are not required during community beta."
+                : "Review your email, identity, and wallet verification."}
           </p>
         </div>
         <div className="readiness-items">
@@ -66,7 +70,11 @@ export default async function DashboardPage() {
           </span>
           <span>
             {data.verification.identity && <Check size={15} />} Identity{" "}
-            {data.verification.identity ? "verified" : "pending"}
+            {data.verification.identity
+              ? "verified"
+              : betaIdentityDisabled
+                ? "not required during beta"
+                : "pending"}
           </span>
           <span>
             {data.verification.wallet && <Check size={15} />} Wallet{" "}

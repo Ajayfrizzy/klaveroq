@@ -2,17 +2,25 @@
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { preferenceRequest, useAccountPreferences } from "@/features/preferences/client";
 
-type SavedSearch = { name: string; url: string };
+type SavedSearch = { id?: string; name: string; url: string };
 export function SavedSearches({ scope }: { scope: string }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const key = `klaveroq:searches:${scope}:${pathname}`;
-  const [searches, setSearches] = useState<SavedSearch[]>([]);
+  const authenticated = scope !== "guest";
+  const { data, error, reload } = useAccountPreferences(authenticated);
+  const [localSearches, setSearches] = useState<SavedSearch[]>([]);
+  const searches = authenticated
+    ? (data?.searches.filter((s) => `/${s.scope}` === pathname) ?? [])
+    : localSearches;
+  const [busy, setBusy] = useState(false);
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [ready, setReady] = useState(false);
   useEffect(() => {
+    if (authenticated) return;
     const timer = setTimeout(() => {
       try {
         const stored: unknown = JSON.parse(localStorage.getItem(key) || "[]");
@@ -35,7 +43,7 @@ export function SavedSearches({ scope }: { scope: string }) {
       setReady(true);
     }, 0);
     return () => clearTimeout(timer);
-  }, [key, pathname]);
+  }, [key, pathname, authenticated]);
   const persist = (next: SavedSearch[]) => {
     try {
       localStorage.setItem(key, JSON.stringify(next));
@@ -48,13 +56,37 @@ export function SavedSearches({ scope }: { scope: string }) {
   return (
     <details className="saved-searches">
       <summary>Saved searches ({searches.length})</summary>
-      <p>Save filters on this device. Saved searches do not send notifications.</p>
+      <p>
+        {authenticated ? "Save filters to your account." : "Save filters on this device."} Saved
+        searches do not send notifications.
+      </p>
       <form
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           const next = new URLSearchParams(params.toString());
           next.delete("cursor");
           const url = `${pathname}?${next}`;
+          if (authenticated) {
+            setBusy(true);
+            setMessage("");
+            try {
+              await preferenceRequest("/saved-searches", "POST", {
+                scope: pathname.slice(1),
+                name: name.trim(),
+                parameters: Object.fromEntries(next),
+              });
+              await reload();
+              setName("");
+              setMessage("Search saved to your account.");
+            } catch (reason) {
+              setMessage(
+                reason instanceof Error ? reason.message : "Search could not be saved. Try again.",
+              );
+            } finally {
+              setBusy(false);
+            }
+            return;
+          }
           persist(
             [...searches.filter((search) => search.url !== url), { name: name.trim(), url }].slice(
               -8,
@@ -73,7 +105,10 @@ export function SavedSearches({ scope }: { scope: string }) {
             placeholder="e.g. Available designers"
           />
         </label>
-        <button className="secondary-button" disabled={!ready || !name.trim()}>
+        <button
+          className="secondary-button"
+          disabled={busy || !(authenticated ? data : ready) || !name.trim()}
+        >
           Save current search
         </button>
       </form>
@@ -85,7 +120,27 @@ export function SavedSearches({ scope }: { scope: string }) {
               type="button"
               className="secondary-button"
               aria-label={`Remove saved search ${search.name}`}
-              onClick={() => persist(searches.filter((item) => item.url !== search.url))}
+              disabled={busy}
+              onClick={async () => {
+                if (!authenticated) {
+                  persist(searches.filter((item) => item.url !== search.url));
+                  return;
+                }
+                setBusy(true);
+                try {
+                  await preferenceRequest("/saved-searches", "DELETE", { id: search.id });
+                  await reload();
+                  setMessage("Saved search removed.");
+                } catch (reason) {
+                  setMessage(
+                    reason instanceof Error
+                      ? reason.message
+                      : "Could not remove search. Try again.",
+                  );
+                } finally {
+                  setBusy(false);
+                }
+              }}
             >
               Remove
             </button>
@@ -93,6 +148,14 @@ export function SavedSearches({ scope }: { scope: string }) {
         ))}
       </ul>
       <p role="status">{message}</p>
+      {error && (
+        <p role="alert">
+          {error}{" "}
+          <button className="secondary-button" onClick={() => void reload()}>
+            Retry loading searches
+          </button>
+        </p>
+      )}
     </details>
   );
 }

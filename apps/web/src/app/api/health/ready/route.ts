@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { productionConfigurationIssues } from "@/server/deployment";
 import { db } from "@/server/db";
 import { withApi } from "@/server/http/errors";
+import { identityConfiguration } from "@/server/identity/config";
 
 export const GET = withApi(async () => {
   let database = "ok";
@@ -18,8 +19,9 @@ export const GET = withApi(async () => {
       dependencies: {
         database,
         email: process.env.EMAIL_PROVIDER === "resend" ? "configured" : "local_or_unconfigured",
-        identity:
-          process.env.IDENTITY_PROVIDER && process.env.IDENTITY_PROVIDER !== "sandbox"
+        identity: identityConfiguration().betaDisabled
+          ? "intentionally_disabled_for_beta"
+          : identityConfiguration().real
             ? "configured"
             : "sandbox_or_unconfigured",
         fileScanner: process.env.FILE_SCANNER === "clamav" ? "configured" : "local_or_unconfigured",

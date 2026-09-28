@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 // origin and test-database URLs unchanged while forwarding to the host harness.
 if (process.platform !== "linux")
   throw new Error("This helper is for the Linux browser container.");
-const servers = [3199, 55434].map((port) => {
+const servers = [3199, 3201, 55434].map((port) => {
   const server = net.createServer((socket) => {
     const upstream = net.connect(port, "host.docker.internal");
     socket.pipe(upstream).pipe(socket);

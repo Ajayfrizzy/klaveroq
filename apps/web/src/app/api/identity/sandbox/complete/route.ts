@@ -25,7 +25,11 @@ export const POST = withApi(async (request: Request) => {
       updatedAt: new Date(),
     })
     .where(
-      and(eq(identityVerifications.id, verificationId), eq(identityVerifications.userId, user.id)),
+      and(
+        eq(identityVerifications.id, verificationId),
+        eq(identityVerifications.userId, user.id),
+        eq(identityVerifications.provider, "sandbox"),
+      ),
     )
     .returning();
   if (!updated)

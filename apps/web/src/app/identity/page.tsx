@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { identityVerifications } from "@/server/db/schema";
 import { ShieldCheck } from "lucide-react";
+import { identityAvailability } from "@/server/identity/provider";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,10 @@ export default async function IdentityPage() {
         description="Review the status returned by the configured identity provider."
         icon={ShieldCheck}
       />
-      <IdentityPanel record={record ?? { status: "NOT_STARTED" }} />
+      <IdentityPanel
+        record={record ?? { status: "NOT_STARTED" }}
+        availability={identityAvailability()}
+      />
     </AppShell>
   );
 }

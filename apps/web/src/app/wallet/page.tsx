@@ -90,6 +90,8 @@ export default async function WalletPage({
       .limit(1),
   ]);
   const identity = identityRows[0];
+  const identityVerified =
+    identity?.status === "VERIFIED" && trustedIdentityProviders().includes(identity.provider);
   const mfa = mfaRows[0];
   const verifiedWallets = walletRecords.filter((wallet) => wallet.status === "VERIFIED");
 
@@ -196,9 +198,18 @@ export default async function WalletPage({
                 Email {current.user.emailVerifiedAt ? "verified" : "pending"}
               </li>
               <li>
-                {identity?.status === "VERIFIED" ? <Check size={14} /> : <Clock3 size={14} />}
+                {identityVerified ? <Check size={14} /> : <Clock3 size={14} />}
                 <Link href="/identity">
-                  Identity {identity ? label(identity.status) : "not started"}
+                  Identity{" "}
+                  {identityVerified
+                    ? "verified"
+                    : identityConfiguration().betaDisabled
+                      ? "not required during beta"
+                      : identity?.status === "VERIFIED"
+                        ? "not verified"
+                        : identity
+                          ? label(identity.status)
+                          : "not started"}
                 </Link>
               </li>
               <li>
@@ -264,3 +275,5 @@ export default async function WalletPage({
     </AppShell>
   );
 }
+import { identityConfiguration } from "@/server/identity/config";
+import { trustedIdentityProviders } from "@/server/identity/provider";

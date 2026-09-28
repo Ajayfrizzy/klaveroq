@@ -1,5 +1,6 @@
 type DeploymentEnvironment = Record<string, string | undefined>;
 import { emailAppUrl, validEmailSender } from "./email/templates";
+import { identityConfiguration } from "./identity/config";
 
 function usesLoopbackDatabase(databaseUrl?: string) {
   if (!databaseUrl) return false;
@@ -12,6 +13,13 @@ function usesLoopbackDatabase(databaseUrl?: string) {
 }
 
 export function allowsIdentitySandbox(environment: DeploymentEnvironment = process.env) {
+  const config = identityConfiguration(environment);
+  if (
+    !config.validStage ||
+    environment.DEPLOYMENT_STAGE === "community_beta" ||
+    environment.DEPLOYMENT_STAGE === "production"
+  )
+    return false;
   if (environment.IDENTITY_PROVIDER !== "sandbox") return false;
   if (!usesLoopbackDatabase(environment.DATABASE_URL)) return false;
   if (environment.NODE_ENV !== "production") return true;
@@ -30,8 +38,20 @@ export function allowsIdentitySandbox(environment: DeploymentEnvironment = proce
 export function productionConfigurationIssues(
   environment: DeploymentEnvironment = process.env,
 ): string[] {
-  if (environment.NODE_ENV !== "production" || environment.E2E_TEST_MODE === "1") return [];
   const issues: string[] = [];
+  const identity = identityConfiguration(environment);
+  if (!identity.validStage) issues.push("deployment_stage");
+  if (!identity.validProvider) issues.push("identity_provider");
+  if (environment.NODE_ENV !== "production") return issues;
+  if (
+    environment.E2E_TEST_MODE === "1" &&
+    (allowsIdentitySandbox(environment) ||
+      (identity.betaDisabled &&
+        usesLoopbackDatabase(environment.DATABASE_URL) &&
+        new URL(environment.DATABASE_URL!).pathname.endsWith("_test")))
+  )
+    return issues;
+  if (identity.stage === "development") issues.push("deployment_stage");
   if (!environment.DATABASE_URL) issues.push("database");
   if (!environment.APP_URL?.startsWith("https://")) issues.push("https_app_url");
   if (!environment.SESSION_SECRET || environment.SESSION_SECRET.length < 32)
@@ -46,7 +66,7 @@ export function productionConfigurationIssues(
   } catch {
     issues.push("email_app_url");
   }
-  if (!environment.IDENTITY_PROVIDER || environment.IDENTITY_PROVIDER === "sandbox")
+  if (!identity.betaDisabled && !identity.real && !issues.includes("identity_provider"))
     issues.push("identity_provider");
   if (environment.FILE_SCANNER !== "clamav" || !environment.CLAMAV_HOST)
     issues.push("malware_scanner");

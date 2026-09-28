@@ -16,6 +16,7 @@ process.env.DATABASE_URL = databaseUrl;
 export default defineConfig({
   tsconfig: "./tests/tsconfig.json",
   testDir: "./tests/e2e",
+  testIgnore: /identity-beta\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -34,7 +35,7 @@ export default defineConfig({
     {
       name: "chromium",
       dependencies: ["clean-database"],
-      testIgnore: /(?:clean-database-profile|responsive)\.spec\.ts/,
+      testIgnore: /(?:clean-database-profile|responsive|identity-beta)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -75,7 +76,9 @@ export default defineConfig({
             E2E_TEST_MODE: "1",
             CRON_SECRET: "phase7-e2e-cron-secret-at-least-32-characters",
             FILE_SCANNER: "local",
+            FILE_STORAGE_ROOT: ".data/e2e-uploads",
             IDENTITY_PROVIDER: "sandbox",
+            DEPLOYMENT_STAGE: "development",
             IDENTITY_SANDBOX_ENABLED: "1",
           },
         },

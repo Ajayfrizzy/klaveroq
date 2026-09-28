@@ -22,15 +22,18 @@ describe("authentication email links", () => {
     const request = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
       void _input;
       void _init;
-      return new Response(null, { status: 202 });
+      return Response.json({ id: "provider-id" });
     });
     vi.stubGlobal("fetch", request);
-    await new ResendEmailProvider("api-key", "Klaveroq <accounts@example.com>").send({
-      to: "user@example.com",
-      subject: "Subject",
-      text: "Text",
-      html: "<p>Text</p>",
-    });
+    await new ResendEmailProvider("api-key", "Klaveroq <accounts@example.com>").send(
+      {
+        to: "user@example.com",
+        subject: "Subject",
+        text: "Text",
+        html: "<p>Text</p>",
+      },
+      "test-key",
+    );
     expect(request).toHaveBeenCalledWith(
       "https://api.resend.com/emails",
       expect.objectContaining({

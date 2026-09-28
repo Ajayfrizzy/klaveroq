@@ -4,7 +4,17 @@ const databaseUrl =
   process.env.TEST_DATABASE_URL ??
   "postgresql://klaveroq_test:klaveroq_test@127.0.0.1:55434/klaveroq_test";
 
+// Server-module integration tests must never inherit the development database.
+const testDatabase = new URL(databaseUrl);
+if (
+  !testDatabase.pathname.endsWith("_test") ||
+  !["127.0.0.1", "localhost"].includes(testDatabase.hostname)
+)
+  throw new Error("Playwright requires an isolated loopback database ending in _test.");
+process.env.DATABASE_URL = databaseUrl;
+
 export default defineConfig({
+  tsconfig: "./tests/tsconfig.json",
   testDir: "./tests/e2e",
   fullyParallel: false,
   workers: 1,

@@ -55,12 +55,12 @@ export async function enforceShortLivedRetention(now = new Date()) {
       .where(lt(authRateLimits.updatedAt, before(RETENTION_DAYS.authRateLimits, now)))
       .returning({ action: authRateLimits.action });
     const deletedDeliveries = await tx
-      .delete(notificationDeliveries)
+      .update(notificationDeliveries)
+      .set({ textBody: "", htmlBody: "" })
       .where(
         and(
-          isNotNull(notificationDeliveries.deliveredAt),
           lt(
-            notificationDeliveries.deliveredAt,
+            notificationDeliveries.createdAt,
             before(RETENTION_DAYS.deliveredNotificationBodies, now),
           ),
         ),

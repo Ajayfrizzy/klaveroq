@@ -7,9 +7,11 @@ import { useState } from "react";
 export function LogoutButton({
   admin = false,
   compact = false,
+  label = "Log out",
 }: {
   admin?: boolean;
   compact?: boolean;
+  label?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -29,11 +31,11 @@ export function LogoutButton({
       className={admin ? "admin-logout" : "user-logout"}
       onClick={logout}
       disabled={busy}
-      aria-label="Log out"
-      title="Log out"
+      aria-label={label}
+      title={label}
     >
       <LogOut size={compact ? 16 : 17} />
-      <span>{busy ? "Signing out..." : "Log out"}</span>
+      <span>{busy ? "Signing out..." : label}</span>
     </button>
   );
 }

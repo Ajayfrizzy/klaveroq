@@ -91,10 +91,8 @@ export function NotificationInbox() {
       setError("The read status could not be saved. Please try again.");
     }
   }
-  async function openSettings() {
-    const next = !showSettings;
-    setShowSettings(next);
-    if (!next || preferences) return;
+  const loadPreferences = useCallback(async () => {
+    setShowSettings(true);
     try {
       const response = await fetch("/api/notifications/preferences");
       const body = await response.json();
@@ -104,6 +102,25 @@ export function NotificationInbox() {
       setShowSettings(false);
       setError("Notification preferences could not be loaded. Please try again.");
     }
+  }, []);
+  useEffect(() => {
+    const openFromLink = () => {
+      if (window.location.hash === "#preferences") void loadPreferences();
+    };
+    const timer = window.setTimeout(openFromLink, 0);
+    const openFromMenu = () => void loadPreferences();
+    window.addEventListener("hashchange", openFromLink);
+    window.addEventListener("notifications:open-preferences", openFromMenu);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("hashchange", openFromLink);
+      window.removeEventListener("notifications:open-preferences", openFromMenu);
+    };
+  }, [loadPreferences]);
+  function openSettings() {
+    if (showSettings) setShowSettings(false);
+    else if (preferences) setShowSettings(true);
+    else void loadPreferences();
   }
   async function savePreferences(next: Preferences) {
     const previous = preferences;
@@ -153,7 +170,11 @@ export function NotificationInbox() {
         }
       />
       {showSettings && (
-        <section className="panel notification-preferences" aria-label="Email preferences">
+        <section
+          id="preferences"
+          className="panel notification-preferences"
+          aria-label="Email preferences"
+        >
           <div>
             <Mail size={18} />
             <span>

@@ -1,4 +1,83 @@
 /* Shared product experience: navigation, discovery and task hierarchy. */
+.sidebar-account {
+  position: relative;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--soft-line);
+}
+.sidebar-account .account-trigger {
+  width: 100%;
+  margin: 0;
+  padding: 10px 6px;
+  grid-template-columns: 34px minmax(0, 1fr) 16px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.account-trigger:hover,
+.account-trigger[aria-expanded="true"] {
+  background: var(--brand-soft);
+}
+.account-trigger:focus-visible,
+.account-options :is(a, button):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.account-chevron {
+  color: var(--muted);
+}
+.account-trigger[aria-expanded="true"] .account-chevron {
+  transform: rotate(180deg);
+}
+.account-options {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 8px 30px #18223026;
+}
+.account-options a,
+.account-options .user-logout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  height: auto;
+  padding: 10px 8px;
+  border-radius: 7px;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  text-decoration: none;
+}
+.account-options svg {
+  flex-shrink: 0;
+}
+.account-options a:hover,
+.account-options .user-logout:hover {
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+.account-options .user-logout span {
+  display: inline;
+}
+.account-signout {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--soft-line);
+}
+
 body {
   line-height: 1.5;
 }

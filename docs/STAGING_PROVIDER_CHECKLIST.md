@@ -17,6 +17,8 @@ duplicate callback, and recovery behavior where the provider supports it.
 
 ## Environment gates
 
+Follow [transactional email configuration and acceptance](EMAIL_DELIVERY.md) for the exact Resend sender/domain, signed webhook, authenticated POST schedule, delivery states and recovery rules. Record live message IDs and confirmed webhook delivery separately from automated mocked-provider results.
+
 - [ ] `APP_URL` is HTTPS and matches OAuth/provider callbacks and allowed origins.
 - [ ] Session, cron, monitoring, MFA-encryption, database, storage, and provider credentials are
       unique to staging and delivered through the secret manager.

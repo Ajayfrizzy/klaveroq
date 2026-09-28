@@ -38,8 +38,8 @@ export const POST = withApi(async (request: Request) => {
     token = await issueAuthToken(user.id, "VERIFY_EMAIL");
     try {
       await sendVerificationEmail(user.email, token);
-    } catch (error) {
-      console.error("Verification email delivery failed.", error);
+    } catch {
+      console.error("Verification email could not be queued.");
     }
     await audit(request, {
       actorUserId: user.id,

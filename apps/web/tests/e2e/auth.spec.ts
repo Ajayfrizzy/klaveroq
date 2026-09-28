@@ -16,7 +16,7 @@ test("email verification and password recovery are complete single-use workflows
   await page.goto("/register");
   await page.getByLabel("Display name").fill("Authentication Test");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   const registrationResponse = page.waitForResponse(
     (response) =>
       response.url().endsWith("/api/auth/register") && response.request().method() === "POST",
@@ -24,7 +24,10 @@ test("email verification and password recovery are complete single-use workflows
   await page.getByRole("button", { name: "Create account" }).click();
   const registration = await registrationResponse;
   expect(registration.status()).toBe(201);
-  const verificationToken = (await registration.json()).data.verificationToken as string;
+  const registrationData = (await registration.json()).data;
+  expect(registrationData.emailStatus).toBe("SIMULATED");
+  expect(registrationData.emailSent).toBe(false);
+  const verificationToken = registrationData.verificationToken as string;
   await expect(page).toHaveURL(/\/verify-email\?/);
   await page.getByRole("link", { name: "Open local verification link" }).click();
   await expect(page.getByRole("heading", { name: "Email verified" })).toBeVisible();
@@ -55,7 +58,7 @@ test("email verification and password recovery are complete single-use workflows
 
   await page.getByRole("link", { name: "Sign in" }).click();
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(replacementPassword);
+  await page.getByLabel("Password", { exact: true }).fill(replacementPassword);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL("/");
 

@@ -17,7 +17,7 @@ async function register(page: Page, email: string, displayName: string) {
   await page.goto("/register");
   await page.getByLabel("Display name").fill(displayName);
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   const responsePromise = page.waitForResponse(
     (response) =>
       response.url().endsWith("/api/auth/register") && response.request().method() === "POST",

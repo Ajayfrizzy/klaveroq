@@ -4,6 +4,16 @@ Audit date: 2026-09-28
 
 Milestone: standalone marketplace, before PactAgent integration
 
+## Transactional email completion — September 28, 2026
+
+Email delivery now uses the existing provider architecture with explicit SIMULATED, ACCEPTED and webhook-confirmed DELIVERED states. Verification/reset links share a durable outbox with expiry checks and body scrubbing; marketplace notifications use branded HTML/plain text with configured-origin links and private-content summaries. Existing security events are queued by the authenticated scheduler independently of optional preferences, preserving Google OAuth and wallet/auth transactions.
+
+The outbox uses atomic claims, stable Resend idempotency keys, five-attempt limits, backoff/Retry-After, interrupted-lease recovery, and a 23-hour retry cutoff inside Resend's 24-hour idempotency window. Signed, timestamp-checked webhooks handle confirmed delivery and terminal failures without regressing on older/replayed events. Legacy unverified delivery records are preserved and labeled for review rather than resent.
+
+Validation: 128 unit tests and all 40 browser/integration tests passed, including Chromium, Firefox, WebKit, mobile, locked visual comparisons, authentication links, preferences, provider rejection/timeout ambiguity, security alerts, concurrent deduplication, retry recovery, webhook signatures/replay and cron authorization/overlap. Production build, TypeScript and lint passed (lint retains three pre-existing unused-argument warnings). The final full suite ran the production app, database and browsers on the Linux clock after mixed Mac/Docker clock skew caused unrelated TOTP/unread-timestamp failures. Screenshot references were refreshed for the already-existing profile, wallet and Activity refinements; no application UI or Google OAuth code changed.
+
+Real Resend API calls, verified-domain DNS, mailbox receipt, hosted webhook delivery and scheduler execution remain staging gates requiring owner credentials/infrastructure. Exact setup and delivery/recovery semantics are in [EMAIL_DELIVERY.md](docs/EMAIL_DELIVERY.md). Test providers used fake credentials; no live messages were sent. No database was reset and nothing was deployed, committed or pushed.
+
 ## Final beta UI/UX refinement — September 28, 2026
 
 The rendered review confirmed earlier navigation, discovery, form-protection and publication work, but found stretched expanded Talent controls, tablet overflow, raw activity/device text, a native-looking upload control, low-contrast mobile navigation and a duplicate-key development warning. These are corrected through shared control/grid rules and targeted presentation changes. Real data, authorization, Google authentication and payment boundaries are preserved.

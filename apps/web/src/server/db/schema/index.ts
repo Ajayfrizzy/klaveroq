@@ -1056,9 +1056,9 @@ export const notificationDeliveries = pgTable(
   "notification_deliveries",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    notificationId: uuid("notification_id")
-      .notNull()
-      .references(() => notifications.id, { onDelete: "cascade" }),
+    notificationId: uuid("notification_id").references(() => notifications.id, {
+      onDelete: "cascade",
+    }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -1072,11 +1072,24 @@ export const notificationDeliveries = pgTable(
     attempts: integer("attempts").default(0).notNull(),
     nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).defaultNow().notNull(),
     deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    category: varchar("category", { length: 30 }).default("JOB").notNull(),
+    providerId: text("provider_id"),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    firstAttemptAt: timestamp("first_attempt_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    tokenHash: text("token_hash"),
+    providerEventAt: timestamp("provider_event_at", { withTimezone: true }),
     lastError: text("last_error"),
     ...timestamps,
   },
   (table) => [
     uniqueIndex("notification_delivery_dedupe_unique").on(table.channel, table.dedupeKey),
     index("notification_delivery_retry_idx").on(table.status, table.nextAttemptAt),
+    uniqueIndex("notification_delivery_provider_unique").on(table.providerId),
   ],
 );
+
+export const emailDeliveryRollout = pgTable("email_delivery_rollout", {
+  id: integer("id").primaryKey(),
+  installedAt: timestamp("installed_at", { withTimezone: true }).defaultNow().notNull(),
+});

@@ -19,7 +19,7 @@ async function register(page: Page, email: string, displayName: string, role = "
   await page.goto("/register");
   await page.getByLabel("Display name").fill(displayName);
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   const responsePromise = page.waitForResponse(
     (response) =>
       response.url().endsWith("/api/auth/register") && response.request().method() === "POST",
@@ -130,12 +130,12 @@ test("notification preferences and the complete support lifecycle remain consist
 
   const [retryBaseline] = await sql<{ count: number }[]>`
     select count(*)::int as count from notification_deliveries
-    where user_id = (select id from users where email = ${customerEmail})`;
+    where user_id = (select id from users where email = ${customerEmail}) and category <> 'AUTH'`;
   await sql`
     update notification_deliveries
     set status = 'FAILED', attempts = 1, delivered_at = null,
         next_attempt_at = now() - interval '1 minute'
-    where user_id = (select id from users where email = ${customerEmail})`;
+    where user_id = (select id from users where email = ${customerEmail}) and category <> 'AUTH'`;
   const retryTrigger = await admin.request.post(
     `/api/admin/support/tickets/${ticket.id}/messages`,
     {
@@ -144,11 +144,18 @@ test("notification preferences and the complete support lifecycle remain consist
     },
   );
   expect(retryTrigger.status()).toBe(201);
+  expect(
+    (
+      await admin.request.post("/api/internal/notifications/retry", {
+        headers: { Authorization: "Bearer phase7-e2e-cron-secret-at-least-32-characters" },
+      })
+    ).status(),
+  ).toBe(200);
   const [deliveryState] = await sql<{ total: number; delivered: number }[]>`
     select count(*)::int as total,
-           count(*) filter (where status = 'DELIVERED')::int as delivered
+           count(*) filter (where status = 'SIMULATED')::int as delivered
     from notification_deliveries
-    where user_id = (select id from users where email = ${customerEmail})`;
+    where user_id = (select id from users where email = ${customerEmail}) and category <> 'AUTH'`;
   expect(deliveryState.total).toBe(retryBaseline.count + 1);
   expect(deliveryState.delivered).toBe(deliveryState.total);
 
@@ -167,7 +174,7 @@ test("notification preferences and the complete support lifecycle remain consist
 
   const [before] = await sql<{ count: number }[]>`
     select count(*)::int as count from notification_deliveries
-    where user_id = (select id from users where email = ${customerEmail})`;
+    where user_id = (select id from users where email = ${customerEmail}) and status <> 'SUPPRESSED'`;
   const replayKey = crypto.randomUUID();
   const firstReplay = await admin.request.post(`/api/admin/support/tickets/${ticket.id}/messages`, {
     headers: { Origin: origin, "Idempotency-Key": replayKey },
@@ -191,7 +198,7 @@ test("notification preferences and the complete support lifecycle remain consist
   expect((await secondReplay.json()).idempotentReplay).toBe(true);
   const [after] = await sql<{ count: number }[]>`
     select count(*)::int as count from notification_deliveries
-    where user_id = (select id from users where email = ${customerEmail})`;
+    where user_id = (select id from users where email = ${customerEmail}) and status <> 'SUPPRESSED'`;
   expect(after.count).toBe(before.count);
   const [messageCount] = await sql<{ count: number }[]>`
     select count(*)::int as count from support_messages

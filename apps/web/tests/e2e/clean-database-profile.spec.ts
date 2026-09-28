@@ -47,7 +47,7 @@ test("empty database stays demo-free and profile changes persist through repeat 
   await page.goto("/register");
   await page.getByLabel("Display name").fill("Clean Profile");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   const registration = page.waitForResponse(
     (response) =>
       response.url().endsWith("/api/auth/register") && response.request().method() === "POST",
@@ -113,10 +113,11 @@ test("empty database stays demo-free and profile changes persist through repeat 
   await page.getByRole("button", { name: "Save profile" }).click();
   await expect(page.getByText("Private profile saved.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.getByRole("button", { name: "Account options", exact: true }).click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL("/");
   await page.goto("/profile");
@@ -201,10 +202,11 @@ test("empty database stays demo-free and profile changes persist through repeat 
   await page.getByRole("button", { name: "Save profile" }).click();
   await expect(page.getByText("Profile saved.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.getByRole("button", { name: "Account options", exact: true }).click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL("/");
   await page.goto("/profile");

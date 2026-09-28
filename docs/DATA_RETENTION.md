@@ -10,7 +10,8 @@
 | Consumed or expired verification/reset tokens | 30 days |
 | Expired wallet challenges | 7 days |
 | Authentication rate-limit windows | 2 days |
-| Delivered email bodies and recipient copies | 90 days |
+| Notification email bodies | Scrub after 90 days; retain delivery/deduplication records and recipient identifiers under account retention policy |
+| Authentication email bodies | Scrub on acceptance/simulation or token expiry; pending links require restricted, encrypted database access |
 
 Run daily. The endpoint reports counts only and writes `internal.retention_enforced` to the audit
 trail. Failed/pending deliveries are retained so retries and incident diagnosis remain possible.

@@ -6,11 +6,11 @@ import {
   Compass,
   BriefcaseBusiness,
   CircleHelp,
+  ChevronUp,
   CreditCard,
   House,
   Menu,
   Plus,
-  Settings,
   ShieldCheck,
   UserRound,
   UsersRound,
@@ -43,6 +43,28 @@ const matchesPath = (pathname: string, href: string) =>
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const accountButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!accountOpen) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!accountRef.current?.contains(event.target as Node)) setAccountOpen(false);
+    };
+    const dismissWithEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setAccountOpen(false);
+      accountButtonRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", dismissWithEscape, true);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", dismissWithEscape, true);
+    };
+  }, [accountOpen]);
   const sidebarRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -207,25 +229,66 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <p>Payment network not connected</p>
         </div>
-        <div className="sidebar-user">
-          <span className="avatar">
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="" onError={() => setAvatarUrl(null)} />
-            ) : (
-              initials
-            )}
-          </span>
-          <span>
-            <strong>{account?.displayName || "Klaveroq account"}</strong>
-            <small>{account?.email || "Signed in"}</small>
-          </span>
-          <span className="sidebar-user-actions">
-            <Link href="/wallet" aria-label="Open account settings" title="Settings">
-              <Settings size={17} />
-            </Link>
-            <LogoutButton compact />
-          </span>
+        <div
+          className="sidebar-account"
+          ref={accountRef}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+              setAccountOpen(false);
+          }}
+        >
+          <button
+            type="button"
+            className="sidebar-user account-trigger"
+            ref={accountButtonRef}
+            aria-label="Account options"
+            aria-expanded={accountOpen}
+            aria-controls="account-options"
+            onClick={() => setAccountOpen((open) => !open)}
+          >
+            <span className="avatar">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" onError={() => setAvatarUrl(null)} />
+              ) : (
+                initials
+              )}
+            </span>
+            <span>
+              <strong>{account?.displayName || "Klaveroq account"}</strong>
+              <small>{account?.email || "Signed in"}</small>
+            </span>
+            <ChevronUp size={16} className="account-chevron" aria-hidden="true" />
+          </button>
+          {accountOpen && (
+            <nav
+              id="account-options"
+              className="account-options"
+              aria-label="Account options"
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest("a")) {
+                  setAccountOpen(false);
+                  setMenuOpen(false);
+                }
+              }}
+            >
+              <Link href="/profile">
+                <UserRound size={17} /> View profile
+              </Link>
+              <Link href="/wallet">
+                <ShieldCheck size={17} /> Wallet &amp; security
+              </Link>
+              <Link
+                href="/notifications#preferences"
+                onClick={() => window.dispatchEvent(new Event("notifications:open-preferences"))}
+              >
+                <Bell size={17} /> Notification preferences
+              </Link>
+              <div className="account-signout">
+                <LogoutButton compact label="Sign out" />
+              </div>
+            </nav>
+          )}
         </div>
       </aside>
       {menuOpen && (

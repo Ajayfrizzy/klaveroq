@@ -16,7 +16,7 @@ test("identity, wallet ownership, and session security workflows enforce their b
   await page.goto("/register");
   await page.getByLabel("Display name").fill("Security Test");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/verify-email/);
 
@@ -220,9 +220,10 @@ test("identity, wallet ownership, and session security workflows enforce their b
   await page.getByRole("button", { name: "Confirm and enable" }).click();
   await expect(page.getByText("Enabled · 8 recovery codes available.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.getByRole("button", { name: "Account options", exact: true }).click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { name: "Two-factor authentication" })).toBeVisible();
   await page.getByLabel("Authentication code").fill("000000");
@@ -232,9 +233,10 @@ test("identity, wallet ownership, and session security workflows enforce their b
   await page.getByRole("button", { name: "Verify and sign in" }).click();
   await expect(page).toHaveURL("/");
 
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.getByRole("button", { name: "Account options", exact: true }).click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.getByLabel("Authentication code").fill(recoveryCodes[0]);
   await page.getByRole("button", { name: "Verify and sign in" }).click();

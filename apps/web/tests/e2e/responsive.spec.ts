@@ -14,7 +14,7 @@ test("public marketplace remains usable at a mobile viewport", async ({ page }) 
 test("professional profile sections remain usable at a mobile viewport", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email").fill("clean-profile@example.test");
-  await page.getByLabel("Password").fill("KlaveroqTest123");
+  await page.getByLabel("Password", { exact: true }).fill("KlaveroqTest123");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL("/");
   await page.goto("/profile");

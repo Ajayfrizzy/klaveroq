@@ -17,6 +17,8 @@ readiness only; it does not approve production providers or PactAgent operations
 
 ## Automated gates
 
+- [ ] Apply the email outbox migration and complete [Resend live acceptance](EMAIL_DELIVERY.md), including verified sending domain, delivery webhook and one-minute authenticated retry schedule.
+
 - [x] Pull requests and `main` pushes run format, lint, typecheck, unit tests, production build,
       PostgreSQL migrations, and Playwright in `.github/workflows/verify.yml`.
 - [x] Chromium covers the complete suite; WebKit covers public discovery and sign-in; Pixel 7

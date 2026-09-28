@@ -128,7 +128,7 @@ test("authenticated pages and mobile menu support keyboard access", async ({ pag
   await expect(page.locator(".sidebar")).toBeVisible();
   await accessible(page);
   await page.keyboard.press("Shift+Tab");
-  await expect(page.getByRole("button", { name: "Log out", exact: true })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Account options", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(open).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(

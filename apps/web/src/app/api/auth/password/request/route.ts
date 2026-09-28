@@ -37,8 +37,8 @@ export const POST = withApi(async (request: Request) => {
     token = await issueAuthToken(user.id, "RESET_PASSWORD");
     try {
       await sendPasswordResetEmail(email, token);
-    } catch (error) {
-      console.error("Password reset email delivery failed.", error);
+    } catch {
+      console.error("Password reset email could not be queued.");
     }
     await audit(request, {
       actorUserId: user.id,

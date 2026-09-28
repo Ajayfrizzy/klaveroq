@@ -38,12 +38,15 @@ export const POST = withApi(async (request: Request) => {
     return created;
   });
   const verificationToken = await issueAuthToken(user.id, "VERIFY_EMAIL");
-  let emailSent = true;
+  let emailSent = false;
+  let emailStatus = "FAILED";
   try {
-    await sendVerificationEmail(user.email, verificationToken);
-  } catch (error) {
+    const delivery = await sendVerificationEmail(user.email, verificationToken);
+    emailStatus = delivery.status;
+    emailSent = ["ACCEPTED", "DELIVERED"].includes(delivery.status);
+  } catch {
     emailSent = false;
-    console.error("Verification email delivery failed.", error);
+    console.error("Verification email could not be queued.");
   }
   await createSession(user.id, request);
   await audit(request, {
@@ -57,6 +60,7 @@ export const POST = withApi(async (request: Request) => {
       data: {
         user: { id: user.id, email: user.email, status: user.status },
         emailSent,
+        emailStatus,
         verificationToken: allowsLocalAuthDelivery() ? verificationToken : undefined,
       },
     },

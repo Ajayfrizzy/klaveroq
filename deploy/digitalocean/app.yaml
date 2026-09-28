@@ -8,7 +8,7 @@ services:
   - name: web
     github:
       repo: Ajayfrizzy/klaveroq
-      branch: main
+      branch: staging
       deploy_on_push: false
     source_dir: /
     environment_slug: node-js

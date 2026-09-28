@@ -76,7 +76,7 @@ test("notifications expose loading and recoverable error states", async ({ page 
   });
 
   await page.goto("/notifications");
-  await expect(page.getByLabel("Loading notifications")).toBeVisible();
+  await expect(page.getByRole("status", { name: "Loading notifications" })).toBeVisible();
   releaseResponse?.();
   const error = page.locator(".form-feedback[role=alert]");
   await expect(error).toContainText("temporarily unavailable");

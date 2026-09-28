@@ -36,13 +36,20 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npm run test:e2e --workspace=@klaveroq/web
+      # Match the browser, system fonts and OS used for the Linux visual references.
+      # Keep Linux native dependencies separate from the host installation.
+      - name: Browser regression suite
+        run: |
+          docker run --rm --init --ipc=host --network=host \
+            -v "$GITHUB_WORKSPACE:/work" -v /work/node_modules \
+            -w /work -e CI=1 -e TEST_DATABASE_URL \
+            mcr.microsoft.com/playwright:v1.63.0-noble \
+            bash -lc 'npm ci && npm run test:e2e --workspace=@klaveroq/web'
       - if: failure()
         uses: actions/upload-artifact@v4
         with:

@@ -48,6 +48,14 @@ The suite's clean-database preflight and retention-count assertions require a fr
 
 The Linux run uses the pinned `mcr.microsoft.com/playwright:v1.63.0-noble` image to match the CI browser environment. `scripts/run-browser-container.mjs` forwards only the isolated app/test-database ports; `PLAYWRIGHT_EXTERNAL_SERVER=1` explicitly opts out of starting a second app server. The normal Playwright command still builds and starts production itself. Firefox's native macOS binary could not initialize its temporary profile, including a fresh download; Firefox was verified in Linux instead. This is a local tooling limitation, not a passing macOS Firefox claim.
 
+### Account-menu visual regression follow-up
+
+CI now runs the browser suite inside that same pinned Playwright image, with a separate Linux dependency installation. Previously, CI installed browsers directly on `ubuntu-latest`, while the Linux references came from the container. The differing system font environments produced text and page-height mismatches: the reported mobile failures pass against the original references inside the pinned image. Keep the image version aligned with the Playwright version in `package-lock.json` when upgrading.
+
+The desktop references were refreshed for the approved avatar/name account menu replacing the settings/logout icons. Mobile references and screenshot comparison tolerances remain unchanged. Review actual/diff artifacts before updating references; do not update them automatically in CI.
+
+Final local verification passed all **40/40 tests** in the pinned Linux browsers with snapshot updating disabled, using a newly created isolated database. This also exposed and fixed a timing-dependent accessibility failure in the notification loading placeholder: it now has a `status` role, and the loading-state test checks that role explicitly. The production build and targeted lint/format checks passed. The updated GitHub workflow still needs its normal hosted run after these changes are pushed.
+
 Agreement-test browser/API contexts now close after each test. This prevents accumulated sessions from affecting later verification.
 
 No existing database was reset. The empty local test database was initialized using existing migrations; separate refinement/acceptance databases were created for the regression suite's empty-database dependency. All fixture changes are restricted to those isolated databases on the local test container (port 55434). Google authentication, Supabase, PactAgent and the owner's development server/data were not changed. Nothing was committed, pushed or deployed.

@@ -209,7 +209,7 @@ export function NotificationInbox() {
           </p>
         )}
         {loading && (
-          <div className="notification-loading" aria-label="Loading notifications">
+          <div className="notification-loading" role="status" aria-label="Loading notifications">
             <i />
             <i />
             <i />

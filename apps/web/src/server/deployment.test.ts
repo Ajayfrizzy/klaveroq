@@ -16,6 +16,13 @@ describe("identity sandbox deployment guard", () => {
     RESEND_WEBHOOK_SECRET: "whsec_test",
     FILE_SCANNER: "clamav",
     CLAMAV_HOST: "scanner",
+    FILE_STORAGE_BACKEND: "spaces",
+    SPACES_REGION: "ams3",
+    SPACES_ENDPOINT: "https://ams3.digitaloceanspaces.com",
+    SPACES_BUCKET: "test-beta",
+    SPACES_PREFIX: "community-beta/",
+    SPACES_ACCESS_KEY_ID: "mock-key",
+    SPACES_SECRET_ACCESS_KEY: "mock-secret",
     CRON_SECRET: "c".repeat(32),
   };
   it("accepts intentionally disabled beta identity while retaining other production checks", () => {
@@ -34,6 +41,21 @@ describe("identity sandbox deployment guard", () => {
         RESEND_API_KEY: "",
       }),
     ).toContain("email_provider");
+  });
+  it("requires durable storage and valid scanner ports in hosted beta", () => {
+    const beta = { ...hosted, DEPLOYMENT_STAGE: "community_beta", IDENTITY_PROVIDER: "disabled" };
+    expect(
+      productionConfigurationIssues({ ...beta, FILE_STORAGE_BACKEND: "filesystem" }),
+    ).toContain("file_storage");
+    expect(productionConfigurationIssues({ ...beta, SPACES_SECRET_ACCESS_KEY: "" })).toContain(
+      "file_storage",
+    );
+    expect(
+      productionConfigurationIssues({ ...beta, SPACES_ENDPOINT: "https://cdn.example.com" }),
+    ).toContain("file_storage");
+    expect(productionConfigurationIssues({ ...beta, CLAMAV_PORT: "65536" })).toContain(
+      "malware_scanner",
+    );
   });
   it.each(["disabled", "sandbox", "", "unknown", "production"])(
     "rejects %s as a production identity provider",

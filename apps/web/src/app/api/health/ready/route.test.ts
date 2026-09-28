@@ -22,6 +22,13 @@ describe("hosted identity readiness", () => {
         RESEND_WEBHOOK_SECRET: "whsec_test",
         FILE_SCANNER: "clamav",
         CLAMAV_HOST: "scanner",
+        FILE_STORAGE_BACKEND: "spaces",
+        SPACES_REGION: "ams3",
+        SPACES_ENDPOINT: "https://ams3.digitaloceanspaces.com",
+        SPACES_BUCKET: "test-beta",
+        SPACES_PREFIX: "community-beta/",
+        SPACES_ACCESS_KEY_ID: "mock-key",
+        SPACES_SECRET_ACCESS_KEY: "mock-secret",
         CRON_SECRET: "c".repeat(32),
       };
       for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);

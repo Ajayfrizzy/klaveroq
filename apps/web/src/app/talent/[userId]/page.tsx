@@ -43,7 +43,7 @@ export default async function PublicTalentProfile({
         <div>
           <section className="public-profile-hero">
             <span className="profile-avatar">
-              {profile.avatarUrl ? (
+              {current && profile.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={profile.avatarUrl}
@@ -137,7 +137,7 @@ export default async function PublicTalentProfile({
               <div className="portfolio-public-grid">
                 {portfolio.map((item) => (
                   <article key={item.id}>
-                    {item.mediaUrl &&
+                    {current && item.mediaUrl &&
                       (item.mediaContentType === "application/pdf" ? (
                         <a className="portfolio-media-file" href={item.mediaUrl}>
                           View project document

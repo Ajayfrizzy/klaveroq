@@ -6,6 +6,7 @@ docs/*
 !docs/SECURITY_REVIEW.md
 !docs/STAGING_PROVIDER_CHECKLIST.md
 !docs/EMAIL_DELIVERY.md
+!docs/DIGITALOCEAN_BETA_FILES.md
 !docs/ui-refinement/
 node_modules/
 .next/

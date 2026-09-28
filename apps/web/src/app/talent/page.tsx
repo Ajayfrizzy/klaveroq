@@ -127,7 +127,7 @@ export default async function TalentPage({
               <article className="talent-card" key={profile.userId}>
                 <div className="talent-card-head">
                   <span className="profile-avatar">
-                    {profile.avatarUrl ? (
+                    {current && profile.avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={profile.avatarUrl}

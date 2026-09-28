@@ -1,0 +1,127 @@
+# Merge these component settings into the existing app spec; do not replace its
+# domains, ingress, secrets, database URL, OAuth/email or identity configuration.
+# Replace the two REPLACE_* values and add the two credentials as encrypted
+# RUN_TIME secrets in the web component before validation/application.
+name: klaveroq
+region: ams
+services:
+  - name: web
+    github:
+      repo: Ajayfrizzy/klaveroq
+      branch: main
+      deploy_on_push: false
+    source_dir: /
+    environment_slug: node-js
+    build_command: npm ci --include=dev && npm run build
+    run_command: npm exec --workspace=@klaveroq/web -- next start --hostname 0.0.0.0 --port 8080
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-2gb
+    health_check:
+      http_path: /api/health/ready
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      failure_threshold: 12
+      success_threshold: 1
+    liveness_health_check:
+      http_path: /api/health/live
+      initial_delay_seconds: 30
+      period_seconds: 30
+      timeout_seconds: 5
+      failure_threshold: 3
+      success_threshold: 1
+    envs:
+      - key: FILE_STORAGE_BACKEND
+        scope: RUN_TIME
+        value: spaces
+      - key: SPACES_REGION
+        scope: RUN_TIME
+        value: ams3
+      - key: SPACES_ENDPOINT
+        scope: RUN_TIME
+        value: https://ams3.digitaloceanspaces.com
+      - key: SPACES_BUCKET
+        scope: RUN_TIME
+        value: REPLACE_PRIVATE_BETA_BUCKET
+      - key: SPACES_PREFIX
+        scope: RUN_TIME
+        value: community-beta/
+      - key: SPACES_ACCESS_KEY_ID
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_IN_APP_PLATFORM_SECRETS
+      - key: SPACES_SECRET_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_IN_APP_PLATFORM_SECRETS
+      - key: FILE_SCANNER
+        scope: RUN_TIME
+        value: clamav
+      - key: CLAMAV_HOST
+        scope: RUN_TIME
+        value: ${clamav.PRIVATE_DOMAIN}
+      - key: CLAMAV_PORT
+        scope: RUN_TIME
+        value: "3310"
+  - name: clamav
+    image:
+      registry_type: DOCKER_HUB
+      registry: clamav
+      repository: clamav
+      tag: "1.4"
+    instance_count: 1
+    instance_size_slug: apps-s-2vcpu-4gb
+    internal_ports:
+      - 3310
+    # No http_port, routes or ingress rule. This is an internal TCP service.
+    # No run_command: retain the official /init entrypoint (clamd + freshclam).
+    health_check:
+      port: 3310
+      initial_delay_seconds: 120
+      period_seconds: 10
+      timeout_seconds: 5
+      failure_threshold: 48
+      success_threshold: 1
+    liveness_health_check:
+      port: 3310
+      initial_delay_seconds: 600
+      period_seconds: 30
+      timeout_seconds: 5
+      failure_threshold: 3
+      success_threshold: 1
+    envs:
+      - key: CLAMAV_NO_CLAMD
+        scope: RUN_TIME
+        value: "false"
+      - key: CLAMAV_NO_FRESHCLAMD
+        scope: RUN_TIME
+        value: "false"
+      - key: CLAMAV_NO_MILTERD
+        scope: RUN_TIME
+        value: "true"
+      - key: CLAMD_STARTUP_TIMEOUT
+        scope: RUN_TIME
+        value: "600"
+      - key: FRESHCLAM_CHECKS
+        scope: RUN_TIME
+        value: "24"
+      - key: CLAMD_CONF_StreamMaxLength
+        scope: RUN_TIME
+        value: 30M
+      - key: CLAMD_CONF_MaxFileSize
+        scope: RUN_TIME
+        value: 30M
+      - key: CLAMD_CONF_MaxScanSize
+        scope: RUN_TIME
+        value: 100M
+      - key: CLAMD_CONF_AlertExceedsMax
+        scope: RUN_TIME
+        value: "yes"
+ingress:
+  rules:
+    - component:
+        name: web
+      match:
+        path:
+          prefix: /

@@ -129,3 +129,5 @@ Marketplace assistance uses the server-side provider boundary in `features/ai`. 
 defaults to a deterministic template provider; generated job and proposal drafts are always
 editable and are never published or submitted automatically. PactAgent remains the infrastructure
 boundary for escrow, settlement, and proof-processing capabilities.
+
+Hosted community-beta upload storage and private ClamAV setup: [DigitalOcean beta files runbook](docs/DIGITALOCEAN_BETA_FILES.md).

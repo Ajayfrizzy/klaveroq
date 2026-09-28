@@ -140,7 +140,7 @@ test("profile media is validated, authorized, persisted, replaced, and deleted",
   ).pathname
     .split("/")
     .at(-1)!;
-  expect((await anonymousContext.request.get(`/api/media/avatar/${ownerId}`)).status()).toBe(404);
+  expect((await anonymousContext.request.get(`/api/media/avatar/${ownerId}`)).status()).toBe(401);
 
   await avatarControl.locator('input[type="file"]').setInputFiles({
     name: "replacement.png",
@@ -163,7 +163,7 @@ test("profile media is validated, authorized, persisted, replaced, and deleted",
     data: { isPublic: true },
   });
   expect(publish.ok()).toBeTruthy();
-  expect((await anonymousContext.request.get(`/api/media/avatar/${ownerId}`)).status()).toBe(200);
+  expect((await anonymousContext.request.get(`/api/media/avatar/${ownerId}`)).status()).toBe(401);
 
   const portfolioResponse = await owner.request.post("/api/profile/portfolio", {
     headers: { Origin: origin, "Idempotency-Key": crypto.randomUUID() },
@@ -222,8 +222,9 @@ test("profile media is validated, authorized, persisted, replaced, and deleted",
   expect((await portfolioUpload).status()).toBe(201);
   await expect(owner.getByAltText("Secure upload project preview")).toBeVisible();
   expect((await anonymousContext.request.get(`/api/media/portfolio/${portfolioId}`)).status()).toBe(
-    200,
+    401,
   );
+  expect((await other.request.get(`/api/media/portfolio/${portfolioId}`)).status()).toBe(200);
 
   const portfolioRemoval = owner.waitForResponse(
     (response) =>

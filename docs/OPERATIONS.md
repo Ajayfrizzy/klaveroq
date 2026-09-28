@@ -61,3 +61,7 @@ applied migration or manually mark it successful.
 Secret rotation order: create replacement, deploy consumers, verify readiness, revoke old secret,
 then review audit/error events. Database and encryption-key rotations require a rehearsed overlap or
 data re-encryption plan; never invalidate MFA ciphertext without migration.
+
+## Hosted file storage
+
+See [DigitalOcean beta files](DIGITALOCEAN_BETA_FILES.md) for the private Spaces adapter, internal ClamAV service spec, credential setup, existing-file transfer, daily orphan cleanup and hosted acceptance checks. App readiness checks configuration; live file-provider acceptance is a separate operator check.

@@ -24,6 +24,8 @@ export const GET = withApi(async () => {
           : identityConfiguration().real
             ? "configured"
             : "sandbox_or_unconfigured",
+        fileStorage:
+          process.env.FILE_STORAGE_BACKEND === "spaces" ? "configured" : "local_or_unconfigured",
         fileScanner: process.env.FILE_SCANNER === "clamav" ? "configured" : "local_or_unconfigured",
         monitoring: process.env.ERROR_MONITORING_WEBHOOK_URL ? "configured" : "log_only",
       },

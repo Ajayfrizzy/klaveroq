@@ -1,3 +1,5 @@
+import { spacesConfiguration } from "./files/config";
+
 type DeploymentEnvironment = Record<string, string | undefined>;
 import { emailAppUrl, validEmailSender } from "./email/templates";
 import { identityConfiguration } from "./identity/config";
@@ -69,6 +71,18 @@ export function productionConfigurationIssues(
   if (!identity.betaDisabled && !identity.real && !issues.includes("identity_provider"))
     issues.push("identity_provider");
   if (environment.FILE_SCANNER !== "clamav" || !environment.CLAMAV_HOST)
+    issues.push("malware_scanner");
+  try {
+    if (environment.FILE_STORAGE_BACKEND !== "spaces") throw new Error("Durable storage required.");
+    spacesConfiguration(environment);
+  } catch {
+    issues.push("file_storage");
+  }
+  const scannerPort = Number(environment.CLAMAV_PORT ?? 3310);
+  if (
+    (!Number.isInteger(scannerPort) || scannerPort < 1 || scannerPort > 65535) &&
+    !issues.includes("malware_scanner")
+  )
     issues.push("malware_scanner");
   if (!environment.CRON_SECRET || environment.CRON_SECRET.length < 32) issues.push("cron_secret");
   return issues;

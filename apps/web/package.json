@@ -6,7 +6,7 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run --exclude 'tests/e2e/**'",
     "test:e2e": "node ../../scripts/reset-test-db.mjs && node ../../scripts/run-playwright.mjs",
     "test:e2e:ui": "node ../../scripts/reset-test-db.mjs && node ../../scripts/run-playwright.mjs --ui",

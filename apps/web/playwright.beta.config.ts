@@ -11,7 +11,7 @@ export default defineConfig({
     {
       name: "beta-identity",
       testMatch:
-        /(?:identity-beta|uploads-beta|profile\.integration|marketplace\.integration)\.spec\.ts/,
+        /(?:identity-beta|uploads-beta|dashboard-smoke|profile\.integration|marketplace\.integration)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
   ],

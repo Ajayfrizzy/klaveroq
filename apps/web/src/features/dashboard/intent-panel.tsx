@@ -16,6 +16,16 @@ export function IntentPanel({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [choice, setChoice] = useState<string | null>(null);
+  if (loadError && !data)
+    return (
+      <section className="intent-panel" aria-label="Your workspace">
+        <h2>Your workspace</h2>
+        <p role="status">Workspace recommendations are temporarily unavailable.</p>
+        <button className="secondary-button" onClick={() => void reload()}>
+          Retry loading preferences
+        </button>
+      </section>
+    );
   const intent = choice ?? data?.workspaceFocus ?? "both";
   const workLabel = !profileReady
     ? "Complete profile"

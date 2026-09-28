@@ -16,7 +16,7 @@ process.env.DATABASE_URL = databaseUrl;
 export default defineConfig({
   tsconfig: "./tests/tsconfig.json",
   testDir: "./tests/e2e",
-  testIgnore: /(?:identity-beta|uploads-beta)\.spec\.ts/,
+  testIgnore: /(?:identity-beta|uploads-beta|dashboard-smoke|dashboard-reliability)\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -35,7 +35,8 @@ export default defineConfig({
     {
       name: "chromium",
       dependencies: ["clean-database"],
-      testIgnore: /(?:clean-database-profile|responsive|identity-beta|uploads-beta)\.spec\.ts/,
+      testIgnore:
+        /(?:clean-database-profile|responsive|identity-beta|uploads-beta|dashboard-smoke|dashboard-reliability)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {

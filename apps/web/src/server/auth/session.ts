@@ -1,3 +1,5 @@
+import { getRenderRequestId } from "../observability/render-context";
+import { requiredOperation } from "../observability/operations";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { db } from "../db";
@@ -44,19 +46,22 @@ export async function revokeCurrentSession() {
 export async function getCurrentUser() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  const [record] = await db
-    .select({ user: users, profile: profiles, sessionId: sessions.id })
-    .from(sessions)
-    .innerJoin(users, eq(users.id, sessions.userId))
-    .leftJoin(profiles, eq(profiles.userId, users.id))
-    .where(
-      and(
-        eq(sessions.tokenHash, sha256(token)),
-        isNull(sessions.revokedAt),
-        gt(sessions.expiresAt, new Date()),
-      ),
-    )
-    .limit(1);
+  const requestId = await getRenderRequestId();
+  const [record] = await requiredOperation(requestId, "auth.session", () =>
+    db
+      .select({ user: users, profile: profiles, sessionId: sessions.id })
+      .from(sessions)
+      .innerJoin(users, eq(users.id, sessions.userId))
+      .leftJoin(profiles, eq(profiles.userId, users.id))
+      .where(
+        and(
+          eq(sessions.tokenHash, sha256(token)),
+          isNull(sessions.revokedAt),
+          gt(sessions.expiresAt, new Date()),
+        ),
+      )
+      .limit(1),
+  );
   if (!record || ["SUSPENDED", "CLOSED"].includes(record.user.status)) return null;
   return record;
 }

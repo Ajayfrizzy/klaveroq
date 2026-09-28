@@ -65,3 +65,9 @@ data re-encryption plan; never invalidate MFA ciphertext without migration.
 ## Hosted file storage
 
 See [DigitalOcean beta files](DIGITALOCEAN_BETA_FILES.md) for the single-service beta with uploads disabled and external notification/retention scheduling. The future [Spaces/ClamAV runbook](DIGITALOCEAN_UPLOADS.md) preserves funded upload setup and cleanup; do not schedule orphan cleanup in this no-upload rollout. App readiness checks configuration; live file-provider acceptance is a separate operator check.
+
+## Dashboard render failures
+
+See [the dashboard reliability investigation](DASHBOARD_RELIABILITY.md) for the concurrent-query analysis, scoped optional states, privacy-safe operation/RSC diagnostics, Retry behavior, isolated timeout reproduction and remaining uncertainty. Green live/ready endpoints do not guarantee authenticated dashboard rendering. The pool cap remains ten; the 1 GB service and beta provider restrictions are unchanged.
+
+Verification: 228 unit tests across 42 files and all eight dashboard browser tests passed. Formatting, typecheck and the production build passed. Lint passed with three existing unused-variable warnings in `src/server/http/errors.test.ts`. Real PostgreSQL fault/recovery browser checks and the authenticated dashboard smoke ran against a newly created loopback test database; no beta reset, seed or migration was performed. The browser checks also verified recommendation recovery and sixteen concurrent reads through a ten-connection pool.

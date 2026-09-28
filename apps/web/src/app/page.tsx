@@ -1,3 +1,4 @@
+import { SectionUnavailable } from "@/components/ui/section-unavailable";
 import { ArrowRight, Check, Clock3, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -21,6 +22,8 @@ export default async function DashboardPage() {
   const profileComplete = Boolean(
     current.profile && getMissingPublicationFields(current.profile).length === 0,
   );
+  const verificationUnavailable =
+    data.verification.identity === null || data.verification.wallet === null;
   const allChecksRecorded = Object.values(data.verification).every(Boolean);
   const betaIdentityDisabled = identityConfiguration().betaDisabled;
 
@@ -40,51 +43,59 @@ export default async function DashboardPage() {
         published={Boolean(current.profile?.isPublic)}
       />
 
-      <section className="readiness-strip" aria-labelledby="readiness-title">
-        <div className="readiness-icon">
-          <ShieldCheck size={23} />
-        </div>
-        <div className="readiness-copy">
-          <div>
-            <h2 id="readiness-title">
-              {allChecksRecorded ? "Account verification complete" : "Finish account verification"}
-            </h2>
-            {allChecksRecorded && (
-              <span className="verified-label">
-                <Check size={13} /> Verified
-              </span>
-            )}
+      {verificationUnavailable ? (
+        <section className="panel" aria-label="Account verification">
+          <SectionUnavailable label="Verification status" />
+        </section>
+      ) : (
+        <section className="readiness-strip" aria-labelledby="readiness-title">
+          <div className="readiness-icon">
+            <ShieldCheck size={23} />
           </div>
-          <p>
-            {allChecksRecorded
-              ? "Email, identity, and wallet ownership are verified."
-              : betaIdentityDisabled
-                ? "Review your email and wallet verification. Identity checks are not required during community beta."
-                : "Review your email, identity, and wallet verification."}
-          </p>
-        </div>
-        <div className="readiness-items">
-          <span>
-            {data.verification.email && <Check size={15} />} Email{" "}
-            {data.verification.email ? "verified" : "pending"}
-          </span>
-          <span>
-            {data.verification.identity && <Check size={15} />} Identity{" "}
-            {data.verification.identity
-              ? "verified"
-              : betaIdentityDisabled
-                ? "not required during beta"
-                : "pending"}
-          </span>
-          <span>
-            {data.verification.wallet && <Check size={15} />} Wallet{" "}
-            {data.verification.wallet ? "verified" : "pending"}
-          </span>
-        </div>
-        <Link href="/wallet">
-          Manage security <ArrowRight size={15} />
-        </Link>
-      </section>
+          <div className="readiness-copy">
+            <div>
+              <h2 id="readiness-title">
+                {allChecksRecorded
+                  ? "Account verification complete"
+                  : "Finish account verification"}
+              </h2>
+              {allChecksRecorded && (
+                <span className="verified-label">
+                  <Check size={13} /> Verified
+                </span>
+              )}
+            </div>
+            <p>
+              {allChecksRecorded
+                ? "Email, identity, and wallet ownership are verified."
+                : betaIdentityDisabled
+                  ? "Review your email and wallet verification. Identity checks are not required during community beta."
+                  : "Review your email, identity, and wallet verification."}
+            </p>
+          </div>
+          <div className="readiness-items">
+            <span>
+              {data.verification.email && <Check size={15} />} Email{" "}
+              {data.verification.email ? "verified" : "pending"}
+            </span>
+            <span>
+              {data.verification.identity && <Check size={15} />} Identity{" "}
+              {data.verification.identity
+                ? "verified"
+                : betaIdentityDisabled
+                  ? "not required during beta"
+                  : "pending"}
+            </span>
+            <span>
+              {data.verification.wallet && <Check size={15} />} Wallet{" "}
+              {data.verification.wallet ? "verified" : "pending"}
+            </span>
+          </div>
+          <Link href="/wallet">
+            Manage security <ArrowRight size={15} />
+          </Link>
+        </section>
+      )}
 
       <section className="metrics-grid" aria-label="Account summary">
         <Metric
@@ -204,7 +215,9 @@ export default async function DashboardPage() {
           </Link>
         </div>
         <div className="activity-list">
-          {data.activity.length ? (
+          {data.activity === null ? (
+            <SectionUnavailable label="Recent activity" />
+          ) : data.activity.length ? (
             data.activity.slice(0, 5).map((item) => (
               <div className="activity-row" key={item.id}>
                 <span className="activity-dot blue" />

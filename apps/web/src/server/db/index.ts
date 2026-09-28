@@ -12,7 +12,8 @@ const client =
   globalDatabase.klaveroqSql ??
   postgres(databaseUrl, { max: process.env.NODE_ENV === "production" ? 10 : 3, prepare: false });
 
-if (process.env.NODE_ENV !== "production") globalDatabase.klaveroqSql = client;
+// Reuse one pool per Node process, including separately loaded production route bundles.
+globalDatabase.klaveroqSql = client;
 
 export const db = drizzle(client, { schema });
 export const sqlClient = client;

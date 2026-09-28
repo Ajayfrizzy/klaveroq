@@ -43,7 +43,9 @@ jobs:
       - run: npm run build
       # Match the browser, system fonts and OS used for the Linux visual references.
       # Keep Linux native dependencies separate from the host installation.
-      - name: Browser regression suite
+      # test:e2e also runs the beta suite's authenticated dashboard-smoke.spec.ts.
+      # Real lock/timeout fault tests use a separate disposable database, not this smoke.
+      - name: Browser regressions and authenticated dashboard smoke
         run: |
           docker run --rm --init --ipc=host --network=host \
             -v "$GITHUB_WORKSPACE:/work" -v /work/node_modules \

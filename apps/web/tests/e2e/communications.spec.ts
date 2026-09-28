@@ -95,8 +95,30 @@ test("notification preferences and the complete support lifecycle remain consist
       response.url().endsWith(`/api/admin/support/tickets/${ticket.id}/messages`) &&
       response.request().method() === "POST",
   );
+  // Saving the message and uploading its attachment are separate requests.
+  // Hold the upload to exercise the slower-upload ordering deterministically.
+  let releaseUpload!: () => void;
+  const uploadGate = new Promise<void>((resolve) => {
+    releaseUpload = resolve;
+  });
+  const attachmentPath = `/api/support/tickets/${ticket.id}/attachments`;
+  await admin.route(`**${attachmentPath}`, async (route) => {
+    await uploadGate;
+    await route.continue();
+  });
+  const attachmentResponse = admin.waitForResponse(
+    (response) => response.url().endsWith(attachmentPath) && response.request().method() === "POST",
+  );
   await admin.getByRole("button", { name: "Send reply" }).click();
-  expect((await replyResponse).status()).toBe(201);
+  try {
+    expect((await replyResponse).status()).toBe(201);
+    await expect(admin.getByRole("button", { name: "Sending...", exact: true })).toBeDisabled();
+  } finally {
+    releaseUpload();
+  }
+  expect((await attachmentResponse).status()).toBe(201);
+  await expect(admin.getByRole("link", { name: /support-notes\.txt/ })).toBeVisible();
+  await expect(admin.getByRole("button", { name: "Send reply", exact: true })).toBeEnabled();
 
   await customer.goto(`/support/${ticket.id}`);
   await expect(

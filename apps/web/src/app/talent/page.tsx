@@ -113,8 +113,14 @@ export default async function TalentPage({
           </div>
         </details>
       </DiscoveryFilters>
-      <SavedSearches key={current?.user.id ?? "guest"} scope={current?.user.id ?? "guest"} />
-      <TalentTools key={current?.user.id ?? "guest"} scope={current?.user.id ?? "guest"}>
+      <SavedSearches
+        key={`searches:${current?.user.id ?? "guest"}`}
+        scope={current?.user.id ?? "guest"}
+      />
+      <TalentTools
+        key={`talent:${current?.user.id ?? "guest"}`}
+        scope={current?.user.id ?? "guest"}
+      >
         {result.data.length ? (
           <section className="talent-grid">
             {result.data.map(({ profile, reputation, portfolioPreview }) => (

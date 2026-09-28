@@ -1,5 +1,6 @@
 import { and, asc, count, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/server/db";
+import { describeActivity } from "@/features/activity/presentation";
 import {
   auditLogs,
   identityVerifications,
@@ -262,11 +263,8 @@ export async function getDashboardData(userId: string, emailVerified: boolean) {
     }),
     activity: activityRows.map((item) => ({
       id: item.id,
-      title: item.action
-        .split(".")
-        .map((part) => part.replaceAll("_", " "))
-        .join(" "),
-      detail: `${item.entityType}${item.entityId ? ` · ${item.entityId}` : ""}`,
+      title: describeActivity(item.action),
+      detail: "Account activity",
       createdAt: item.createdAt,
     })),
   };

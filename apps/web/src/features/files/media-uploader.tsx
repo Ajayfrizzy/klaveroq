@@ -1,7 +1,7 @@
 "use client";
 
 import { ImagePlus, RotateCcw, Trash2, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { uploadFormData } from "./upload";
 
 type Media = { url: string; altText: string; contentType: string };
@@ -13,6 +13,7 @@ export function MediaUploader({
   altRequired = false,
   initialMedia,
   onChange,
+  onPreview,
 }: {
   endpoint: string;
   label: string;
@@ -20,6 +21,7 @@ export function MediaUploader({
   altRequired?: boolean;
   initialMedia: Media | null;
   onChange: (media: Media | null) => void;
+  onPreview?: (url: string | null) => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [altText, setAltText] = useState(initialMedia?.altText ?? "");
@@ -27,6 +29,13 @@ export function MediaUploader({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const controller = useRef<AbortController | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
   async function upload() {
     if (!file) return;
@@ -45,7 +54,9 @@ export function MediaUploader({
         setProgress,
       );
       onChange(media);
+      onPreview?.(null);
       setFile(null);
+      if (fileInput.current) fileInput.current.value = "";
       setProgress(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The file could not be uploaded.");
@@ -79,15 +90,28 @@ export function MediaUploader({
         <ImagePlus size={15} />
         <span>{initialMedia ? `Replace ${label}` : `Choose ${label}`}</span>
         <input
+          ref={fileInput}
+          aria-label={initialMedia ? `Replace ${label}` : `Choose ${label}`}
           type="file"
           accept={accept}
           disabled={busy}
           onChange={(event) => {
-            setFile(event.target.files?.[0] ?? null);
+            const selected = event.target.files?.[0] ?? null;
+            setFile(selected);
+            const url = selected?.type.startsWith("image/") ? URL.createObjectURL(selected) : null;
+            setPreview(url);
+            onPreview?.(url);
             setError("");
           }}
         />
       </label>
+      {file?.type.startsWith("image/") && preview && (
+        <figure className="upload-preview">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {!onPreview && <img src={preview} alt={`Selected ${label} preview`} />}
+          <figcaption>Preview only — select Upload to save this image.</figcaption>
+        </figure>
+      )}
       {(file || initialMedia) && (
         <label>
           Alternative text

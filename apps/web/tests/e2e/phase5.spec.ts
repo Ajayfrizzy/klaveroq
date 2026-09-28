@@ -16,6 +16,11 @@ const testDatabaseUrl =
 
 test.use({ actionTimeout: 15_000 });
 
+const accountCleanup: Array<() => Promise<void>> = [];
+test.afterEach(async () => {
+  await Promise.all(accountCleanup.splice(0).map((close) => close()));
+});
+
 type Account = { id: string; api: APIRequestContext; page: Page };
 
 async function account(browser: Browser, email: string, name: string): Promise<Account> {
@@ -39,7 +44,9 @@ async function account(browser: Browser, email: string, name: string): Promise<A
     baseURL: origin,
     extraHTTPHeaders: { Origin: origin, Cookie: cookie },
   });
+  accountCleanup.push(() => api.dispose());
   const context = await browser.newContext();
+  accountCleanup.push(() => context.close());
   await context.addCookies([
     {
       name: "klaveroq_test_session",
@@ -237,6 +244,9 @@ test("participants submit dispute evidence and two administrators approve only p
     mimeType: "text/plain",
     buffer: Buffer.from("Phase 5 dispute evidence from the disposable browser test."),
   });
+  await expect(worker.page.getByLabel("Evidence note")).toHaveValue(
+    "The attached delivery note explains how the submitted work satisfies the agreed criteria.",
+  );
   const evidenceResponse = worker.page.waitForResponse(
     (response) =>
       response.url().includes("/api/disputes/") &&

@@ -1,10 +1,12 @@
 "use client";
-import { Bell, Check, CheckCheck, Mail, Settings2 } from "lucide-react";
+import { Bell, Check, CheckCheck, Mail, Settings2, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { formatEventTime } from "@/features/activity/presentation";
 type Notification = {
   id: string;
+  type?: string;
   title: string;
   body: string;
   href?: string;
@@ -75,35 +77,51 @@ export function NotificationInbox() {
         item.id === id ? { ...item, readAt: read ? new Date().toISOString() : undefined } : item,
       ),
     );
-    const response = await fetch(`/api/notifications/${id}/read`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ read }),
-      keepalive: true,
-    });
-    if (!response.ok) await load();
-    window.dispatchEvent(new Event("notifications:changed"));
+    try {
+      const response = await fetch(`/api/notifications/${id}/read`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read }),
+        keepalive: true,
+      });
+      if (!response.ok) throw new Error("Notification could not be updated.");
+      window.dispatchEvent(new Event("notifications:changed"));
+    } catch {
+      await load();
+      setError("The read status could not be saved. Please try again.");
+    }
   }
   async function openSettings() {
     const next = !showSettings;
     setShowSettings(next);
     if (!next || preferences) return;
-    const response = await fetch("/api/notifications/preferences");
-    const body = await response.json();
-    if (response.ok) setPreferences(body.data);
-    else setError(body.error?.message ?? "Notification preferences could not be loaded.");
+    try {
+      const response = await fetch("/api/notifications/preferences");
+      const body = await response.json();
+      if (response.ok) setPreferences(body.data);
+      else throw new Error("Notification preferences could not be loaded.");
+    } catch {
+      setShowSettings(false);
+      setError("Notification preferences could not be loaded. Please try again.");
+    }
   }
   async function savePreferences(next: Preferences) {
+    const previous = preferences;
     setPreferences(next);
-    const response = await fetch("/api/notifications/preferences", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(next),
-    });
-    if (!response.ok) {
-      const body = await response.json();
-      setError(body.error?.message ?? "Notification preferences could not be saved.");
-      setPreferences(null);
+    try {
+      const response = await fetch("/api/notifications/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      if (!response.ok) {
+        const body = await response.json();
+        setError(body.error?.message ?? "Notification preferences could not be saved.");
+        setPreferences(previous);
+      }
+    } catch {
+      setPreferences(previous);
+      setError("Notification preferences could not be saved. Please try again.");
     }
   }
   return (
@@ -184,20 +202,28 @@ export function NotificationInbox() {
           </div>
         )}
         {items.map((item) => {
+          const security = item.type?.startsWith("SECURITY_") ?? false;
           const message = (
             <>
               <span className="notification-icon">
-                <Bell size={17} />
+                {security ? <ShieldAlert size={17} /> : <Bell size={17} />}
               </span>
               <div>
                 <strong>{item.title}</strong>
+                <small>
+                  {security ? "Security alert" : "Marketplace update"} ·{" "}
+                  {item.readAt ? "Read" : "Unread"}
+                </small>
                 <p>{item.body}</p>
-                <small>{new Date(item.createdAt).toLocaleString()}</small>
+                <time dateTime={item.createdAt}>{formatEventTime(item.createdAt)}</time>
               </div>
             </>
           );
           return (
-            <article className={item.readAt ? "" : "unread"} key={item.id}>
+            <article
+              className={`${item.readAt ? "" : "unread"} ${security ? "security-notification" : ""}`}
+              key={item.id}
+            >
               {item.href ? (
                 <Link
                   className="notification-main"

@@ -31,20 +31,24 @@ export function IntentPanel({
       ? "Publish profile"
       : "Find work";
   return (
-    <section className="intent-panel" aria-labelledby="intent-title">
+    <section
+      className={`intent-panel${profileReady && published ? " intent-complete" : ""}`}
+      aria-labelledby="intent-title"
+    >
       <p className="eyebrow">Your workspace</p>
       <h2 id="intent-title">What would you like to do?</h2>
       <div className="intent-options" role="group" aria-label="Workspace focus">
         {[
-          ["hire", "Hire talent"],
-          ["work", "Find work"],
-          ["both", "Both"],
-        ].map(([value, label]) => (
+          ["hire", "Hire talent", "Post a brief and choose a professional"],
+          ["work", "Find work", "Build your profile and send proposals"],
+          ["both", "Both", "Hire and work from one account"],
+        ].map(([value, label, description]) => (
           <button
             key={value}
             type="button"
             className="secondary-button"
             aria-pressed={intent === value}
+            aria-label={label}
             onClick={() => {
               setIntent(value);
               try {
@@ -54,7 +58,8 @@ export function IntentPanel({
               }
             }}
           >
-            {label}
+            <strong>{label}</strong>
+            <small>{description}</small>
           </button>
         ))}
       </div>
@@ -73,7 +78,7 @@ export function IntentPanel({
         )}
         {intent !== "hire" && (
           <Link
-            className={intent === "work" ? "primary-button" : "secondary-button"}
+            className={intent === "work" || !profileReady ? "primary-button" : "secondary-button"}
             href={profileReady && published ? "/discover" : "/profile"}
           >
             {workLabel}

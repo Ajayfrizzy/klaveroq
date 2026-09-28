@@ -110,9 +110,13 @@ export function WalletVerificationForm({ initialMessage = "" }: { initialMessage
               maxLength={300}
               value={address}
               onChange={(event) => setAddress(event.target.value.trim())}
-              placeholder="ckb..."
+              placeholder={network === "testnet" ? "ckt..." : "ckb..."}
+              aria-describedby="wallet-address-network"
             />
           </label>
+          <small id="wallet-address-network" className="full-field">
+            Use your CKB {network} address ({network === "testnet" ? "ckt" : "ckb"}…).
+          </small>
           <button className="primary-button" disabled={busy}>
             <KeyRound size={16} /> {busy ? "Creating..." : "Create signing message"}
           </button>

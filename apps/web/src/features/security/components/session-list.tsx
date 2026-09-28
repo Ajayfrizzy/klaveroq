@@ -2,6 +2,8 @@
 
 import { KeyRound, MonitorSmartphone, X } from "lucide-react";
 import { useState } from "react";
+import { deviceSummary } from "../device-summary";
+import { formatEventTime } from "@/features/activity/presentation";
 
 type SessionRecord = {
   id: string;
@@ -15,10 +17,12 @@ export function SessionList({ initialSessions }: { initialSessions: SessionRecor
   const [records, setRecords] = useState(initialSessions);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   async function revoke(id: string) {
     setBusy(id);
     setError("");
+    setSuccess("");
     try {
       const response = await fetch(`/api/auth/sessions/${id}`, { method: "DELETE" });
       if (!response.ok) {
@@ -26,6 +30,7 @@ export function SessionList({ initialSessions }: { initialSessions: SessionRecor
         throw new Error(body.error?.message ?? "The session could not be revoked.");
       }
       setRecords((current) => current.filter((session) => session.id !== id));
+      setSuccess("The device was signed out.");
       window.dispatchEvent(new Event("notifications:changed"));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The session could not be revoked.");
@@ -48,15 +53,21 @@ export function SessionList({ initialSessions }: { initialSessions: SessionRecor
             <span>
               {session.current ? <KeyRound size={17} /> : <MonitorSmartphone size={17} />}
             </span>
-            <p>
-              <strong>{session.userAgent || "Unknown client"}</strong>
+            <div className="session-description">
+              <strong>{deviceSummary(session.userAgent)}</strong>
               <small>
                 {session.current
                   ? "Current session"
-                  : `Last recorded ${new Date(session.lastSeenAt).toLocaleString()}`}
-                {` · Expires ${new Date(session.expiresAt).toLocaleString()}`}
+                  : `Last recorded ${formatEventTime(session.lastSeenAt)}`}
+                {` · Expires ${formatEventTime(session.expiresAt)}`}
               </small>
-            </p>
+              {session.userAgent && (
+                <details className="event-details">
+                  <summary>Device details</summary>
+                  <p>{session.userAgent}</p>
+                </details>
+              )}
+            </div>
             {!session.current && (
               <button
                 className="icon-button danger"
@@ -76,6 +87,11 @@ export function SessionList({ initialSessions }: { initialSessions: SessionRecor
       {error && (
         <p className="form-feedback error" role="alert">
           {error}
+        </p>
+      )}
+      {success && (
+        <p className="form-feedback success" role="status">
+          {success}
         </p>
       )}
     </section>

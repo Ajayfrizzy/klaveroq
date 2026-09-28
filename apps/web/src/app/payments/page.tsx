@@ -43,23 +43,30 @@ export default async function PaymentsPage({
         description="Track confirmed funding, releases, and refunds."
         icon={ReceiptText}
       />
-      <section className="payment-stats">
-        <article>
-          <span>Currently secured</span>
-          <strong>Unavailable</strong>
-          <small>Awaiting reconciled PactAgent balances</small>
-        </article>
-        <article>
-          <span>Confirmed funding history</span>
-          <strong>{funding.value}</strong>
-          <small>{funding.note}</small>
-        </article>
-        <article>
-          <span>Released this month</span>
-          <strong>{released.value}</strong>
-          <small>{released.note}</small>
-        </article>
+      <section className="panel payment-notice">
+        <ReceiptText size={24} aria-hidden="true" />
+        <div>
+          <h2>Payment network not connected</h2>
+          <p>
+            Funding, payouts, and reconciled balances are unavailable. Recorded operations below are
+            a history of payment events, not a current spendable or secured balance.
+          </p>
+        </div>
       </section>
+      {history.records.length > 0 && (
+        <section className="payment-stats">
+          <article>
+            <span>Confirmed funding history</span>
+            <strong>{funding.value}</strong>
+            <small>{funding.note}</small>
+          </article>
+          <article>
+            <span>Released this month</span>
+            <strong>{released.value}</strong>
+            <small>{released.note}</small>
+          </article>
+        </section>
+      )}
       <section className="panel data-panel">
         <div className="section-heading">
           <div>
@@ -96,7 +103,10 @@ export default async function PaymentsPage({
                     <strong>
                       {labels[operation.type] ?? operation.type.toLowerCase().replaceAll("_", " ")}
                     </strong>
-                    <small>{operation.externalReference ?? operation.id}</small>
+                    <details className="event-details">
+                      <summary>Transaction reference</summary>
+                      <small>{operation.externalReference ?? operation.id}</small>
+                    </details>
                   </p>
                 </div>
                 <strong>{job.title}</strong>

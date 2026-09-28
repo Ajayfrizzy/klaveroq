@@ -46,24 +46,27 @@ export default defineConfig({
       use: { ...devices["Pixel 7"] },
     },
   ],
-  webServer: {
-    command: "npm run build && npx next start --hostname 127.0.0.1 --port 3199",
-    url: "http://127.0.0.1:3199/login",
-    reuseExistingServer: false,
-    timeout: 180_000,
-    env: {
-      DATABASE_URL: databaseUrl,
-      APP_URL: "http://127.0.0.1:3199",
-      NEXT_DIST_DIR: ".next-e2e",
-      SESSION_COOKIE_NAME: "klaveroq_test_session",
-      EMAIL_PROVIDER: "local",
-      AUTH_EXPOSE_LOCAL_TOKENS: "1",
-      MFA_ENCRYPTION_KEY: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
-      E2E_TEST_MODE: "1",
-      CRON_SECRET: "phase7-e2e-cron-secret-at-least-32-characters",
-      FILE_SCANNER: "local",
-      IDENTITY_PROVIDER: "sandbox",
-      IDENTITY_SANDBOX_ENABLED: "1",
-    },
-  },
+  webServer:
+    process.env.PLAYWRIGHT_EXTERNAL_SERVER === "1"
+      ? undefined
+      : {
+          command: "npm run build && npx next start --hostname 127.0.0.1 --port 3199",
+          url: "http://127.0.0.1:3199/login",
+          reuseExistingServer: false,
+          timeout: 180_000,
+          env: {
+            DATABASE_URL: databaseUrl,
+            APP_URL: "http://127.0.0.1:3199",
+            NEXT_DIST_DIR: ".next-e2e",
+            SESSION_COOKIE_NAME: "klaveroq_test_session",
+            EMAIL_PROVIDER: "local",
+            AUTH_EXPOSE_LOCAL_TOKENS: "1",
+            MFA_ENCRYPTION_KEY: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
+            E2E_TEST_MODE: "1",
+            CRON_SECRET: "phase7-e2e-cron-secret-at-least-32-characters",
+            FILE_SCANNER: "local",
+            IDENTITY_PROVIDER: "sandbox",
+            IDENTITY_SANDBOX_ENABLED: "1",
+          },
+        },
 });

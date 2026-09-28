@@ -1,8 +1,18 @@
 # Klaveroq Functional Audit
 
-Audit date: 2026-09-26
+Audit date: 2026-09-28
 
 Milestone: standalone marketplace, before PactAgent integration
+
+## Final beta UI/UX refinement — September 28, 2026
+
+The rendered review confirmed earlier navigation, discovery, form-protection and publication work, but found stretched expanded Talent controls, tablet overflow, raw activity/device text, a native-looking upload control, low-contrast mobile navigation and a duplicate-key development warning. These are corrected through shared control/grid rules and targeted presentation changes. Real data, authorization, Google authentication and payment boundaries are preserved.
+
+The [refinement report and screenshot index](docs/ui-refinement/README.md) records the audit, all ten before/after pages at three widths, added visual references and verification details. The original desktop/tablet/mobile captures used an isolated new account. Populated records are isolated browser-test fixtures only.
+
+Validation: production build, lint, TypeScript, formatting and 114 unit tests pass. The complete Linux acceptance suite passed 39/39 tests across its Chromium, Firefox, WebKit and mobile projects, including database integrations. Twenty main-page desktop/mobile Axe audits report no violations; 320/375/768/1024/1440px reflow checks pass. Reviewed Linux screenshots passed comparison with updating disabled, including populated Talent, profile editing/upload preview and job validation. There are 52 visual references across macOS and Linux. Native macOS Firefox could not initialize its temporary profile; Linux Firefox passed.
+
+Readiness is limited to this UI scope. Real hosted Google/email/identity checks, supported browser-wallet certification and manual assistive-technology review remain the existing release gates. PactAgent funding, settlement, payouts and refunds remain unavailable. Nothing has been deployed, committed or pushed; no existing database was reset.
 
 ## UI/UX phases — September 26, 2026
 

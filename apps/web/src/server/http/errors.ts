@@ -56,7 +56,14 @@ export const withApi =
     const requestId = request ? getRequestId(request) : "unavailable";
     const startedAt = performance.now();
     try {
-      const response = await handler(...args);
+      const original = await handler(...args);
+      // Redirect and fetched responses can have immutable headers. Copy the
+      // response without consuming its body before adding tracing metadata.
+      const response = new Response(original.body, {
+        status: original.status,
+        statusText: original.statusText,
+        headers: original.headers,
+      });
       response.headers.set("x-request-id", requestId);
       log.info("api.request_completed", {
         requestId,

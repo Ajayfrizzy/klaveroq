@@ -1,5 +1,21 @@
 # Klaveroq Implementation Phases
 
+## Final beta refinement — September 28, 2026
+
+The rendered follow-up audit builds on the four completed phases below. Evidence and screenshot comparisons are in [the refinement report](docs/ui-refinement/README.md).
+
+1. **Rendered audit and shared rules:** captured ten pages at desktop/tablet/mobile widths; standardized control sizing and corrected intrinsic grid overflow.
+2. **Discovery:** separated advanced filters and form actions, retained URL/filter behavior, and kept sparse results at readable card widths.
+3. **Dashboard:** clarified focus choices, reduced completed-onboarding emphasis, and preserved real operational metrics.
+4. **Profile and portfolio:** polished real media uploads with local previews and clear upload actions; added header visibility state and progressive disclosure for optional links.
+5. **Jobs and hiring:** consistent workspace controls, responsive tables, accessible step state, and regression coverage of proposals, messages, agreements and validation.
+6. **Activity and notifications:** canonical customer-facing activity descriptions, expandable technical detail, workspace links, consistent timestamps and visible security/read categories.
+7. **Wallet, payments and support:** readable devices, compact truthful payment availability, recoverable network feedback and no untouched-form banner.
+8. **Navigation and mobile:** fixed mobile contrast and icon-link labeling; checked 320/375/768/1024/1440px layouts, keyboard access and reduced motion.
+9. **Development errors and regression:** fixed duplicate React keys on Talent; added reviewed macOS/Linux production visual references and verified production has no development overlay.
+
+All nine refinement phases are complete. The full Linux acceptance suite passed 39/39 tests with locked visual references; 114 unit tests, production build, lint, TypeScript and formatting checks passed. This UI scope is ready for staging review, subject to the external-provider and manual accessibility gates in the refinement report. No database was reset and nothing was deployed, committed or pushed.
+
 ## UI/UX improvement phases (September 26, 2026)
 
 The UI/UX review is being implemented in four sequential phases, preserving payment and identity truthfulness.

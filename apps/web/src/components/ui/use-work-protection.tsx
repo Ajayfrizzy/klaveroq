@@ -78,12 +78,10 @@ export function useWorkProtection(value: string, error = "") {
       bypass.current = true;
       setSavedValue(next);
     },
-    status: (
+    status: dirty ? (
       <p className="work-save-status" role="status">
-        {dirty
-          ? "Unsaved changes — keep this page open until you save or submit."
-          : "No unsaved changes."}
+        Unsaved changes — keep this page open until you save or submit.
       </p>
-    ),
+    ) : null,
   };
 }

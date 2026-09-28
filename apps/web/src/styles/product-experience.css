@@ -14,6 +14,209 @@ body {
 :root {
   --text-subtle: #586579;
   --text-muted: #586579;
+  --space-control: 12px;
+  --space-panel: clamp(16px, 2vw, 24px);
+  --radius-panel: 12px;
+  --radius-control: 8px;
+}
+/* Keep intrinsic content from widening workspace grids at intermediate widths. */
+:is(.dashboard-grid, .security-layout, .profile-layout, .support-layout, .detail-layout) > *,
+:is(.section-heading, .section-page-header, .page-heading, .profile-editor-heading) > * {
+  min-width: 0;
+}
+.dashboard-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.toolbar {
+  flex-wrap: wrap;
+}
+.toolbar .search-field {
+  height: var(--control-height);
+  flex: 1 1 220px;
+}
+.toolbar select {
+  height: var(--control-height);
+}
+.workspace-tabs {
+  overflow-x: auto;
+}
+.workspace-tabs a {
+  white-space: nowrap;
+  min-height: var(--control-height);
+}
+.header-actions {
+  flex-wrap: wrap;
+}
+.section-page-header {
+  flex-wrap: wrap;
+}
+.section-title-wrap {
+  min-width: 0;
+}
+.section-title-wrap > span {
+  flex-shrink: 0;
+}
+@media (min-width: 1400px) {
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+.job-column-head,
+.job-row {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1fr) 20px;
+}
+.job-row > * {
+  min-width: 0;
+}
+:is(.panel, .intent-panel, .market-empty) {
+  overflow-wrap: anywhere;
+}
+:is(.primary-button, .secondary-button) {
+  min-height: var(--control-height);
+  height: auto;
+  align-self: start;
+  flex-shrink: 0;
+}
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+  min-width: 0;
+  min-height: var(--control-height);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 10px 12px;
+  color: var(--text);
+  background-color: var(--surface);
+  font: inherit;
+}
+select {
+  min-height: var(--control-height);
+}
+button:disabled {
+  cursor: not-allowed;
+}
+.event-details {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.event-details summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.activity-group :is(strong, p, small, time),
+.session-description small {
+  font-size: 13px;
+}
+.activity-group a {
+  color: var(--brand-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.session-description {
+  min-width: 0;
+}
+.session-description small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+}
+.notification-main time {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.security-notification .notification-icon {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+.payment-notice {
+  display: flex;
+  align-items: start;
+  gap: 16px;
+  padding: var(--space-panel);
+  margin-bottom: 24px;
+}
+.payment-notice > svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.payment-notice h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.payment-notice p {
+  margin: 0;
+  max-width: 78ch;
+  color: var(--text-muted);
+}
+.media-uploader .file-picker {
+  position: relative;
+  min-height: var(--control-height);
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  font-size: 13px;
+}
+.file-picker:focus-within {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
+.media-uploader .file-picker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.upload-preview {
+  margin: 0;
+}
+.upload-preview img {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--canvas);
+}
+.upload-preview figcaption {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.media-uploader > label:not(.file-picker),
+.media-upload-actions > span {
+  font-size: 13px;
+}
+.new-case form > div:has(.work-save-status),
+.new-case form > .form-feedback {
+  grid-column: 1 / -1;
+}
+.new-case form > div:empty {
+  display: none;
+}
+.new-case :is(label, input, select, textarea),
+.mfa-panel :is(label, p),
+.wallet-connect-form label {
+  font-size: 13px;
+}
+.new-case form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.new-case form > button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.quick-guides > div {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.profile-editor-heading .profile-avatar {
+  background: var(--brand-soft);
+  border: 4px solid white;
+  box-shadow: var(--shadow);
 }
 .talent-stats .secondary-stat {
   opacity: 1;
@@ -60,7 +263,7 @@ body {
   letter-spacing: -0.025em;
 }
 .panel {
-  border-radius: 10px;
+  border-radius: var(--radius-panel);
 }
 .payment-availability {
   color: var(--text-muted);
@@ -340,6 +543,16 @@ body {
 .job-next strong {
   white-space: normal;
 }
+.bottom-nav {
+  background: var(--surface);
+}
+.bottom-nav a {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.bottom-nav a.active {
+  color: var(--brand-strong);
+}
 :is(input, textarea, select)[aria-invalid="true"] {
   border-color: var(--danger);
 }
@@ -347,11 +560,12 @@ body {
   input,
   textarea,
   select,
+  .new-case :is(input, select, textarea),
   .profile-edit-form :is(input, select, textarea) {
     font-size: 16px;
   }
   .profile-save-actions {
-    bottom: 65px;
+    bottom: 75px;
   }
   .hiring-tools > button {
     width: 100%;
@@ -385,7 +599,15 @@ body {
 }
 .market-content .listing-grid,
 .market-content .talent-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+.talent-card-head h2 {
+  font-size: 16px;
+}
+.talent-card-head p,
+.talent-meta {
+  font-size: 13px;
+  line-height: 1.5;
 }
 .discovery-filters {
   display: flex;
@@ -421,11 +643,13 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
   padding-top: 12px;
+  align-items: start;
 }
 .discovery-filter-fields :is(input, select) {
   width: 100%;
   min-width: 0;
   min-height: 44px;
+  height: var(--control-height);
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -438,6 +662,23 @@ body {
   box-shadow: none;
   display: grid;
   gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  margin-top: 12px;
+  background: var(--canvas);
+}
+.discovery-filter-fields .advanced-filters {
+  grid-column: 1 / -1;
+}
+.discovery-filter-fields .advanced-filters summary {
+  width: fit-content;
+}
+.filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-control);
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
 }
 .discovery-results-bar,
 .empty-actions {
@@ -501,7 +742,7 @@ summary {
   margin: 0 0 24px;
   border-left: 4px solid var(--accent);
   border-radius: 10px;
-  padding: 24px;
+  padding: var(--space-panel);
   background: var(--accent-soft);
 }
 .intent-panel h2 {
@@ -522,6 +763,31 @@ summary {
   color: var(--accent);
   background: white;
   box-shadow: inset 0 -3px var(--accent);
+}
+.intent-options[role="group"] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.intent-options[role="group"] button {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  text-align: left;
+  white-space: normal;
+  padding: 12px;
+  height: 100%;
+}
+.intent-options[role="group"] small {
+  font-weight: 400;
+  line-height: 1.5;
+}
+.intent-complete {
+  background: var(--surface);
+  padding-block: 16px;
+}
+.intent-complete > .eyebrow,
+.intent-complete > small {
+  display: none;
 }
 .metrics-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -552,7 +818,45 @@ summary {
 .technical-details p {
   line-height: 1.6;
 }
+@media (max-width: 1100px) {
+  .security-layout,
+  .profile-layout,
+  .support-layout,
+  .new-case {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .activity-row {
+    grid-template-columns: 7px minmax(0, 1fr);
+  }
+  .activity-row time {
+    grid-column: 2;
+  }
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .support-categories {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 @media (max-width: 760px) {
+  .job-column-head {
+    display: none;
+  }
+  .job-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .intent-options[role="group"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .activity-group article {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+  .activity-group article > time {
+    grid-column: 2;
+  }
+  .filter-actions > * {
+    flex: 1;
+  }
   .market-header .public-desktop-nav {
     display: none;
   }
@@ -598,5 +902,90 @@ summary {
   }
   .empty-actions > a {
     width: 100%;
+  }
+}
+.avatar img,
+.top-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.profile-visibility {
+  padding: 20px;
+  flex-wrap: wrap;
+}
+
+.profile-visibility > div:first-child {
+  flex: 1 1 280px;
+}
+
+.profile-visibility > .profile-publish-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 0 1 240px;
+}
+
+.profile-publish-actions button {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .profile-visibility > div:first-child,
+  .profile-visibility > .profile-publish-actions {
+    flex: 0 1 auto;
+  }
+
+  .profile-visibility > .profile-publish-actions {
+    align-items: stretch;
+  }
+}
+
+.auth-panel > .auth-account-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-password-field {
+  position: relative;
+  display: block;
+}
+
+.auth-password-field input {
+  width: 100%;
+  padding-right: 48px;
+}
+
+.auth-password-field .password-toggle {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.auth-spinner {
+  animation: auth-spin 0.8s linear infinite;
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-spinner {
+    animation: none;
   }
 }

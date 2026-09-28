@@ -179,7 +179,12 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
 
       <ol className="stepper">
         {steps.map((label, index) => (
-          <li className={index === step ? "active" : index < step ? "done" : ""} key={label}>
+          <li
+            className={index === step ? "active" : index < step ? "done" : ""}
+            key={label}
+            aria-current={index === step ? "step" : undefined}
+            aria-label={`Step ${index + 1}: ${label}`}
+          >
             <span>{index < step ? <Check size={15} /> : index + 1}</span>
             <strong>{label}</strong>
           </li>

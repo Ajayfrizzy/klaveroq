@@ -41,11 +41,14 @@ export function DiscoveryFilters({
             <Filter size={17} aria-hidden="true" /> Filters
             {active.length ? ` (${active.length})` : ""}
           </summary>
-          <div className="discovery-filter-fields">
-            {children}
+          <div className="discovery-filter-fields">{children}</div>
+          <div className="filter-actions">
             <button className="primary-button" type="submit">
               Apply filters
             </button>
+            <Link className="secondary-button" href={pathname}>
+              Clear filters
+            </Link>
           </div>
         </details>
       </form>

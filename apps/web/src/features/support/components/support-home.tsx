@@ -39,11 +39,16 @@ export function SupportHome() {
   const [draftValue, setDraftValue] = useState("");
   const { root: workRoot, status: workStatus, markSaved } = useWorkProtection(draftValue, error);
   const load = useCallback(async () => {
-    const response = await fetch("/api/support/tickets");
-    const body = await response.json();
-    if (response.ok) setTickets(body.data);
-    else setError(body.error?.message ?? "Unable to load support cases.");
-    setLoading(false);
+    try {
+      const response = await fetch("/api/support/tickets");
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error?.message ?? "Unable to load support cases.");
+      setTickets(body.data);
+    } catch {
+      setError("Your cases could not be loaded. Check your connection and refresh the page.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
@@ -138,7 +143,7 @@ export function SupportHome() {
             </div>
           </div>
           {loading && <p className="support-empty">Loading cases...</p>}
-          {!loading && tickets.length === 0 && (
+          {!loading && !error && tickets.length === 0 && (
             <p className="support-empty">No support cases yet.</p>
           )}
           {tickets.map((ticket) => (

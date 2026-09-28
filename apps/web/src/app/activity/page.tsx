@@ -6,6 +6,12 @@ import { PageHeader } from "@/components/layout/page-header";
 import { getCurrentUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { auditLogs } from "@/server/db/schema";
+import Link from "next/link";
+import {
+  activityDestination,
+  describeActivity,
+  formatEventTime,
+} from "@/features/activity/presentation";
 
 export default async function ActivityPage() {
   const current = await getCurrentUser();
@@ -19,9 +25,9 @@ export default async function ActivityPage() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Audit trail"
+        eyebrow="Your workspace"
         title="Activity"
-        description="A chronological record of your authorized actions."
+        description="Your recent account updates and marketplace actions. Times are shown in UTC."
         icon={Activity}
       />
       <section className="panel full-activity">
@@ -34,19 +40,16 @@ export default async function ActivityPage() {
                   <FileCheck2 size={17} />
                 </span>
                 <div>
-                  <strong>
-                    {event.action
-                      .split(".")
-                      .map((part) => part.replaceAll("_", " "))
-                      .join(" ")}
-                  </strong>
-                  <p>
-                    {event.entityType}
-                    {event.entityId ? ` · ${event.entityId}` : ""}
-                  </p>
-                  <small>Authorized account event</small>
+                  <strong>{describeActivity(event.action)}</strong>
+                  {activityDestination(event.action) && (
+                    <p>
+                      <Link href={activityDestination(event.action)!}>Open related workspace</Link>
+                    </p>
+                  )}
                 </div>
-                <time>{event.createdAt.toLocaleString()}</time>
+                <time dateTime={event.createdAt.toISOString()}>
+                  {formatEventTime(event.createdAt)}
+                </time>
               </article>
             ))}
           </div>

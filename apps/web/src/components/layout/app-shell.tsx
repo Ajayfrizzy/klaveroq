@@ -80,6 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [menuOpen]);
   const [account, setAccount] = useState<{ displayName: string; email: string } | null>(null);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const refreshUnreadNotifications = useCallback(async () => {
     try {
@@ -97,6 +98,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     void fetch("/api/auth/me")
       .then((response) => response.json())
       .then((body) => {
+        if (active)
+          setAvatarUrl(
+            body.data?.profile?.avatarKey
+              ? `/api/media/avatar/${body.data.user.id}?v=${encodeURIComponent(body.data.profile.avatarKey)}`
+              : null,
+          );
         if (active && body.data)
           setAccount({
             displayName: body.data.profile?.displayName || body.data.user.email.split("@")[0],
@@ -107,6 +114,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const update = (event: Event) => setAvatarUrl((event as CustomEvent<string | null>).detail);
+    window.addEventListener("profile:avatar-changed", update);
+    return () => window.removeEventListener("profile:avatar-changed", update);
   }, []);
 
   useEffect(() => {
@@ -195,7 +208,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p>Payment network not connected</p>
         </div>
         <div className="sidebar-user">
-          <span className="avatar">{initials}</span>
+          <span className="avatar">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" onError={() => setAvatarUrl(null)} />
+            ) : (
+              initials
+            )}
+          </span>
           <span>
             <strong>{account?.displayName || "Klaveroq account"}</strong>
             <small>{account?.email || "Signed in"}</small>
@@ -231,7 +251,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Klaveroq
           </Link>
           {pathname !== "/" && (
-            <Link className="dashboard-return" href="/">
+            <Link className="dashboard-return" href="/" aria-label="Dashboard">
               <House size={16} />
               <span>Dashboard</span>
             </Link>
@@ -246,7 +266,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {hasUnreadNotifications && <span className="notification-dot" aria-hidden="true" />}
             </Link>
             <Link className="top-avatar" href="/profile" aria-label="Open profile">
-              {initials}
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" onError={() => setAvatarUrl(null)} />
+              ) : (
+                initials
+              )}
             </Link>
           </div>
         </header>

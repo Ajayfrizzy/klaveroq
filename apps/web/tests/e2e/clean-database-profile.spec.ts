@@ -40,7 +40,9 @@ test("empty database stays demo-free and profile changes persist through repeat 
   await expect(page.getByRole("heading", { name: "New opportunities start here" })).toBeVisible();
   await expect(page.getByText(/Alex Morgan|Maya Chen|KQ-DEMO/i)).toHaveCount(0);
   await page.goto("/talent");
-  await expect(page.getByRole("heading", { name: "Be among the first professionals" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Be among the first professionals" }),
+  ).toBeVisible();
 
   await page.goto("/register");
   await page.getByLabel("Display name").fill("Clean Profile");

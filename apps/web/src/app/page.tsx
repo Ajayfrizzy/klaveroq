@@ -8,6 +8,7 @@ import { getDashboardData } from "@/features/dashboard/server/queries";
 import { formatAssetAmount } from "@/features/dashboard/server/metrics";
 import { IntentPanel } from "@/features/dashboard/intent-panel";
 import { getMissingPublicationFields } from "@/features/talent/server/publication";
+import { formatEventTime } from "@/features/activity/presentation";
 
 export const dynamic = "force-dynamic";
 
@@ -203,7 +204,9 @@ export default async function DashboardPage() {
                   <strong>{item.title}</strong>
                   <span>{item.detail}</span>
                 </div>
-                <time>{item.createdAt.toLocaleString()}</time>
+                <time dateTime={item.createdAt.toISOString()}>
+                  {formatEventTime(item.createdAt)}
+                </time>
               </div>
             ))
           ) : (

@@ -139,6 +139,7 @@ export function ProfileEditor({
   const [languagesText, setLanguagesText] = useState(initialProfile.languages.join(", "));
   const [portfolio, setPortfolio] = useState(initialPortfolio);
   const [avatar, setAvatar] = useState(initialAvatar);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [portfolioForm, setPortfolioForm] = useState(emptyPortfolio);
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
@@ -402,9 +403,12 @@ export function ProfileEditor({
         <div className="profile-editor-heading">
           <div className="profile-identity compact">
             <div className="profile-avatar">
-              {avatar ? (
+              {avatarPreview || avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatar.url} alt={avatar.altText} />
+                <img
+                  src={avatarPreview ?? avatar!.url}
+                  alt={avatarPreview ? "Selected profile photo preview" : avatar!.altText}
+                />
               ) : (
                 profile.displayName.slice(0, 2).toUpperCase()
               )}
@@ -412,6 +416,9 @@ export function ProfileEditor({
             <div>
               <div>
                 <h2>{profile.displayName}</h2>
+                <span className="mini-state">
+                  {profile.isPublic ? "Public profile" : "Private profile"}
+                </span>
                 <span className={`availability availability-${profile.availability.toLowerCase()}`}>
                   {profile.availability.toLowerCase()}
                 </span>
@@ -447,7 +454,13 @@ export function ProfileEditor({
             label="profile photo"
             accept="image/jpeg,image/png,image/webp"
             initialMedia={avatar}
-            onChange={setAvatar}
+            onPreview={setAvatarPreview}
+            onChange={(media) => {
+              setAvatar(media);
+              window.dispatchEvent(
+                new CustomEvent("profile:avatar-changed", { detail: media?.url ?? null }),
+              );
+            }}
           />
         </div>
         {editing ? (
@@ -459,7 +472,15 @@ export function ProfileEditor({
               if (section) section.open = true;
             }}
           >
-            <nav className="profile-section-nav" aria-label="Profile sections">
+            <nav
+              className="profile-section-nav"
+              aria-label="Profile sections"
+              onClick={(event) => {
+                const link = (event.target as HTMLElement).closest("a");
+                const section = link?.hash ? document.querySelector(link.hash) : null;
+                if (section instanceof HTMLDetailsElement) section.open = true;
+              }}
+            >
               <a href="#profile-identity">1. Identity</a>
               <a href="#profile-expertise">2. Expertise</a>
               <a href="#profile-location">3. Availability</a>
@@ -649,7 +670,7 @@ export function ProfileEditor({
                 </label>
               </div>
             </details>
-            <details className="profile-step" id="profile-links" open>
+            <details className="profile-step" id="profile-links">
               <summary>4. Online presence (optional)</summary>
               <div className="profile-form-section-heading">
                 <h3>Online presence</h3>
@@ -837,21 +858,23 @@ export function ProfileEditor({
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          className={profile.isPublic ? "secondary-button" : "primary-button"}
-          onClick={updateVisibility}
-          disabled={busy}
-          aria-describedby={!profile.isPublic && !profileReady ? "publish-guidance" : undefined}
-        >
-          {profile.isPublic ? <EyeOff size={16} /> : <Eye size={16} />}
-          {profile.isPublic ? "Make profile private" : "Publish profile"}
-        </button>
-        {!profile.isPublic && !profileReady && (
-          <span id="publish-guidance" className="publish-guidance">
-            Complete all required details before publishing.
-          </span>
-        )}
+        <div className="profile-publish-actions">
+          <button
+            type="button"
+            className={profile.isPublic ? "secondary-button" : "primary-button"}
+            onClick={updateVisibility}
+            disabled={busy}
+            aria-describedby={!profile.isPublic && !profileReady ? "publish-guidance" : undefined}
+          >
+            {profile.isPublic ? <EyeOff size={16} /> : <Eye size={16} />}
+            {profile.isPublic ? "Make profile private" : "Publish profile"}
+          </button>
+          {!profile.isPublic && !profileReady && (
+            <span id="publish-guidance" className="publish-guidance">
+              Complete all required details before publishing.
+            </span>
+          )}
+        </div>
       </section>
 
       <section className="panel portfolio-manager">

@@ -1,10 +1,10 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GOOGLE_OAUTH_MESSAGES, googleOAuthHref, safeReturnTo } from "@/server/auth/google";
 import { initialAuthCredentials } from "@/features/auth/defaults";
 
@@ -18,6 +18,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  useEffect(() => {
+    const reset = () => setGoogleBusy(false);
+    window.addEventListener("pageshow", reset);
+    return () => window.removeEventListener("pageshow", reset);
+  }, []);
   const [mfaToken, setMfaToken] = useState(searchParams.get("mfaToken") ?? "");
   const [mfaCode, setMfaCode] = useState("");
   const oauthError = searchParams.get("oauthError");
@@ -157,12 +163,18 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           className={`google-auth-button${googleBusy ? " disabled" : ""}`}
           href={googleHref}
           aria-disabled={googleBusy}
+          aria-busy={googleBusy}
           onClick={(event) => {
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
             if (googleBusy) event.preventDefault();
             else setGoogleBusy(true);
           }}
         >
-          <GoogleIcon />
+          {googleBusy ? (
+            <LoaderCircle className="auth-spinner" aria-hidden="true" />
+          ) : (
+            <GoogleIcon />
+          )}
           {googleBusy ? "Opening Google..." : "Continue with Google"}
         </a>
         <div className="auth-separator">
@@ -193,14 +205,25 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           </label>
           <label>
             Password
-            <input
-              required
-              type="password"
-              minLength={12}
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
+            <span className="auth-password-field">
+              <input
+                required
+                type={showPassword ? "text" : "password"}
+                minLength={12}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((shown) => !shown)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </span>
           </label>
           {(error || oauthError) && (
             <div className="form-errors" role="alert">
@@ -213,14 +236,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             {busy ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
-        <small>
+        <small className="auth-account-links">
           {mode === "login" ? (
             <>
               <Link href="/forgot-password">Forgot password?</Link>
-              <span className="auth-link-separator" aria-hidden="true">
-                ·
+              <span>
+                Need an account? <Link href="/register">Register</Link>
               </span>
-              Need an account? <Link href="/register">Register</Link>
             </>
           ) : (
             <>

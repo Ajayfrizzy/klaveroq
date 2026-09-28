@@ -2,7 +2,7 @@
 
 import { AlertTriangle, Clock3, FileText, LoaderCircle, Paperclip, Scale } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { uploadFormData } from "@/features/files/upload";
 import { useWorkProtection } from "@/components/ui/use-work-protection";
 
@@ -31,7 +31,13 @@ type DisputeRecord = {
   settlementStatus?: string;
 };
 
+const subscribeToHydration = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
+
 export function DisputeWorkspace({ disputes }: { disputes: DisputeRecord[] }) {
+  // Do not accept edits into SSR controls before React can retain their state.
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
   const router = useRouter();
   const [note, setNote] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -110,6 +116,7 @@ export function DisputeWorkspace({ disputes }: { disputes: DisputeRecord[] }) {
                 <label>
                   Evidence note
                   <textarea
+                    disabled={!hydrated}
                     required
                     minLength={10}
                     maxLength={5000}
@@ -122,6 +129,7 @@ export function DisputeWorkspace({ disputes }: { disputes: DisputeRecord[] }) {
                   Supporting files
                   <input
                     type="file"
+                    disabled={!hydrated}
                     multiple
                     accept="image/jpeg,image/png,image/webp,application/pdf,text/plain"
                     onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
@@ -133,7 +141,7 @@ export function DisputeWorkspace({ disputes }: { disputes: DisputeRecord[] }) {
                     {progress}%
                   </progress>
                 )}
-                <button className="secondary-button" disabled={Boolean(busy)}>
+                <button className="secondary-button" disabled={!hydrated || Boolean(busy)}>
                   {busy === dispute.id ? <LoaderCircle size={15} /> : <Paperclip size={15} />}{" "}
                   Submit evidence
                 </button>

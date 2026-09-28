@@ -1,3 +1,4 @@
+import { assertFileUploadsEnabled } from "@/server/files/upload-policy";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { audit } from "@/server/audit";
@@ -14,6 +15,7 @@ const mediaTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"] 
 export const POST = withApi(
   async (request: Request, context: { params: Promise<{ id: string }> }) => {
     assertSameOrigin(request);
+    assertFileUploadsEnabled();
     const { user } = await requireUser();
     const { id } = await context.params;
     const item = await requirePortfolioOwner(id, user.id);

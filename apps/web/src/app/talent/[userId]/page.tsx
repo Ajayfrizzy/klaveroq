@@ -137,7 +137,8 @@ export default async function PublicTalentProfile({
               <div className="portfolio-public-grid">
                 {portfolio.map((item) => (
                   <article key={item.id}>
-                    {current && item.mediaUrl &&
+                    {current &&
+                      item.mediaUrl &&
                       (item.mediaContentType === "application/pdf" ? (
                         <a className="portfolio-media-file" href={item.mediaUrl}>
                           View project document

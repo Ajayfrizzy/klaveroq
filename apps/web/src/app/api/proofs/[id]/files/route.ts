@@ -1,3 +1,4 @@
+import { assertFileUploadsEnabled } from "@/server/files/upload-policy";
 import { count, eq, sum } from "drizzle-orm";
 import { db } from "@/server/db";
 import { jobs, milestones, proofFiles, proofSubmissions } from "@/server/db/schema";
@@ -12,6 +13,7 @@ import { audit } from "@/server/audit";
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/proofs/[id]/files">) => {
     assertSameOrigin(request);
+    assertFileUploadsEnabled();
     const { user } = await requireUser();
     const { id } = await context.params;
     const [proof] = await db

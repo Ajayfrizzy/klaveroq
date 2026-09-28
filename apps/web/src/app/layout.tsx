@@ -1,3 +1,6 @@
+import { connection } from "next/server";
+import { fileUploadsEnabled } from "@/features/files/upload-policy";
+import { UploadAvailabilityProvider } from "@/features/files/upload-availability";
 import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 import "@/styles/product-experience.css";
@@ -31,7 +34,8 @@ export const viewport: Viewport = {
   themeColor: "#4F46E5",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  await connection();
   return (
     <html lang="en">
       <body>
@@ -40,7 +44,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </a>
         <RouteTitle />
         <div id="main-content" tabIndex={-1}>
-          {children}
+          <UploadAvailabilityProvider enabled={fileUploadsEnabled()}>
+            {children}
+          </UploadAvailabilityProvider>
         </div>
       </body>
     </html>

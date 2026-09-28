@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { ApiError } from "../http/errors";
 import { getFileStorage, assertStorageKey, type FileStorage } from "./backend";
+import { assertFileUploadsEnabled } from "./upload-policy";
 import { scanFileBytes } from "./scanner";
 export { scanFileBytes, allowsLocalFileScanner } from "./scanner";
 
@@ -57,11 +58,9 @@ export function detectFileType(bytes: Uint8Array): DetectedFileType | null {
 export async function storePrivateFile(
   file: File,
   policy: FilePolicy = {},
-  dependencies: { storage: FileStorage; scan: typeof scanFileBytes } = {
-    storage: getFileStorage(),
-    scan: scanFileBytes,
-  },
+  dependencies?: { storage: FileStorage; scan: typeof scanFileBytes },
 ) {
+  assertFileUploadsEnabled();
   const maxBytes = policy.maxBytes ?? MAX_FILE_BYTES;
   if (file.size < 1 || file.size > maxBytes)
     throw new ApiError(
@@ -85,7 +84,7 @@ export async function storePrivateFile(
   const filename = `${randomUUID()}${extensions[contentType]}`;
   const quarantineKey = `quarantine/${date}/${filename}`;
   const cleanKey = `clean/${date}/${filename}`;
-  const { storage, scan } = dependencies;
+  const { storage, scan } = dependencies ?? { storage: getFileStorage(), scan: scanFileBytes };
   let phase: "storage" | "scan" = "storage";
   try {
     await storage.put(quarantineKey, bytes, contentType);

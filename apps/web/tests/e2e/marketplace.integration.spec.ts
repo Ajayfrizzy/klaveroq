@@ -1,7 +1,7 @@
 import { expect, request, test, type APIRequestContext } from "@playwright/test";
 import postgres from "postgres";
 
-const baseURL = "http://127.0.0.1:3199";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3199";
 const password = "KlaveroqTest123";
 const testDatabaseUrl =
   process.env.TEST_DATABASE_URL ??

@@ -17,9 +17,10 @@ NODE_ENV=production
 DEPLOYMENT_STAGE=community_beta
 IDENTITY_PROVIDER=disabled
 IDENTITY_SANDBOX_ENABLED=0
+FILE_UPLOADS_ENABLED=false
 ```
 
-Do not set `E2E_TEST_MODE` or sandbox secrets on hosted environments. `/api/health/ready` reports `identity: intentionally_disabled_for_beta`; all email, scanner, database, HTTPS and secret requirements still apply. The identity page states that checks are unavailable and not required for beta participation. Start/country/sandbox controls are absent; authenticated starts return 503 `IDENTITY_VERIFICATION_UNAVAILABLE` without inserting a row. Existing records are preserved. Google login, verified email and wallet ownership are not identity verification.
+Do not set `E2E_TEST_MODE` or sandbox secrets on hosted environments. `/api/health/ready` reports `identity: intentionally_disabled_for_beta`; email, database, HTTPS and secret requirements still apply. Spaces and ClamAV may be omitted only with the explicit disabled-upload beta configuration; uploads-enabled hosting and full production retain both requirements. The identity page states that checks are unavailable and not required for beta participation. Start/country/sandbox controls are absent; authenticated starts return 503 `IDENTITY_VERIFICATION_UNAVAILABLE` without inserting a row. Existing records are preserved. Google login, verified email and wallet ownership are not identity verification.
 
 Full production uses `DEPLOYMENT_STAGE=production` and still requires a real implemented identity adapter. **No real identity adapter is implemented in this milestone.** The supported-real-provider registry is deliberately empty: missing, disabled, sandbox and arbitrary provider strings all fail full-production readiness. A policy test exercises a hypothetical registered adapter, but is not evidence of a live provider integration. Integrating, registering and validating signed callbacks/replays/expiry remains a production-only gate. Sandbox is permitted only in guarded local/E2E environments and never in the explicit community-beta or production stage.
 

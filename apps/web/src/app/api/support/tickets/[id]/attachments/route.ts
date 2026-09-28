@@ -1,3 +1,4 @@
+import { assertFileUploadsEnabled } from "@/server/files/upload-policy";
 import { and, count, eq, sum } from "drizzle-orm";
 import { db } from "@/server/db";
 import { supportAttachments, supportMessages } from "@/server/db/schema";
@@ -12,6 +13,7 @@ import { audit } from "@/server/audit";
 export const POST = withApi(
   async (request: Request, context: { params: Promise<{ id: string }> }) => {
     assertSameOrigin(request);
+    assertFileUploadsEnabled();
     const { user } = await requireUser();
     const { id } = await context.params;
     const ticket = await requireSupportTicket(id);

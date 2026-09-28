@@ -2,6 +2,7 @@
 
 import { ImagePlus, RotateCcw, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useUploadsEnabled, UploadsUnavailable } from "./upload-availability";
 import { uploadFormData } from "./upload";
 
 type Media = { url: string; altText: string; contentType: string };
@@ -23,6 +24,7 @@ export function MediaUploader({
   onChange: (media: Media | null) => void;
   onPreview?: (url: string | null) => void;
 }) {
+  const uploadsEnabled = useUploadsEnabled();
   const [file, setFile] = useState<File | null>(null);
   const [altText, setAltText] = useState(initialMedia?.altText ?? "");
   const [progress, setProgress] = useState<number | null>(null);
@@ -38,7 +40,7 @@ export function MediaUploader({
   }, [preview]);
 
   async function upload() {
-    if (!file) return;
+    if (!uploadsEnabled || !file) return;
     setBusy(true);
     setError("");
     setProgress(0);
@@ -83,6 +85,8 @@ export function MediaUploader({
       setBusy(false);
     }
   }
+
+  if (!uploadsEnabled) return <UploadsUnavailable />;
 
   return (
     <div className="media-uploader">

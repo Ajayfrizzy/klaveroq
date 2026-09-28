@@ -1,5 +1,6 @@
 "use client";
 
+import { useUploadsEnabled, UploadsUnavailable } from "@/features/files/upload-availability";
 import { ArrowLeft, Download, Paperclip, Send } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
@@ -37,6 +38,7 @@ export function TicketConversation({
   ticketId: string;
   admin?: boolean;
 }) {
+  const uploadsEnabled = useUploadsEnabled();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
@@ -74,7 +76,7 @@ export function TicketConversation({
       setSending(false);
       return setError(body.error?.message ?? "Unable to send your reply.");
     }
-    if (file?.size) {
+    if (uploadsEnabled && file?.size) {
       const upload = new FormData();
       upload.set("messageId", body.data.id);
       upload.set("file", file);
@@ -198,12 +200,14 @@ export function TicketConversation({
                   Internal note
                 </label>
               )}
+              {!uploadsEnabled && <UploadsUnavailable />}
               <label className="attachment-button">
                 <Paperclip size={16} />
                 <span>Add attachment</span>
                 <input
                   name="file"
                   type="file"
+                  disabled={!uploadsEnabled}
                   accept="image/jpeg,image/png,image/webp,application/pdf,text/plain"
                 />
               </label>

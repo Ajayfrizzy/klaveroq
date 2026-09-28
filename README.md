@@ -130,4 +130,6 @@ defaults to a deterministic template provider; generated job and proposal drafts
 editable and are never published or submitted automatically. PactAgent remains the infrastructure
 boundary for escrow, settlement, and proof-processing capabilities.
 
-Hosted community-beta upload storage and private ClamAV setup: [DigitalOcean beta files runbook](docs/DIGITALOCEAN_BETA_FILES.md).
+Single-service community beta (uploads disabled): [DigitalOcean beta files runbook](docs/DIGITALOCEAN_BETA_FILES.md).
+
+For local file-upload development, explicitly set `FILE_UPLOADS_ENABLED=true`. Hosted uploads require the preserved [Spaces and ClamAV setup](docs/DIGITALOCEAN_UPLOADS.md).

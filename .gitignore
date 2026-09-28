@@ -7,6 +7,8 @@ docs/*
 !docs/STAGING_PROVIDER_CHECKLIST.md
 !docs/EMAIL_DELIVERY.md
 !docs/DIGITALOCEAN_BETA_FILES.md
+!docs/DIGITALOCEAN_UPLOADS.md
+!docs/FUNCTIONAL_AUDIT.md
 !docs/ui-refinement/
 node_modules/
 .next/

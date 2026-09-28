@@ -1,5 +1,22 @@
 # Release Checklist
 
+## Low-cost community beta: uploads disabled
+
+The current deployment candidate is [one 1 GB service on `staging`](../deploy/digitalocean/app.yaml), with `FILE_UPLOADS_ENABLED=false`. Review [the required environment and scheduler setup](DIGITALOCEAN_BETA_FILES.md) and [functional audit](FUNCTIONAL_AUDIT.md). Funded Spaces/ClamAV implementation remains in the repository and its separate template; it is not required for this explicit beta mode. No new migration is included.
+
+- [x] All five file-upload APIs reject with a consistent feature-unavailable response; shared storage guard prevents bypass.
+- [x] Upload controls are unavailable while text workflows remain usable.
+- [x] Readiness tests cover beta without providers, enabled uploads without providers and full-production requirements.
+- [x] Unit suite: 214 passed across 38 files.
+- [x] Disabled-upload beta production-build browser/integration suite: 4 passed on an isolated local test database.
+- [x] Enabled-upload browser lifecycle regression: 1 passed; Spaces/ClamAV unit coverage remains intact.
+- [x] Formatting, typecheck and optimized production builds passed. Lint has no errors and three existing warnings in `http/errors.test.ts`.
+- [x] Existing media metadata is preserved during denied uploads/text edits; no existing beta database was reset or accessed.
+- [ ] Operator: validate the merged App Platform spec, secrets, domain, HTTPS and 1 GB plan before deployment.
+- [ ] Operator: verify live Google/Resend and enable a reviewed external notification/retention schedule; Actions workflow stays dormant by default.
+- [ ] Operator: back up any recoverable local uploads; do not delete historical metadata or schedule orphan cleanup for this rollout.
+- [ ] Operator: monitor 1 GB memory under gradual real traffic; roughly 64 MiB per Argon2 password operation means concurrency needs headroom.
+
 ## Account preferences and community-beta identity
 
 Verification for this milestone: **149 unit tests passed** across 31 files; **44/44 complete Linux browser/integration tests passed** with snapshot updates disabled; the separate disabled-beta browser/API test passed in Linux and again through its own production-build/server configuration. Production builds for sandbox E2E and disabled beta, typecheck and lint passed (three pre-existing unused-argument lint warnings). The final full run kept application, database and browsers on Linux with isolated temporary uploads after mixed-host tests encountered upload and clock-dependent failures. Existing development databases and credentials were not migrated or changed; the new migration was applied only to newly created isolated test databases. No deployment, commit or push was performed.
@@ -17,9 +34,10 @@ NODE_ENV=production
 DEPLOYMENT_STAGE=community_beta
 IDENTITY_PROVIDER=disabled
 IDENTITY_SANDBOX_ENABLED=0
+FILE_UPLOADS_ENABLED=false
 ```
 
-Do not set `E2E_TEST_MODE` or sandbox secrets on hosted environments. `/api/health/ready` reports `identity: intentionally_disabled_for_beta`; all email, scanner, database, HTTPS and secret requirements still apply. The identity page states that checks are unavailable and not required for beta participation. Start/country/sandbox controls are absent; authenticated starts return 503 `IDENTITY_VERIFICATION_UNAVAILABLE` without inserting a row. Existing records are preserved. Google login, verified email and wallet ownership are not identity verification.
+Do not set `E2E_TEST_MODE` or sandbox secrets on hosted environments. `/api/health/ready` reports `identity: intentionally_disabled_for_beta`; email, database, HTTPS and secret requirements still apply. Spaces and ClamAV may be omitted only with the explicit disabled-upload beta configuration; uploads-enabled hosting and full production retain both requirements. The identity page states that checks are unavailable and not required for beta participation. Start/country/sandbox controls are absent; authenticated starts return 503 `IDENTITY_VERIFICATION_UNAVAILABLE` without inserting a row. Existing records are preserved. Google login, verified email and wallet ownership are not identity verification.
 
 Full production uses `DEPLOYMENT_STAGE=production` and still requires a real implemented identity adapter. **No real identity adapter is implemented in this milestone.** The supported-real-provider registry is deliberately empty: missing, disabled, sandbox and arbitrary provider strings all fail full-production readiness. A policy test exercises a hypothetical registered adapter, but is not evidence of a live provider integration. Integrating, registering and validating signed callbacks/replays/expiry remains a production-only gate. Sandbox is permitted only in guarded local/E2E environments and never in the explicit community-beta or production stage.
 

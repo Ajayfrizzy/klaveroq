@@ -57,6 +57,38 @@ describe("identity sandbox deployment guard", () => {
       "malware_scanner",
     );
   });
+  it("allows the explicit low-cost beta without upload providers, never full production", () => {
+    const beta = {
+      ...hosted,
+      DEPLOYMENT_STAGE: "community_beta",
+      IDENTITY_PROVIDER: "disabled",
+      IDENTITY_SANDBOX_ENABLED: "0",
+      FILE_UPLOADS_ENABLED: "false",
+      FILE_SCANNER: undefined,
+      CLAMAV_HOST: undefined,
+      FILE_STORAGE_BACKEND: undefined,
+      SPACES_SECRET_ACCESS_KEY: undefined,
+    };
+    expect(productionConfigurationIssues(beta)).toEqual([]);
+    expect(productionConfigurationIssues({ ...beta, DEPLOYMENT_STAGE: "production" })).toEqual(
+      expect.arrayContaining(["file_storage", "malware_scanner", "identity_provider"]),
+    );
+    for (const value of ["true", undefined, "FALSE", "typo"]) {
+      expect(productionConfigurationIssues({ ...beta, FILE_UPLOADS_ENABLED: value })).toEqual(
+        expect.arrayContaining(["file_storage", "malware_scanner"]),
+      );
+    }
+    expect(productionConfigurationIssues({ ...beta, FILE_UPLOADS_ENABLED: "typo" })).toContain(
+      "file_uploads_enabled",
+    );
+    expect(productionConfigurationIssues({ ...beta, IDENTITY_SANDBOX_ENABLED: "1" })).toContain(
+      "file_storage",
+    );
+    expect(productionConfigurationIssues({ ...beta, RESEND_API_KEY: "" })).toContain(
+      "email_provider",
+    );
+    expect(productionConfigurationIssues({ ...beta, CRON_SECRET: "" })).toContain("cron_secret");
+  });
   it.each(["disabled", "sandbox", "", "unknown", "production"])(
     "rejects %s as a production identity provider",
     (provider) => {

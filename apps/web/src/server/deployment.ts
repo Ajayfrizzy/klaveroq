@@ -1,3 +1,4 @@
+import { betaWithoutUploads } from "@/features/files/upload-policy";
 import { spacesConfiguration } from "./files/config";
 
 type DeploymentEnvironment = Record<string, string | undefined>;
@@ -44,6 +45,11 @@ export function productionConfigurationIssues(
   const identity = identityConfiguration(environment);
   if (!identity.validStage) issues.push("deployment_stage");
   if (!identity.validProvider) issues.push("identity_provider");
+  if (
+    environment.FILE_UPLOADS_ENABLED !== undefined &&
+    !["true", "false"].includes(environment.FILE_UPLOADS_ENABLED)
+  )
+    issues.push("file_uploads_enabled");
   if (environment.NODE_ENV !== "production") return issues;
   if (
     environment.E2E_TEST_MODE === "1" &&
@@ -70,20 +76,23 @@ export function productionConfigurationIssues(
   }
   if (!identity.betaDisabled && !identity.real && !issues.includes("identity_provider"))
     issues.push("identity_provider");
-  if (environment.FILE_SCANNER !== "clamav" || !environment.CLAMAV_HOST)
-    issues.push("malware_scanner");
-  try {
-    if (environment.FILE_STORAGE_BACKEND !== "spaces") throw new Error("Durable storage required.");
-    spacesConfiguration(environment);
-  } catch {
-    issues.push("file_storage");
+  if (!betaWithoutUploads(environment)) {
+    if (environment.FILE_SCANNER !== "clamav" || !environment.CLAMAV_HOST)
+      issues.push("malware_scanner");
+    try {
+      if (environment.FILE_STORAGE_BACKEND !== "spaces")
+        throw new Error("Durable storage required.");
+      spacesConfiguration(environment);
+    } catch {
+      issues.push("file_storage");
+    }
+    const scannerPort = Number(environment.CLAMAV_PORT ?? 3310);
+    if (
+      (!Number.isInteger(scannerPort) || scannerPort < 1 || scannerPort > 65535) &&
+      !issues.includes("malware_scanner")
+    )
+      issues.push("malware_scanner");
   }
-  const scannerPort = Number(environment.CLAMAV_PORT ?? 3310);
-  if (
-    (!Number.isInteger(scannerPort) || scannerPort < 1 || scannerPort > 65535) &&
-    !issues.includes("malware_scanner")
-  )
-    issues.push("malware_scanner");
   if (!environment.CRON_SECRET || environment.CRON_SECRET.length < 32) issues.push("cron_secret");
   return issues;
 }

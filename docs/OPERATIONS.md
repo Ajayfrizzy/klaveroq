@@ -64,4 +64,4 @@ data re-encryption plan; never invalidate MFA ciphertext without migration.
 
 ## Hosted file storage
 
-See [DigitalOcean beta files](DIGITALOCEAN_BETA_FILES.md) for the private Spaces adapter, internal ClamAV service spec, credential setup, existing-file transfer, daily orphan cleanup and hosted acceptance checks. App readiness checks configuration; live file-provider acceptance is a separate operator check.
+See [DigitalOcean beta files](DIGITALOCEAN_BETA_FILES.md) for the single-service beta with uploads disabled and external notification/retention scheduling. The future [Spaces/ClamAV runbook](DIGITALOCEAN_UPLOADS.md) preserves funded upload setup and cleanup; do not schedule orphan cleanup in this no-upload rollout. App readiness checks configuration; live file-provider acceptance is a separate operator check.

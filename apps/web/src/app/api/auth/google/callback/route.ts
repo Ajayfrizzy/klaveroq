@@ -218,7 +218,7 @@ async function callback(request: Request) {
       metadata: { provider: "google" },
     }),
   ]);
-  return Response.redirect(new URL(returnTo, appUrl()));
+  return Response.redirect(new URL(returnTo === "/" ? "/dashboard" : returnTo, appUrl()));
 }
 
 export async function GET(request: Request) {

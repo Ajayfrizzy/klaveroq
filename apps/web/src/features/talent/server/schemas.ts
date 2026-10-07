@@ -85,19 +85,22 @@ export const talentQuerySchema = z
     ),
     sort: z.preprocess(
       blankToUndefined,
-      z.enum(["reputation", "completed", "recent"]).default("reputation"),
+      z.enum(["discover", "reputation", "completed", "recent"]).default("discover"),
     ),
     cursor: z.preprocess(blankToUndefined, z.string().max(500).optional()),
-    limit: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(50).default(18)),
+    limit: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(50).default(24)),
   })
   .superRefine((input, context) => {
     if (!input.cursor) return;
     const cursor = decodeCursor(input.cursor);
-    const expectedKind = {
-      reputation: "talent-reputation",
-      completed: "talent-completed",
-      recent: "talent-recent",
-    }[input.sort];
+    const expectedKind = input.query
+      ? "talent-discover"
+      : {
+          discover: "talent-discover",
+          reputation: "talent-reputation",
+          completed: "talent-completed",
+          recent: "talent-recent",
+        }[input.sort];
     if (!cursor || cursor.kind !== expectedKind)
       context.addIssue({ code: "custom", path: ["cursor"], message: "Invalid pagination cursor." });
   });

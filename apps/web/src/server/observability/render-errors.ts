@@ -86,6 +86,8 @@ export function isTransientDatabaseError(error: unknown) {
 export type RenderOperation =
   | "auth.session"
   | "rsc.render"
+  | "marketplace.talent_preview"
+  | "marketplace.jobs_preview"
   | "dashboard.jobs"
   | "dashboard.job_totals"
   | "dashboard.identity"

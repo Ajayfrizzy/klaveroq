@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 import postgres from "postgres";
 import { sessionRequest } from "./preference-test-session";
 
-const origin = "http://127.0.0.1:3199";
+const origin = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3199";
 const headers = { Origin: origin };
 const password = "KlaveroqTest123";
 function database() {
@@ -224,7 +224,7 @@ test("workspace, searches and shortlist follow the account across refresh, login
 }) => {
   const user = await account(sessionRequest(page.request));
   const [talentUserId] = await publicTalent();
-  await page.goto("/");
+  await page.goto("/dashboard");
   const hire = page.getByRole("button", { name: "Hire talent", exact: true });
   await page.route("**/api/preferences", (route) =>
     route.request().method() === "PATCH"
@@ -266,7 +266,7 @@ test("workspace, searches and shortlist follow the account across refresh, login
       })
     ).status(),
   ).toBe(200);
-  await page.goto("/");
+  await page.goto("/dashboard");
   await expect(hire).toHaveAttribute("aria-pressed", "true");
   const second = await browser.newContext();
   try {
@@ -279,7 +279,7 @@ test("workspace, searches and shortlist follow the account across refresh, login
         })
       ).status(),
     ).toBe(200);
-    await otherPage.goto(origin + "/");
+    await otherPage.goto(origin + "/dashboard");
     await expect(
       otherPage.getByRole("button", { name: "Hire talent", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -300,7 +300,7 @@ test("workspace, searches and shortlist follow the account across refresh, login
 test("device migration is opt-in, preserves declined data and retries safely", async ({ page }) => {
   const user = await account(sessionRequest(page.request));
   const [talentUserId] = await publicTalent();
-  await page.goto("/");
+  await page.goto("/dashboard");
   await page.evaluate(
     ({ id, talentUserId }) => {
       localStorage.setItem(`klaveroq:intent:${id}`, "work");
@@ -371,7 +371,7 @@ test("device migration is opt-in, preserves declined data and retries safely", a
 
 test("malformed legacy keys never offer an import", async ({ page }) => {
   const user = await account(sessionRequest(page.request));
-  await page.goto("/");
+  await page.goto("/dashboard");
   await page.evaluate((id) => {
     localStorage.setItem(`klaveroq:intent:${id}`, "administrator");
     localStorage.setItem(

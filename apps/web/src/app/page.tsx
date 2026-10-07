@@ -1,284 +1,414 @@
-import { SectionUnavailable } from "@/components/ui/section-unavailable";
-import { ArrowRight, Check, Clock3, ShieldCheck } from "lucide-react";
+import { HeroScene, ReputationNotes } from "@/features/marketplace/components/landing-interactions";
+import { optionalOperation } from "@/server/observability/operations";
+import { getRenderRequestId } from "@/server/observability/render-context";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { AppShell } from "@/components/layout/app-shell";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { getCurrentUser } from "@/server/auth/session";
-import { getDashboardData } from "@/features/dashboard/server/queries";
-import { formatAssetAmount } from "@/features/dashboard/server/metrics";
-import { IntentPanel } from "@/features/dashboard/intent-panel";
-import { getMissingPublicationFields } from "@/features/talent/server/publication";
-import { formatEventTime } from "@/features/activity/presentation";
-import { identityConfiguration } from "@/server/identity/config";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  FileCheck2,
+  Layers3,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { MarketplaceHeader } from "@/features/marketplace/components/marketplace-header";
+import { listTalent } from "@/features/talent/server/queries";
+import { talentQuerySchema } from "@/features/talent/server/schemas";
+import { listPublicListings } from "@/features/marketplace/server/queries";
+import { listingQuerySchema } from "@/features/marketplace/server/schemas";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Work with trust. Deliver with proof.",
+  description:
+    "Find opportunities, discover independent professionals, and build working relationships around clear milestones and verifiable delivery.",
+};
 
-export default async function DashboardPage() {
-  const current = await getCurrentUser();
-  if (!current) redirect("/login");
-  const data = await getDashboardData(current.user.id, Boolean(current.user.emailVerifiedAt));
-  const displayName = current.profile?.displayName?.split(" ")[0] || "there";
-  const profileComplete = Boolean(
-    current.profile && getMissingPublicationFields(current.profile).length === 0,
-  );
-  const verificationUnavailable =
-    data.verification.identity === null || data.verification.wallet === null;
-  const allChecksRecorded = Object.values(data.verification).every(Boolean);
-  const betaIdentityDisabled = identityConfiguration().betaDisabled;
-
+export default async function HomePage() {
+  const requestId = await getRenderRequestId();
+  const [talentResult, jobResult] = await Promise.all([
+    optionalOperation(requestId, "marketplace.talent_preview", () =>
+      listTalent(talentQuerySchema.parse({ limit: 6 })),
+    ),
+    optionalOperation(requestId, "marketplace.jobs_preview", () =>
+      listPublicListings(listingQuerySchema.parse({ limit: 3 })),
+    ),
+  ]);
+  const talent = talentResult?.data ?? null;
+  const jobs = jobResult?.data ?? null;
   return (
-    <AppShell>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">Work with trust. Deliver with proof.</p>
-          <h1>Welcome{displayName === "there" ? "" : `, ${displayName}`}</h1>
-          <p>Here is what needs your attention across your jobs.</p>
-        </div>
-      </div>
-
-      <IntentPanel
-        userId={current.user.id}
-        profileReady={profileComplete}
-        published={Boolean(current.profile?.isPublic)}
-      />
-
-      {verificationUnavailable ? (
-        <section className="panel" aria-label="Account verification">
-          <SectionUnavailable label="Verification status" />
-        </section>
-      ) : (
-        <section className="readiness-strip" aria-labelledby="readiness-title">
-          <div className="readiness-icon">
-            <ShieldCheck size={23} />
-          </div>
-          <div className="readiness-copy">
-            <div>
-              <h2 id="readiness-title">
-                {allChecksRecorded
-                  ? "Account verification complete"
-                  : "Finish account verification"}
-              </h2>
-              {allChecksRecorded && (
-                <span className="verified-label">
-                  <Check size={13} /> Verified
-                </span>
-              )}
+    <div className="public-site">
+      <MarketplaceHeader />
+      <main>
+        <section className="home-hero public-container">
+          <div className="hero-copy">
+            <p className="public-kicker">
+              <span /> Independent talent. Shared ambition.
+            </p>
+            <h1>
+              Work with people
+              <br />
+              you can <em>trust.</em>
+            </h1>
+            <p className="hero-description">
+              Find your next opportunity. Discover the right professional. Move great work forward
+              with clear milestones and proof of delivery.
+            </p>
+            <div className="public-actions">
+              <Link className="primary-button" href="/jobs">
+                Find work <ArrowUpRight size={18} />
+              </Link>
+              <Link className="secondary-button" href="/talent">
+                Hire talent <ArrowRight size={18} />
+              </Link>
             </div>
-            <p>
-              {allChecksRecorded
-                ? "Email, identity, and wallet ownership are verified."
-                : betaIdentityDisabled
-                  ? "Review your email and wallet verification. Identity checks are not required during community beta."
-                  : "Review your email, identity, and wallet verification."}
+            <p className="hero-footnote">
+              Explore first. Join when you’re ready. <Link href="/login">Sign in</Link>
             </p>
           </div>
-          <div className="readiness-items">
+          <HeroScene>
+            <div className="scene-orbit" />
+            <div className="glass-card scene-profile">
+              <div className="scene-card-label">
+                <span className="scene-icon">
+                  <Sparkles size={20} />
+                </span>{" "}
+                The right expertise <ArrowUpRight size={17} />
+              </div>
+              <h2>
+                Good work starts
+                <br />
+                with the right people.
+              </h2>
+              <div className="skill-list">
+                <span>Design</span>
+                <span>Development</span>
+                <span>Strategy</span>
+              </div>
+            </div>
+            <div className="glass-card scene-milestone">
+              <div className="scene-card-label">
+                <Layers3 size={17} /> A shared plan <span className="scene-dot" />
+              </div>
+              <h3>Clarity at every milestone</h3>
+              <p>
+                <Check size={15} /> Agree on the deliverable
+              </p>
+              <p>
+                <Check size={15} /> Define what success looks like
+              </p>
+              <div className="scene-progress">
+                <span />
+              </div>
+            </div>
+            <div className="glass-card scene-proof">
+              <span className="proof-icon">
+                <FileCheck2 size={23} />
+              </span>
+              <div>
+                <strong>Let the work speak.</strong>
+                <p>Deliver. Review. Build reputation.</p>
+              </div>
+            </div>
+            <span className="scene-caption">A clearer way to work · Product illustration</span>
+          </HeroScene>
+        </section>
+        <div className="home-principles">
+          <div className="public-container">
+            <span>Work with trust. Deliver with proof.</span>
             <span>
-              {data.verification.email && <Check size={15} />} Email{" "}
-              {data.verification.email ? "verified" : "pending"}
+              <Check size={16} /> Clear expectations
             </span>
             <span>
-              {data.verification.identity && <Check size={15} />} Identity{" "}
-              {data.verification.identity
-                ? "verified"
-                : betaIdentityDisabled
-                  ? "not required during beta"
-                  : "pending"}
+              <Check size={16} /> Visible expertise
             </span>
             <span>
-              {data.verification.wallet && <Check size={15} />} Wallet{" "}
-              {data.verification.wallet ? "verified" : "pending"}
+              <Check size={16} /> Verifiable delivery
             </span>
           </div>
-          <Link href="/wallet">
-            Manage security <ArrowRight size={15} />
-          </Link>
-        </section>
-      )}
-
-      <section className="metrics-grid" aria-label="Account summary">
-        <Metric
-          icon={<BriefIcon />}
-          tone="teal"
-          label="Active jobs"
-          value={String(data.activeJobCount)}
-          note="Across client and worker roles"
-        />
-        <Metric
-          icon={<Clock3 size={20} />}
-          tone="amber"
-          label="Pending actions"
-          value={String(data.pendingActionCount)}
-          note={data.pendingActionCount ? "Items waiting on you" : "Nothing waiting on you"}
-        />
-      </section>
-
-      <p className="payment-availability">
-        Payment integration is not connected. Funding and payouts are unavailable.{" "}
-        <Link href="/payments">View payment status</Link>
-      </p>
-
-      <div className="dashboard-grid">
-        <section className="panel jobs-panel">
-          <div className="section-heading">
+        </div>
+        <section
+          className="public-section public-container home-market-preview"
+          data-count={jobs?.length ?? 0}
+        >
+          <div className="public-section-heading">
             <div>
-              <h2>Active jobs</h2>
-              <p>Your current marketplace work</p>
+              <p className="public-kicker">Find your next chapter</p>
+              <h2>Work worth doing.</h2>
+              <p>Open opportunities from the Klaveroq marketplace.</p>
             </div>
             <Link href="/jobs">
-              View all <ArrowRight size={15} />
+              Explore all jobs <ArrowUpRight size={18} />
             </Link>
           </div>
-          <div className="job-column-head" aria-hidden="true">
-            <span>Job</span>
-            <span>Status</span>
-            <span>Value</span>
-            <span>Next action</span>
-            <span />
-          </div>
-          <div className="job-list">
-            {data.jobs.length ? (
-              data.jobs.slice(0, 5).map((job) => (
-                <Link className="job-row" href={`/jobs/${job.id}`} key={job.id}>
-                  <div className="job-title">
-                    <span className={`role-mark ${job.role.toLowerCase()}`}>{job.role[0]}</span>
-                    <div>
-                      <strong>{job.title}</strong>
-                      <span>
-                        {job.counterparty} · {job.reference}
-                      </span>
-                    </div>
+          <div className="home-jobs">
+            {jobs?.length ? (
+              jobs.map(({ listing }) => (
+                <Link className="home-job-card" href={`/jobs/${listing.id}`} key={listing.id}>
+                  <div>
+                    <span className="public-kicker">{listing.category.toLowerCase()}</span>
+                    <ArrowUpRight size={19} />
                   </div>
-                  <StatusBadge status={job.status} />
-                  <div className="job-value">
+                  <h3>{listing.title}</h3>
+                  <p>{listing.description.slice(0, 150)}</p>
+                  <div className="skill-list">
+                    {listing.skills.slice(0, 3).map((skill) => (
+                      <span key={skill}>{skill}</span>
+                    ))}
+                  </div>
+                  <footer>
+                    <span>Proposals close</span>
                     <strong>
-                      {formatAssetAmount(job.amount, job.assetDecimals)} {job.asset}
+                      {listing.proposalDeadline.toLocaleDateString("en", {
+                        month: "short",
+                        day: "numeric",
+                        timeZone: "UTC",
+                      })}
                     </strong>
-                    <span>{job.progress} milestones</span>
-                  </div>
-                  <div className="job-next">
-                    <strong>{job.nextAction}</strong>
-                    <span>Updated {job.updatedAt.toLocaleDateString()}</span>
-                  </div>
-                  <ArrowRight className="row-arrow" size={18} />
+                  </footer>
                 </Link>
               ))
             ) : (
-              <div className="market-empty compact-empty">
-                <p>No active jobs yet.</p>
+              <div className="public-empty">
+                <Layers3 size={26} />
+                <h3>
+                  {jobs
+                    ? "Your next opportunity starts here."
+                    : "Opportunities are temporarily unavailable."}
+                </h3>
+                <p>
+                  {jobs
+                    ? "We’re building a community of ambitious professionals and thoughtful clients. Have a project in mind? Start the conversation with a clear brief."
+                    : "Please try browsing jobs again shortly."}
+                </p>
+                <Link href="/jobs/new/public">
+                  Post an opportunity <ArrowRight size={16} />
+                </Link>
               </div>
             )}
           </div>
         </section>
-
-        <aside className="panel actions-panel">
-          <div className="section-heading">
-            <div>
-              <h2>Pending actions</h2>
-              <p>Items waiting on you</p>
+        <section className="home-talent-section">
+          <div
+            className="public-section public-container home-market-preview"
+            data-count={talent?.length ?? 0}
+          >
+            <div className="public-section-heading">
+              <div>
+                <p className="public-kicker">People behind the possibilities</p>
+                <h2>Meet your next collaborator.</h2>
+                <p>Real skills, individual perspectives, and room to build something great.</p>
+              </div>
+              <Link href="/talent">
+                Browse all talent <ArrowUpRight size={18} />
+              </Link>
             </div>
-            <span className="count-badge">{data.pendingActionCount}</span>
-          </div>
-          {data.pendingActions.length ? (
-            data.pendingActions.map((action) => (
-              <div className="action-item" key={action.id}>
-                <span className="action-icon">
-                  <Clock3 size={18} />
-                </span>
-                <div>
-                  <strong>{action.title}</strong>
-                  <p>{action.detail}</p>
-                  <small>{action.note}</small>
-                  <Link href={`/jobs/${action.jobId}`}>
-                    Open job <ArrowRight size={14} />
+            <div className="home-talent-grid">
+              {talent?.length ? (
+                talent.map(({ profile, reputation }) => (
+                  <Link
+                    className="home-talent-card"
+                    href={`/talent/${profile.userId}`}
+                    key={profile.userId}
+                  >
+                    <div className="home-talent-top">
+                      <span className="profile-avatar">
+                        {profile.displayName.slice(0, 2).toUpperCase()}
+                      </span>
+                      <ArrowUpRight size={18} />
+                    </div>
+                    <h3>{profile.displayName}</h3>
+                    <p>{profile.headline || profile.primaryRole}</p>
+                    <div className="skill-list">
+                      {profile.skills.slice(0, 3).map((skill) => (
+                        <span key={skill}>{skill}</span>
+                      ))}
+                    </div>
+                    <small>
+                      {reputation.completedJobs
+                        ? `${reputation.completedJobs} completed Klaveroq engagements`
+                        : "New on Klaveroq"}
+                    </small>
+                  </Link>
+                ))
+              ) : (
+                <div className="public-empty">
+                  <Sparkles size={26} />
+                  <h3>
+                    {talent
+                      ? "Make your expertise discoverable."
+                      : "Talent previews are temporarily unavailable."}
+                  </h3>
+                  <p>
+                    {talent
+                      ? "The community is growing. Publish your professional profile to help future clients discover what you do best."
+                      : "Please try the talent directory again shortly."}
+                  </p>
+                  <Link href="/profile">
+                    Build your profile <ArrowRight size={16} />
                   </Link>
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="market-empty compact-empty">
-              <p>No pending actions.</p>
+              )}
             </div>
-          )}
-        </aside>
-      </div>
-
-      <section className="activity-panel">
-        <div className="section-heading">
-          <div>
-            <h2>Recent activity</h2>
-            <p>Updates across your workspace</p>
+            <p className="home-discovery-note">
+              A fresh selection of published professionals each day. Explore the directory to find
+              your match.
+            </p>
           </div>
-          <Link href="/activity">
-            Full activity <ArrowRight size={15} />
-          </Link>
-        </div>
-        <div className="activity-list">
-          {data.activity === null ? (
-            <SectionUnavailable label="Recent activity" />
-          ) : data.activity.length ? (
-            data.activity.slice(0, 5).map((item) => (
-              <div className="activity-row" key={item.id}>
-                <span className="activity-dot blue" />
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.detail}</span>
-                </div>
-                <time dateTime={item.createdAt.toISOString()}>
-                  {formatEventTime(item.createdAt)}
-                </time>
-              </div>
-            ))
-          ) : (
-            <div className="market-empty compact-empty">
-              <p>No activity recorded yet.</p>
+        </section>
+        <section className="public-section public-container" id="how-it-works">
+          <div className="public-section-heading">
+            <div>
+              <p className="public-kicker">From first hello to work well done</p>
+              <h2>
+                A better working relationship,
+                <br />
+                one clear step at a time.
+              </h2>
             </div>
-          )}
+          </div>
+          <div className="home-steps">
+            {[
+              [
+                "Discover",
+                "Find opportunities that fit your skills, or professionals who understand your ambition.",
+              ],
+              [
+                "Agree",
+                "Turn a conversation into a shared scope, clear milestones, and agreed deliverables.",
+              ],
+              [
+                "Deliver",
+                "Share the work with evidence. Review each milestone against what you agreed.",
+              ],
+              [
+                "Build reputation",
+                "Let completed engagements and honest reviews become part of your professional story.",
+              ],
+            ].map(([title, copy], i) => (
+              <article key={title}>
+                <span>0{i + 1}</span>
+                <h3>{title}</h3>
+                <p>{copy}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+        <section className="public-container">
+          <div className="home-trust">
+            <div>
+              <p className="public-kicker">
+                <ShieldCheck size={17} /> Trust, grounded in work
+              </p>
+              <h2>
+                A reputation you build.
+                <br />A story you can stand behind.
+              </h2>
+              <p>
+                Skills and portfolios introduce you. Completed Klaveroq engagements and reviews tell
+                the next chapter. Each signal has a clear source.
+              </p>
+              <Link href="/talent">
+                Discover the people behind the work <ArrowRight size={17} />
+              </Link>
+            </div>
+            <ReputationNotes>
+              <article>
+                <span>01</span>
+                <div>
+                  <h3>Everyone starts somewhere</h3>
+                  <p>
+                    New professionals are welcome. No invented ratings or credentials — just space
+                    to show what you can do.
+                  </p>
+                </div>
+              </article>
+              <article>
+                <span>02</span>
+                <div>
+                  <h3>Proof makes progress visible</h3>
+                  <p>
+                    Milestones make expectations explicit and give both sides a shared basis for
+                    reviewing delivery.
+                  </p>
+                </div>
+              </article>
+              <article>
+                <span>03</span>
+                <div>
+                  <h3>Transparent from the start</h3>
+                  <p>
+                    Community beta supports discovery and work planning. Payments and external
+                    credentials are not connected.
+                  </p>
+                </div>
+              </article>
+            </ReputationNotes>
+          </div>
+        </section>
+        <section className="public-section public-container home-audiences">
+          <article>
+            <p className="public-kicker">For professionals</p>
+            <h2>
+              Your skills deserve
+              <br />
+              the right opportunity.
+            </h2>
+            <p>
+              Bring your portfolio, find work that fits, and build a track record with every
+              completed engagement.
+            </p>
+            <Link href="/register?returnTo=/profile">
+              Join as a professional <ArrowUpRight size={18} />
+            </Link>
+          </article>
+          <article>
+            <p className="public-kicker">For clients</p>
+            <h2>
+              Great work starts
+              <br />
+              with a clear brief.
+            </h2>
+            <p>
+              Discover independent talent, compare proposals, and agree on exactly what a successful
+              delivery looks like.
+            </p>
+            <Link href="/jobs/new/public">
+              Post your first opportunity <ArrowUpRight size={18} />
+            </Link>
+          </article>
+        </section>
+        <section className="home-final">
+          <div className="public-container">
+            <p className="public-kicker">Let’s make good work happen</p>
+            <h2>
+              Your next chapter
+              <br />
+              starts with a connection.
+            </h2>
+            <Link className="primary-button" href="/register">
+              Join Klaveroq <ArrowUpRight size={18} />
+            </Link>
+            <p>Work with trust. Deliver with proof.</p>
+          </div>
+        </section>
+      </main>
+      <footer className="home-footer public-container">
+        <div>
+          <Link className="brand" href="/">
+            Klaveroq<span className="footer-dot">.</span>
+          </Link>
+          <p>A clearer way to work together.</p>
         </div>
-      </section>
-    </AppShell>
-  );
-}
-
-function Metric({
-  icon,
-  tone,
-  label,
-  value,
-  note,
-}: {
-  icon: React.ReactNode;
-  tone: string;
-  label: string;
-  value: string;
-  note: string;
-}) {
-  return (
-    <article>
-      <span className={`metric-icon ${tone}`}>{icon}</span>
-      <div>
-        <p>{label}</p>
-        <strong>{value}</strong>
-        <small>{note}</small>
-      </div>
-    </article>
-  );
-}
-
-function BriefIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-    >
-      <rect x="3" y="7" width="18" height="13" rx="2" />
-      <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18" />
-    </svg>
+        <nav aria-label="Footer navigation">
+          <Link href="/jobs">Find work</Link>
+          <Link href="/talent">Find talent</Link>
+          <Link href="/#how-it-works">How it works</Link>
+          <Link href="/login">Sign in</Link>
+        </nav>
+        <small>© {new Date().getUTCFullYear()} Klaveroq · Community beta</small>
+      </footer>
+    </div>
   );
 }

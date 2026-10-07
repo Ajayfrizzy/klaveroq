@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { JobWizard } from "@/features/jobs/components/job-wizard";
 import { getCurrentUser } from "@/server/auth/session";
@@ -10,6 +11,10 @@ export default async function DirectJobPage({
 }) {
   const { talent: talentId } = await searchParams;
   const current = await getCurrentUser();
+  if (!current)
+    redirect(
+      `/login?returnTo=${encodeURIComponent(`/jobs/new/direct${talentId ? `?talent=${talentId}` : ""}`)}`,
+    );
   const talent = talentId && talentId !== current?.user.id ? await getPublicTalent(talentId) : null;
   const selectedTalent =
     talent && talent.profile.availability !== "UNAVAILABLE"

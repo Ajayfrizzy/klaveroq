@@ -1,9 +1,9 @@
-import { AppShell } from "@/components/layout/app-shell";
+import { MarketplaceLayout } from "@/features/marketplace/components/marketplace-layout";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 export default function JobsLoading() {
   return (
-    <AppShell>
+    <MarketplaceLayout>
       <PageSkeleton />
-    </AppShell>
+    </MarketplaceLayout>
   );
 }

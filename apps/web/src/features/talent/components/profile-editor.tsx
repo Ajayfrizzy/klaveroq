@@ -428,9 +428,11 @@ export function ProfileEditor({
             </div>
           </div>
           <div className="profile-editor-actions">
-            <Link className="secondary-button" href={`/talent/${profile.userId}`}>
-              <ExternalLink size={15} /> Preview profile
-            </Link>
+            {profile.isPublic && (
+              <Link className="secondary-button" href={`/talent/${profile.userId}`}>
+                <ExternalLink size={15} /> View public profile
+              </Link>
+            )}
             <button
               className="secondary-button"
               onClick={() => (editing ? cancelProfileEdit() : setEditing(true))}
@@ -853,8 +855,8 @@ export function ProfileEditor({
             <strong>{profile.isPublic ? "Public" : "Private"}</strong>
             <p>
               {profile.isPublic
-                ? "Your professional profile, portfolio and Klaveroq reputation can appear in Talent Discovery."
-                : "Your profile is only visible to you and participants in existing Klaveroq engagements where required."}
+                ? "Your professional profile, portfolio and Klaveroq reputation are publicly discoverable, including by visitors without an account."
+                : "Publishing makes your professional profile and portfolio discoverable on the public homepage, talent directory, and profile page. Keep contact details and sensitive information out of these fields. Your private profile is only visible to you and existing engagement participants where required."}
             </p>
           </div>
         </div>

@@ -4,21 +4,37 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 
-export function PublicNavigation() {
+export function PublicNavigation({ signedIn = false }: { signedIn?: boolean }) {
   const pathname = usePathname();
   const query = useSearchParams().toString();
   const returnTo = encodeURIComponent(`${pathname}${query ? `?${query}` : ""}`);
   const links = (
     <>
-      <Link href="/discover" aria-current={pathname.startsWith("/discover") ? "page" : undefined}>
+      <Link
+        href="/jobs"
+        aria-current={
+          pathname.startsWith("/discover") || pathname.startsWith("/jobs") ? "page" : undefined
+        }
+      >
         Find work
       </Link>
       <Link href="/talent" aria-current={pathname.startsWith("/talent") ? "page" : undefined}>
         Find talent
       </Link>
-      <Link href={`/login?returnTo=${returnTo}`}>Sign in</Link>
-      <Link className="primary-button" href="/register">
-        Create account
+      <Link href="/#how-it-works">How it works</Link>
+      {signedIn ? (
+        <>
+          <Link href="/dashboard">Dashboard</Link>
+          <Link href="/profile">Your profile</Link>
+        </>
+      ) : (
+        <Link href={`/login?returnTo=${returnTo}`}>Sign in</Link>
+      )}
+      <Link
+        className="primary-button"
+        href={signedIn ? "/jobs/new/public" : `/register?returnTo=${returnTo}`}
+      >
+        {signedIn ? "Post a job" : "Join Klaveroq"}
       </Link>
     </>
   );

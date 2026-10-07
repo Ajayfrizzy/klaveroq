@@ -24,3 +24,19 @@ describe("opaque pagination cursors", () => {
     ).toBeNull();
   });
 });
+
+it("pins discovery rotation to a day and retains relevance through pagination", () => {
+  const cursor = {
+    kind: "talent-discover" as const,
+    seed: "2026-10-07",
+    rank: 3,
+    value: "a".repeat(32),
+    id: "00000000-0000-4000-8000-000000000001",
+  };
+  expect(decodeCursor(encodeCursor(cursor))).toEqual(cursor);
+  expect(
+    decodeCursor(
+      Buffer.from(JSON.stringify({ ...cursor, seed: "unsafe SQL" })).toString("base64url"),
+    ),
+  ).toBeNull();
+});

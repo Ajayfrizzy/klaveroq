@@ -23,6 +23,11 @@ import {
 import { getCurrentUser } from "@/server/auth/session";
 
 export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "Find talent",
+  description:
+    "Discover published professional profiles, portfolios and real Klaveroq work history.",
+};
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
 
 export default async function TalentPage({
@@ -60,7 +65,7 @@ export default async function TalentPage({
             Klaveroq work.
           </p>
         </div>
-        <Link className="secondary-button" href="/discover">
+        <Link className="secondary-button" href="/jobs">
           <BriefcaseBusiness size={16} /> Find work
         </Link>
       </section>
@@ -106,6 +111,7 @@ export default async function TalentPage({
               <option value="10">10+ completed jobs</option>
             </select>
             <select name="sort" defaultValue={input.sort} aria-label="Sort talent">
+              <option value="discover">Discover · daily rotation</option>
               <option value="reputation">Best reputation</option>
               <option value="completed">Most completed work</option>
               <option value="recent">Recently updated</option>
@@ -113,6 +119,11 @@ export default async function TalentPage({
           </div>
         </details>
       </DiscoveryFilters>
+      <p className="discovery-note">
+        {input.query
+          ? "Search matches are ranked by relevance, with a daily rotation for ties."
+          : "Discover rotates daily to give published professionals a fresh opportunity to be seen."}
+      </p>
       <SavedSearches
         key={`searches:${current?.user.id ?? "guest"}`}
         scope={current?.user.id ?? "guest"}
@@ -193,7 +204,16 @@ export default async function TalentPage({
                   Skills and availability are self-reported. Ratings come from completed Klaveroq
                   work.
                 </p>
-                <ShortlistButton id={profile.userId} name={profile.displayName} />
+                {current ? (
+                  <ShortlistButton id={profile.userId} name={profile.displayName} />
+                ) : (
+                  <Link
+                    className="secondary-button"
+                    href={`/login?returnTo=${encodeURIComponent(`/talent/${profile.userId}`)}`}
+                  >
+                    Sign in to shortlist
+                  </Link>
+                )}
                 <Link
                   className="secondary-button talent-profile-link"
                   href={`/talent/${profile.userId}`}
@@ -221,7 +241,7 @@ export default async function TalentPage({
               <Link className="secondary-button" href="/jobs/new/public">
                 Post a job
               </Link>
-              <Link className="secondary-button" href="/discover">
+              <Link className="secondary-button" href="/jobs">
                 Find work
               </Link>
             </div>

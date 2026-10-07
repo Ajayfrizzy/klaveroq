@@ -167,7 +167,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
     <div className="wizard-page" ref={workRoot}>
       {workStatus}
       <div className="wizard-heading">
-        <Link className="back-link" href="/">
+        <Link className="back-link" href="/dashboard">
           <ArrowLeft size={17} /> Overview
         </Link>
         <div>

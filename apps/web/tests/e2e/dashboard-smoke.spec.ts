@@ -17,7 +17,7 @@ test("authenticated dashboard smoke: renders and survives an RSC navigation and 
   expect(response.status()).toBe(201);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  const dashboard = await page.goto("/");
+  const dashboard = await page.goto("/dashboard");
   expect(dashboard?.headers()["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
   await expect(page.getByRole("heading", { name: "Welcome, Dashboard" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Recent activity", exact: true })).toBeVisible();

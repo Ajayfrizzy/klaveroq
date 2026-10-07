@@ -33,6 +33,13 @@ export const paginationCursorSchema = z.discriminatedUnion("kind", [
   talentReputationCursorSchema,
   talentCompletedCursorSchema,
   talentRecentCursorSchema,
+  z.object({
+    kind: z.literal("talent-discover"),
+    seed: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    rank: z.number().int().min(0).max(10),
+    value: z.string().regex(/^[a-f0-9]{32}$/),
+    id: z.string().uuid(),
+  }),
 ]);
 
 export type PaginationCursor = z.infer<typeof paginationCursorSchema>;

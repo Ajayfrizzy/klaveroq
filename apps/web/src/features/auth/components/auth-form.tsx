@@ -44,7 +44,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message ?? "Authentication failed.");
       if (mode === "register") {
-        const params = new URLSearchParams({ email });
+        const params = new URLSearchParams({ email, returnTo });
+        try {
+          sessionStorage.setItem("klaveroq:auth-return", returnTo);
+        } catch {
+          /* Optional handoff across verification tabs. */
+        }
         params.set("sent", body.data?.emailSent ? "1" : "0");
         if (body.data?.verificationToken) params.set("localToken", body.data.verificationToken);
         router.push(`/verify-email?${params.toString()}`);
@@ -60,7 +65,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           ? returnTo
           : ["SUPPORT", "SUPER_ADMIN"].includes(body.data?.user?.systemRole)
             ? "/admin"
-            : "/",
+            : "/dashboard",
       );
       router.refresh();
     } catch (reason) {
@@ -86,7 +91,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           ? body.data.returnTo
           : ["SUPPORT", "SUPER_ADMIN"].includes(body.data?.user?.systemRole)
             ? "/admin"
-            : "/";
+            : "/dashboard";
       router.push(destination);
       router.refresh();
     } catch (reason) {
@@ -241,12 +246,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             <>
               <Link href="/forgot-password">Forgot password?</Link>
               <span>
-                Need an account? <Link href="/register">Register</Link>
+                Need an account?{" "}
+                <Link href={`/register?returnTo=${encodeURIComponent(returnTo)}`}>Register</Link>
               </span>
             </>
           ) : (
             <>
-              Already registered? <Link href="/login">Sign in</Link>
+              Already registered?{" "}
+              <Link href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in</Link>
             </>
           )}
         </small>

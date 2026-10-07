@@ -22,6 +22,7 @@ import { ProposalThread } from "@/features/marketplace/components/proposal-threa
 import { getReputationSummary } from "@/features/reputation/server/queries";
 import { getProposalUnreadCounts } from "@/features/marketplace/server/unread";
 export const dynamic = "force-dynamic";
+export { publicListingMetadata as generateMetadata } from "@/features/marketplace/server/metadata";
 const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
 export default async function ListingDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -37,7 +38,9 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   ]);
   if (!record || record.listing.status === "DRAFT" || record.listing.status === "CANCELLED")
     notFound();
-  const clientReputation = await getReputationSummary(record.listing.clientUserId);
+  const clientReputation = record.clientPublished
+    ? await getReputationSummary(record.listing.clientUserId)
+    : null;
   const owner = current?.user.id === record.listing.clientUserId;
   const canSubmit =
     record.listing.status === "OPEN" && record.listing.proposalDeadline > new Date();
@@ -104,7 +107,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   }
   return (
     <MarketplaceLayout>
-      <Link className="back-link" href="/discover">
+      <Link className="back-link" href="/jobs">
         <ArrowLeft size={16} /> Back to discovery
       </Link>
       <div className="listing-detail-layout">

@@ -10,8 +10,7 @@ export function RenderError({ retry }: { retry: () => void }) {
       </button>
       <p>
         {/* Full navigation also works when the root router/layout failed. */}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/">Return to your dashboard</a>
+        <a href="/dashboard">Return to your dashboard</a>
       </p>
     </main>
   );

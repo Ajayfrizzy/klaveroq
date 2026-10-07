@@ -4,18 +4,19 @@ import { UploadAvailabilityProvider } from "@/features/files/upload-availability
 import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 import "@/styles/product-experience.css";
+import "@/styles/public-marketplace.css";
 import { RouteTitle } from "@/components/layout/route-title";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://klaveroq.com"),
+  metadataBase: new URL(process.env.APP_URL || "http://localhost:3000"),
   title: { default: "Klaveroq", template: "%s | Klaveroq" },
   description:
     "Klaveroq is a work marketplace where clients discover talent, professionals find opportunities, and both sides structure milestone-based work with verifiable delivery.",
   applicationName: "Klaveroq",
-  alternates: { canonical: "/" },
+  robots: { index: false, follow: false },
   openGraph: {
     type: "website",
-    url: "https://klaveroq.com",
+
     siteName: "Klaveroq",
     title: "Klaveroq",
     description:

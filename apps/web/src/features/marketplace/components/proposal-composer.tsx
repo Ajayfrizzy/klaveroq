@@ -126,7 +126,7 @@ export function ProposalComposer({
 
   const assist = async () => {
     if (!signedIn) {
-      router.push(`/login?returnTo=/discover/${listingId}`);
+      router.push(`/login?returnTo=/jobs/${listingId}`);
       return;
     }
     setAssistantBusy(true);
@@ -180,7 +180,7 @@ export function ProposalComposer({
   };
   const submit = async () => {
     if (!signedIn) {
-      router.push(`/login?returnTo=/discover/${listingId}`);
+      router.push(`/login?returnTo=/jobs/${listingId}`);
       return;
     }
     if (!validate()) {
@@ -234,6 +234,20 @@ export function ProposalComposer({
     } else router.refresh();
     setBusy(false);
   };
+
+  if (!signedIn)
+    return (
+      <section className="proposal-form">
+        <h2>Interested in this opportunity?</h2>
+        <p>Sign in or create an account to share your approach and apply.</p>
+        <Link
+          className="primary-button"
+          href={`/login?returnTo=${encodeURIComponent(`/jobs/${listingId}`)}`}
+        >
+          Sign in to apply <ArrowLeft size={16} style={{ rotate: "180deg" }} />
+        </Link>
+      </section>
+    );
 
   if (phase === "review")
     return (

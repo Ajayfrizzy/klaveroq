@@ -39,3 +39,24 @@ describe("account search validation", () => {
     ).toBe(false);
   });
 });
+
+it("normalizes the daily discovery default while preserving explicit sorts without a search", () => {
+  expect(
+    normalizedQuery(
+      savedSearchSchema.parse({
+        scope: "talent",
+        name: "Explore",
+        parameters: { sort: "discover" },
+      }),
+    ),
+  ).toBe("");
+  expect(
+    normalizedQuery(
+      savedSearchSchema.parse({
+        scope: "talent",
+        name: "Rated",
+        parameters: { sort: "reputation" },
+      }),
+    ),
+  ).toBe("sort=reputation");
+});

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { and, asc, count, desc, eq, gt, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import {
@@ -55,9 +56,13 @@ export async function listPublicListings(input: z.infer<typeof listingQuerySchem
     .select({
       listing: jobListings,
       client: {
-        displayName: profiles.displayName,
-        headline: profiles.headline,
-        countryCode: profiles.countryCode,
+        displayName: sql<string>`case when ${profiles.isPublic} then ${profiles.displayName} else 'Klaveroq client' end`,
+        headline: sql<
+          string | null
+        >`case when ${profiles.isPublic} then ${profiles.headline} else null end`,
+        countryCode: sql<
+          string | null
+        >`case when ${profiles.isPublic} then ${profiles.countryCode} else null end`,
       },
       proposalCount: sql<number>`coalesce(${proposalCounts.value}, 0)`,
     })
@@ -92,7 +97,8 @@ export async function listPublicListings(input: z.infer<typeof listingQuerySchem
   };
 }
 
-export async function getPublicListing(id: string, ownerUserId?: string) {
+export const getPublicListing = cache(async (id: string, ownerUserId?: string) => {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
   const proposalCounts = db
     .select({ listingId: proposals.listingId, value: count(proposals.id).as("proposal_count") })
     .from(proposals)
@@ -102,11 +108,16 @@ export async function getPublicListing(id: string, ownerUserId?: string) {
   const [record] = await db
     .select({
       listing: jobListings,
+      clientPublished: profiles.isPublic,
       client: {
-        displayName: profiles.displayName,
-        headline: profiles.headline,
-        countryCode: profiles.countryCode,
-        bio: profiles.bio,
+        displayName: sql<string>`case when ${profiles.isPublic} then ${profiles.displayName} else 'Klaveroq client' end`,
+        headline: sql<
+          string | null
+        >`case when ${profiles.isPublic} then ${profiles.headline} else null end`,
+        countryCode: sql<
+          string | null
+        >`case when ${profiles.isPublic} then ${profiles.countryCode} else null end`,
+        bio: sql<string | null>`case when ${profiles.isPublic} then ${profiles.bio} else null end`,
       },
       proposalCount: sql<number>`coalesce(${proposalCounts.value}, 0)`,
     })
@@ -124,7 +135,7 @@ export async function getPublicListing(id: string, ownerUserId?: string) {
     )
     .limit(1);
   return record;
-}
+});
 
 export async function getProposalEvaluations(listingId: string) {
   const rows = await db

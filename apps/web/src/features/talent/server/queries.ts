@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { and, countDistinct, desc, eq, gte, ilike, inArray, lt, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/server/db";
@@ -9,6 +10,7 @@ import type { talentQuerySchema } from "./schemas";
 import { decodeCursor, encodeCursor } from "@/server/pagination/cursor";
 
 async function getTalentProfile(userId: string, actorUserId?: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) return null;
   const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1);
   if (!profile || !canViewTalentProfile(profile.isPublic, profile.userId, actorUserId)) return null;
   const [portfolio, reputation] = await Promise.all([
@@ -41,9 +43,8 @@ async function getTalentProfile(userId: string, actorUserId?: string) {
   };
 }
 
-export function getPublicTalent(userId: string) {
-  return getTalentProfile(userId);
-}
+// Request-scoped only: metadata and page rendering share the same publication check.
+export const getPublicTalent = cache((userId: string) => getTalentProfile(userId));
 
 export function getTalentForViewer(userId: string, actorUserId?: string) {
   return getTalentProfile(userId, actorUserId);
@@ -72,6 +73,18 @@ export async function listTalent(input: z.infer<typeof talentQuerySchema>) {
     .as("review_stats");
   const completedValue = sql<number>`coalesce(${completedWork.completedJobs}, 0)`;
   const ratingValue = sql<number>`coalesce(${reviewStats.averageRating}, 0)`;
+  // Pin the UTC day in the cursor so paging across midnight never reshuffles a result window.
+  const cursor = input.cursor ? decodeCursor(input.cursor) : null;
+  const discovery = Boolean(input.query) || input.sort === "discover";
+  const seed =
+    cursor?.kind === "talent-discover" ? cursor.seed : new Date().toISOString().slice(0, 10);
+  const rotation = sql<string>`md5(${profiles.userId}::text || ${seed})`;
+  const relevance = input.query
+    ? sql<number>`case
+    when lower(${profiles.displayName}) = lower(${input.query}) or lower(${profiles.primaryRole}) = lower(${input.query}) or ${profiles.skills} ? ${input.query.toLowerCase()} then 3
+    when ${profiles.headline} ilike ${`%${input.query}%`} or ${profiles.primaryRole} ilike ${`%${input.query}%`} then 2
+    else 1 end`
+    : sql<number>`0::integer`;
   const conditions = [eq(profiles.isPublic, true)];
   if (input.query)
     conditions.push(
@@ -89,6 +102,18 @@ export async function listTalent(input: z.infer<typeof talentQuerySchema>) {
   if (input.minCompletedJobs) conditions.push(gte(completedValue, input.minCompletedJobs));
   if (input.cursor) {
     const cursor = decodeCursor(input.cursor)!;
+    if (cursor.kind === "talent-discover")
+      conditions.push(
+        or(
+          lt(relevance, cursor.rank),
+          and(eq(relevance, cursor.rank), lt(rotation, cursor.value)),
+          and(
+            eq(relevance, cursor.rank),
+            eq(rotation, cursor.value),
+            lt(profiles.userId, cursor.id),
+          ),
+        )!,
+      );
     if (cursor.kind === "talent-reputation")
       conditions.push(
         or(
@@ -118,17 +143,25 @@ export async function listTalent(input: z.infer<typeof talentQuerySchema>) {
   }
 
   const rankedRows = await db
-    .select({ profile: profiles, averageRating: ratingValue, completedJobs: completedValue })
+    .select({
+      profile: profiles,
+      averageRating: ratingValue,
+      completedJobs: completedValue,
+      rank: relevance,
+      rotation,
+    })
     .from(profiles)
     .leftJoin(completedWork, eq(completedWork.userId, profiles.userId))
     .leftJoin(reviewStats, eq(reviewStats.userId, profiles.userId))
     .where(and(...conditions))
     .orderBy(
-      ...(input.sort === "recent"
-        ? [desc(profiles.updatedAt), desc(profiles.userId)]
-        : input.sort === "completed"
-          ? [desc(completedValue), desc(profiles.userId)]
-          : [desc(ratingValue), desc(completedValue), desc(profiles.userId)]),
+      ...(discovery
+        ? [desc(relevance), desc(rotation), desc(profiles.userId)]
+        : input.sort === "recent"
+          ? [desc(profiles.updatedAt), desc(profiles.userId)]
+          : input.sort === "completed"
+            ? [desc(completedValue), desc(profiles.userId)]
+            : [desc(ratingValue), desc(completedValue), desc(profiles.userId)]),
     )
     .limit(input.limit + 1);
   const hasMore = rankedRows.length > input.limit;
@@ -179,24 +212,32 @@ export async function listTalent(input: z.infer<typeof talentQuerySchema>) {
     data,
     nextCursor:
       hasMore && last
-        ? input.sort === "recent"
+        ? discovery
           ? encodeCursor({
-              kind: "talent-recent",
-              value: last.profile.updatedAt.toISOString(),
+              kind: "talent-discover",
+              seed,
+              rank: Number(last.rank),
+              value: last.rotation,
               id: last.profile.userId,
             })
-          : input.sort === "completed"
+          : input.sort === "recent"
             ? encodeCursor({
-                kind: "talent-completed",
-                completed: Number(last.completedJobs),
+                kind: "talent-recent",
+                value: last.profile.updatedAt.toISOString(),
                 id: last.profile.userId,
               })
-            : encodeCursor({
-                kind: "talent-reputation",
-                rating: Number(last.averageRating),
-                completed: Number(last.completedJobs),
-                id: last.profile.userId,
-              })
+            : input.sort === "completed"
+              ? encodeCursor({
+                  kind: "talent-completed",
+                  completed: Number(last.completedJobs),
+                  id: last.profile.userId,
+                })
+              : encodeCursor({
+                  kind: "talent-reputation",
+                  rating: Number(last.averageRating),
+                  completed: Number(last.completedJobs),
+                  id: last.profile.userId,
+                })
         : null,
   };
 }

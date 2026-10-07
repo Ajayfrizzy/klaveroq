@@ -1,5 +1,6 @@
 "use client";
 
+import { safeReturnTo } from "@/server/auth/google";
 import { CheckCircle2, Mail, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -9,6 +10,18 @@ type State = "idle" | "verifying" | "verified" | "error";
 
 export function VerifyEmailForm() {
   const searchParams = useSearchParams();
+  const [destination, setDestination] = useState(safeReturnTo(searchParams.get("returnTo")));
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchParams.get("returnTo")) return;
+      try {
+        setDestination(safeReturnTo(sessionStorage.getItem("klaveroq:auth-return")));
+      } catch {
+        /* Storage is optional. */
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [searchParams]);
   const token = searchParams.get("token");
   const localToken = searchParams.get("localToken");
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
@@ -86,13 +99,16 @@ export function VerifyEmailForm() {
           {state === "verifying" ? "Verifying your link..." : message}
         </p>
         {state === "verified" ? (
-          <Link className="primary-button" href="/">
-            Continue to dashboard
+          <Link className="primary-button" href={destination === "/" ? "/dashboard" : destination}>
+            Continue to Klaveroq
           </Link>
         ) : (
           <>
             {localToken && !token && (
-              <Link className="secondary-button" href={`/verify-email?token=${localToken}`}>
+              <Link
+                className="secondary-button"
+                href={`/verify-email?token=${localToken}&returnTo=${encodeURIComponent(destination)}`}
+              >
                 Open local verification link
               </Link>
             )}
@@ -112,7 +128,8 @@ export function VerifyEmailForm() {
               </button>
             </form>
             <small>
-              Already verified? <Link href="/login">Sign in</Link>
+              Already verified?{" "}
+              <Link href={`/login?returnTo=${encodeURIComponent(destination)}`}>Sign in</Link>
             </small>
           </>
         )}

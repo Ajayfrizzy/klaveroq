@@ -47,7 +47,11 @@ export function normalizedQuery(input: z.infer<typeof savedSearchSchema>) {
     a.localeCompare(b),
   )) {
     if (value === undefined || value === "" || value === 0) continue;
-    if (key === "sort" && value === (input.scope === "discover" ? "newest" : "reputation"))
+    if (
+      key === "sort" &&
+      (value === (input.scope === "discover" ? "newest" : "discover") ||
+        (input.scope === "talent" && input.parameters.query))
+    )
       continue;
     params.set(key, value instanceof Date ? value.toISOString() : String(value));
   }

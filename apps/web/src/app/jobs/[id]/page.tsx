@@ -9,6 +9,9 @@ import {
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
+import ListingDetail from "@/app/discover/[id]/page";
+import { getPublicListing } from "@/features/marketplace/server/queries";
+import { publicListingMetadata } from "@/features/marketplace/server/metadata";
 import { notFound } from "next/navigation";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { AppShell } from "@/components/layout/app-shell";
@@ -36,9 +39,17 @@ import { AgreementActions } from "@/features/jobs/components/agreement-actions";
 import { DisputeWorkspace } from "@/features/jobs/components/dispute-workspace";
 
 export const dynamic = "force-dynamic";
+export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
+  const metadata = await publicListingMetadata(props);
+  return metadata.title === "Job unavailable"
+    ? { title: "Agreement details", robots: { index: false, follow: false } }
+    : metadata;
+}
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
+  if (await getPublicListing(id)) return <ListingDetail params={params} />;
   const current = await getCurrentUser();
   if (!current) notFound();
   const [record] = await db
@@ -138,7 +149,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   return (
     <AppShell>
       <div className="detail-back">
-        <Link href="/jobs">
+        <Link href="/jobs?view=agreements">
           <ArrowLeft size={16} /> All jobs
         </Link>
       </div>

@@ -119,7 +119,7 @@ test("empty database stays demo-free and profile changes persist through repeat 
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/dashboard");
   await page.goto("/profile");
   await expect(page.getByText("Product engineer", { exact: true })).toBeVisible();
 
@@ -208,7 +208,7 @@ test("empty database stays demo-free and profile changes persist through repeat 
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/dashboard");
   await page.goto("/profile");
   await expect(page.getByRole("heading", { name: "Published Profile Name" })).toBeVisible();
   await expect(page.getByText("Reliable marketplace product engineer")).toBeVisible();

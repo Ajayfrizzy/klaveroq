@@ -16,7 +16,7 @@ test("professional profile sections remain usable at a mobile viewport", async (
   await page.getByLabel("Email").fill("clean-profile@example.test");
   await page.getByLabel("Password", { exact: true }).fill("KlaveroqTest123");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/dashboard");
   await page.goto("/profile");
   await expect(page.getByRole("heading", { name: "About" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Skills" })).toBeVisible();

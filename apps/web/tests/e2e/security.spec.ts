@@ -231,7 +231,7 @@ test("identity, wallet ownership, and session security workflows enforce their b
   await expect(page.getByText("The authenticator or recovery code is invalid.")).toBeVisible();
   await page.getByLabel("Authentication code").fill(totpCode(setupKey));
   await page.getByRole("button", { name: "Verify and sign in" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/dashboard");
 
   await page.getByRole("button", { name: "Account options", exact: true }).click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
@@ -240,7 +240,7 @@ test("identity, wallet ownership, and session security workflows enforce their b
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.getByLabel("Authentication code").fill(recoveryCodes[0]);
   await page.getByRole("button", { name: "Verify and sign in" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/dashboard");
   await page.goto("/wallet");
   await expect(page.getByText("Enabled · 7 recovery codes available.")).toBeVisible();
   await page.getByLabel("Authenticator or recovery code").fill(recoveryCodes[1]);

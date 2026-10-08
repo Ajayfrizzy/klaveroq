@@ -206,6 +206,7 @@ test("public job details mask private clients and preserve the apply and registr
 test("account actions require authentication and profile reputation stays honest", async ({
   page,
   request,
+  baseURL,
 }) => {
   for (const path of [
     "/jobs/new/public",
@@ -238,7 +239,7 @@ test("account actions require authentication and profile reputation stays honest
     "/api/marketplace/listings",
   ]) {
     const response = await request.post(path, {
-      headers: { Origin: "http://127.0.0.1:3201", "Idempotency-Key": crypto.randomUUID() },
+      headers: { Origin: new URL(baseURL!).origin, "Idempotency-Key": crypto.randomUUID() },
       data: {},
     });
     expect(response.status()).toBe(401);
@@ -247,10 +248,11 @@ test("account actions require authentication and profile reputation stays honest
 
 test("signed-in users retain workspace access and can browse the public homepage", async ({
   page,
+  baseURL,
 }) => {
   const api = sessionRequest(page.request);
   const response = await api.post("/api/auth/register", {
-    headers: { Origin: "http://127.0.0.1:3201" },
+    headers: { Origin: new URL(baseURL!).origin },
     data: {
       email: `public-workspace-${crypto.randomUUID()}@example.test`,
       password: "KlaveroqTest123",

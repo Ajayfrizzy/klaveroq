@@ -279,13 +279,15 @@ test("client and workers complete publication, proposals, messaging, award, and 
   client.once("dialog", (dialog) => dialog.accept());
   await workerCard.getByRole("button", { name: "Award proposal" }).click();
   await expect(client).toHaveURL(/\/jobs\/[0-9a-f-]+$/);
-  await expect(client.locator('a[href="/jobs"][aria-current="page"]').first()).toBeVisible();
+  await expect(
+    client.locator('a[href="/jobs?view=agreements"][aria-current="page"]').first(),
+  ).toBeVisible();
   const agreementUrl = new URL(client.url()).pathname;
   await expect(
     client.getByText("This is an agreement draft created from the awarded proposal."),
   ).toBeVisible();
 
-  await worker.goto("/jobs");
+  await worker.goto("/jobs?view=agreements");
   await expect(worker.getByText("E2E marketplace reporting interface updated")).toBeVisible();
   await worker.goto(agreementUrl);
   await expect(worker.getByText("You are the worker")).toBeVisible();

@@ -2,10 +2,10 @@ import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 const routes = [
-  "/",
+  "/dashboard",
   "/discover",
   "/talent",
-  "/jobs",
+  "/jobs?view=agreements",
   "/payments",
   "/activity",
   "/notifications",
@@ -56,7 +56,7 @@ for (const width of [375, 1440]) {
     for (const route of routes) {
       await ready(page, route);
       await expect(page.locator("nextjs-portal")).toHaveCount(0);
-      await expect(page).toHaveScreenshot(`${route.slice(1) || "dashboard"}-${width}.png`, {
+      await expect.soft(page).toHaveScreenshot(`${route.split("?")[0].slice(1)}-${width}.png`, {
         fullPage: true,
         animations: "disabled",
         caret: "initial",
@@ -163,7 +163,7 @@ test("profile uploads, populated talent and invalid job forms have visual refere
     await expect(page.locator(".talent-card")).toBeVisible();
     await expect(page.locator(".talent-card")).toHaveCount(1);
     await expect(page.locator(".sidebar-user strong")).toHaveText("Beta Review");
-    await expect(page).toHaveScreenshot(`talent-populated-${width}.png`, {
+    await expect.soft(page).toHaveScreenshot(`talent-populated-${width}.png`, {
       fullPage: true,
       caret: "initial",
       mask: [page.locator(".sidebar-user small"), page.locator(".filter-chip")],
@@ -185,7 +185,7 @@ test("profile uploads, populated talent and invalid job forms have visual refere
       page.locator(".profile-avatar").getByAltText("Selected profile photo preview"),
     ).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
-    await expect(page).toHaveScreenshot(`profile-editing-${width}.png`, {
+    await expect.soft(page).toHaveScreenshot(`profile-editing-${width}.png`, {
       fullPage: true,
       caret: "initial",
       mask: [page.locator(".sidebar-user small")],
@@ -201,7 +201,7 @@ test("profile uploads, populated talent and invalid job forms have visual refere
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(page.getByLabel("Job title", { exact: false })).toBeFocused();
     await page.evaluate(() => window.scrollTo(0, 0));
-    await expect(page).toHaveScreenshot(`job-validation-${width}.png`, {
+    await expect.soft(page).toHaveScreenshot(`job-validation-${width}.png`, {
       fullPage: true,
       caret: "initial",
       mask: [page.locator(".sidebar-user small")],

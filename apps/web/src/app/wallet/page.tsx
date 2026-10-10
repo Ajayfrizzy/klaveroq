@@ -39,6 +39,8 @@ export default async function WalletPage({
   if (!current) redirect("/login?returnTo=%2Fwallet");
   const { walletStatus } = await searchParams;
 
+  const communityBeta = identityConfiguration().stage === "community_beta";
+  const defaultNetwork = process.env.CKB_NETWORK === "mainnet" ? "mainnet" : "testnet";
   const now = new Date();
   const [walletRecords, identityRows, sessionRecords, activeHolds, mfaRows] = await Promise.all([
     db
@@ -100,8 +102,8 @@ export default async function WalletPage({
       <PageHeader
         eyebrow="Account records"
         title="Wallet & security"
-        description="Review wallet, identity, and active-session records stored for your account."
-        icon={WalletCards}
+        description="Manage account security, sign-in sessions, and optional ownership records."
+        icon={ShieldCheck}
         action={
           <Link className="secondary-button" href="/identity">
             <ShieldCheck size={16} /> Manage identity
@@ -110,8 +112,11 @@ export default async function WalletPage({
       />
       <section className="panel security-score">
         <ShieldCheck size={27} />
-        <h2>Recorded account checks</h2>
-        <p>These statuses come from your authorized account records.</p>
+        <h2>Account security</h2>
+        <p>
+          Email or Google sign-in is your primary account access. Review your recorded security
+          checks below.
+        </p>
         <ul>
           <li>
             {current.user.emailVerifiedAt ? <Check size={14} /> : <Clock3 size={14} />}
@@ -145,7 +150,33 @@ export default async function WalletPage({
       </section>
       <div className="security-layout">
         <div>
+          <MfaPanel
+            initialEnabled={Boolean(mfa?.verifiedAt)}
+            recoveryCodesRemaining={mfa?.recoveryCodeHashes.length ?? 0}
+            passwordConfigured={Boolean(current.user.passwordHash)}
+          />
+          <SessionList
+            initialSessions={sessionRecords.map((session) => ({
+              ...session,
+              current: session.id === current.sessionId,
+            }))}
+          />
+          <section className="panel security-settings">
+            <h2>Identity</h2>
+            <p>
+              {identityConfiguration().betaDisabled
+                ? "Identity verification is not required during beta."
+                : identityVerified
+                  ? "Identity verified."
+                  : "Review your identity verification status."}
+            </p>
+            <Link className="secondary-button" href="/identity">
+              Manage identity
+            </Link>
+          </section>
           <WalletVerificationForm
+            defaultNetwork={defaultNetwork}
+            communityBeta={communityBeta}
             initialMessage={
               walletStatus === "hold"
                 ? "Ownership verified. The payout change is in a 24-hour security hold."
@@ -177,11 +208,11 @@ export default async function WalletPage({
                 </div>
                 <div className="wallet-purposes">
                   <div>
-                    <span>Purpose</span>
+                    <span>{communityBeta ? "Future intended use" : "Purpose"}</span>
                     <strong>{label(wallet.purpose)}</strong>
                   </div>
                   <div>
-                    <span>Defaults</span>
+                    <span>{communityBeta ? "Future defaults" : "Defaults"}</span>
                     <strong>
                       {[
                         wallet.isDefaultFunding ? "Funding" : null,
@@ -196,31 +227,16 @@ export default async function WalletPage({
                     <strong>{(wallet.verifiedAt ?? wallet.createdAt).toLocaleDateString()}</strong>
                   </div>
                 </div>
-                <p className="form-feedback">
-                  This ownership record does not assert a blockchain balance or payment capability.
-                </p>
-                <WalletActions wallet={wallet} />
+                <WalletActions wallet={wallet} communityBeta={communityBeta} />
               </section>
             ))
           ) : (
             <section className="panel market-empty account-empty">
               <WalletCards size={26} />
               <h2>No wallet records</h2>
-              <p>No payment destination has been stored for your account.</p>
+              <p>You have not recorded wallet ownership. You can use the marketplace without it.</p>
             </section>
           )}
-
-          <SessionList
-            initialSessions={sessionRecords.map((session) => ({
-              ...session,
-              current: session.id === current.sessionId,
-            }))}
-          />
-          <MfaPanel
-            initialEnabled={Boolean(mfa?.verifiedAt)}
-            recoveryCodesRemaining={mfa?.recoveryCodeHashes.length ?? 0}
-            passwordConfigured={Boolean(current.user.passwordHash)}
-          />
         </div>
         <aside>
           {activeHolds.length > 0 && (
@@ -243,7 +259,7 @@ export default async function WalletPage({
           )}
 
           <section className="panel security-settings">
-            <h2>Account security</h2>
+            <h2>Sign-in security</h2>
             <div>
               <LockKeyhole size={16} />
               <span>

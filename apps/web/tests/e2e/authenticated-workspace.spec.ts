@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import postgres from "postgres";
 import { sessionRequest } from "./preference-test-session";
@@ -46,6 +46,15 @@ async function capture(page: Page, name: string) {
     animations: "disabled",
   });
 }
+async function focusIsExposed(field: Locator) {
+  await expect(field).toBeFocused();
+  expect(
+    await field.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.top >= 88 && rect.bottom <= innerHeight - 80;
+    }),
+  ).toBe(true);
+}
 async function audit(page: Page) {
   expect(
     (await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze())
@@ -64,6 +73,11 @@ async function reflow(page: Page, name: string) {
         `${name} ${width}px`,
       )
       .toBe(true);
+    if (name === "proposal-review" && width <= 430) {
+      const confirm = await page.getByRole("button", { name: "Confirm and submit" }).boundingBox();
+      expect(confirm!.height).toBeLessThanOrEqual(64);
+      expect(confirm!.height).toBeGreaterThanOrEqual(44);
+    }
     if (name === "job-creation") {
       const steps = await page
         .locator(".listing-steps > li")
@@ -74,7 +88,7 @@ async function reflow(page: Page, name: string) {
           (await page.getByRole("button", { name: "Continue", exact: true }).boundingBox())!.width,
         ).toBeGreaterThan(120);
     }
-    if ([375, 768, 1440].includes(width)) await capture(page, `${name}-${width}`);
+    if ([375, 430, 768, 1440].includes(width)) await capture(page, `${name}-${width}`);
   }
 }
 
@@ -131,7 +145,18 @@ test("job and proposal editors preserve collapsed fields through review and subm
   await page.getByLabel("Skills").fill("Product design, Accessibility");
   await reflow(page, "job-creation");
   await page.getByRole("button", { name: /Continue/ }).click();
+  await page.setViewportSize({ width: 375, height: 812 });
   await page.getByLabel("Milestone title").fill("Booking prototype");
+  await page.locator(".milestone-disclosure > summary").click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await focusIsExposed(page.getByLabel("What will be delivered?"));
+  await expect(page.getByLabel("Milestone title")).toHaveValue("Booking prototype");
+  // The same error must reveal the field again after the user closes it.
+  await page.locator(".milestone-disclosure > summary").click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.getByLabel("What will be delivered?")).toBeFocused();
+  await reflow(page, "job-milestone-invalid");
+  await audit(page);
   await page
     .getByLabel("What will be delivered?")
     .fill("An interactive prototype of the full booking journey.");
@@ -144,6 +169,25 @@ test("job and proposal editors preserve collapsed fields through review and subm
   await page.locator(".milestone-disclosure > summary").click();
   await expect(page.getByLabel("Milestone title")).not.toBeVisible();
   await reflow(page, "job-milestones");
+  await page.locator(".milestone-disclosure > summary").click();
+  await page.getByRole("button", { name: /Add milestone/ }).click();
+  const secondJob = page.locator(".milestone-disclosure").nth(1);
+  for (const label of [
+    "Milestone title",
+    "What will be delivered?",
+    "How will success be confirmed?",
+    "What proof should be provided?",
+  ]) {
+    await secondJob
+      .getByLabel(label)
+      .fill(await page.locator(".milestone-disclosure").first().getByLabel(label).inputValue());
+  }
+  await secondJob.getByLabel("Delivery time").fill("7");
+  await secondJob.locator("summary").click();
+  await page.getByRole("button", { name: /Continue/ }).click();
+  await expect(secondJob.getByLabel("Delivery time")).toBeFocused();
+  await expect(page.locator(".milestone-disclosure").first()).toHaveAttribute("open", "");
+  await page.getByRole("button", { name: "Remove milestone 2" }).click();
   await page.getByRole("button", { name: /Continue/ }).click();
   await page.getByLabel("Minimum budget (CKB)").fill("100");
   await page.getByLabel("Maximum budget (CKB)").fill("200");
@@ -190,11 +234,39 @@ test("job and proposal editors preserve collapsed fields through review and subm
   await reflow(worker, "proposal");
   await audit(worker);
   // Invalid fields inside a closed milestone must be revealed and focused.
+  await worker.setViewportSize({ width: 375, height: 812 });
   await worker.getByLabel("Milestone title").fill("");
+  await worker.locator(".milestone-disclosure > summary").click();
+  await worker.getByRole("button", { name: /Review proposal/ }).click();
+  await focusIsExposed(worker.getByLabel("Milestone title"));
+  await reflow(worker, "proposal-invalid");
+  await audit(worker);
   await worker.locator(".milestone-disclosure > summary").click();
   await worker.getByRole("button", { name: /Review proposal/ }).click();
   await expect(worker.getByLabel("Milestone title")).toBeFocused();
   await worker.getByLabel("Milestone title").fill("Prototype and handoff");
+  const timing = worker.locator('.milestone-disclosure input[type="number"]').last();
+  await timing.fill("0");
+  await worker.locator(".milestone-disclosure > summary").click();
+  await worker.getByRole("button", { name: /Review proposal/ }).click();
+  await expect(timing).toBeFocused();
+  await timing.fill("7");
+  for (const [label, invalid] of [
+    ["What will you deliver?", ""],
+    ["How will success be confirmed?", ""],
+    ["Milestone amount", "0"],
+    ["What proof will you provide?", ""],
+  ]) {
+    const field = worker.getByLabel(label);
+    const saved = await field.inputValue();
+    await field.fill(invalid);
+    await worker.locator(".milestone-disclosure > summary").click();
+    await worker.getByRole("button", { name: /Review proposal/ }).click();
+    await expect(field).toBeFocused();
+    await field.fill(saved);
+  }
+
+  await expect(worker.getByLabel("Milestone amount")).toHaveValue("150");
   await worker.locator(".milestone-disclosure > summary").click();
   await worker.getByRole("button", { name: /Review proposal/ }).click();
   await expect(worker.getByRole("heading", { name: "Review your proposal" })).toBeFocused();
@@ -222,7 +294,15 @@ test("wallet message stays exact while payload and signature fields are progress
     }),
   );
   await page.goto("/wallet");
-  await page.getByLabel("Wallet address").fill("ckb-isolated-interface-test-address");
+  await expect(page.getByRole("combobox", { name: /Network/ })).toHaveValue("testnet");
+  await expect(page.getByRole("combobox", { name: /Purpose/ })).toHaveCount(0);
+  await expect(page.locator(".wallet-beta-explanation")).toContainText(
+    "Wallet verification is optional",
+  );
+  await expect(page.locator(".wallet-beta-explanation")).toContainText(
+    "does not activate payments",
+  );
+  await page.getByLabel("Wallet address").fill("ckt-isolated-interface-test-address");
   await page.getByRole("button", { name: "Create signing message" }).click();
   await expect(page.getByRole("button", { name: "Copy message" })).toBeVisible();
   await expect(page.getByLabel("Message to sign", { exact: true })).not.toBeVisible();
@@ -332,6 +412,22 @@ test("published profile and portfolio display saved professional details without
   await audit(page);
   await page.getByRole("button", { name: "Edit profile", exact: true }).click();
   await reflow(page, "profile-edit-populated");
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Both", exact: true }).click();
+  await expect(page.locator(".intent-current")).toContainText("Current focus: Both");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByRole("group", { name: "Workspace focus" })).not.toBeVisible();
+  await page.getByRole("button", { name: "Change", exact: true }).click();
+  await page.getByRole("button", { name: "Hire talent", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Hire talent", exact: true })).toBeEnabled();
+  await page.reload();
+  await expect(page.locator(".intent-current")).toContainText("Current focus: Hire talent");
+  await page.getByRole("button", { name: "Change", exact: true }).click();
+  await page.getByRole("button", { name: "Find work", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Find work", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await reflow(page, "dashboard-established");
+  await audit(page);
 });
 
 test("support ticket and reply remain usable with attachments disabled", async ({ page }) => {

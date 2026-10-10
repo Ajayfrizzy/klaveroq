@@ -31,6 +31,7 @@ export default defineConfig({
             ...server?.env,
             NEXT_DIST_DIR: ".next-beta-e2e",
             APP_URL: "http://127.0.0.1:3201",
+            CKB_NETWORK: "testnet",
             DEPLOYMENT_STAGE: "community_beta",
             IDENTITY_PROVIDER: "disabled",
             IDENTITY_SANDBOX_ENABLED: "0",

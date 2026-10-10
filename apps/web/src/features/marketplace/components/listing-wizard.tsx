@@ -100,6 +100,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const {
     root: workRoot,
+    requestValidationFocus,
     dirty: workDirty,
     status: workStatus,
     markSaved,
@@ -128,6 +129,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
     );
 
   const validate = (target: Stage | "all") => {
+    requestValidationFocus();
     if ((target === 1 || target === "all") && description.trim().length < 40)
       return "Describe the work and expected outcome in at least 40 characters.";
     if ((target === 1 || target === "all") && title.trim().length < 5)
@@ -578,6 +580,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                       <label>
                         Milestone title
                         <input
+                          aria-invalid={Boolean(error) && milestone.title.trim().length < 2}
                           value={milestone.title}
                           onChange={(event) =>
                             updateMilestone(milestone.id, "title", event.target.value)
@@ -591,6 +594,11 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                             type="number"
                             min={index ? milestones[index - 1].deliveryDays + 1 : 1}
                             max={365}
+                            aria-invalid={
+                              Boolean(error) &&
+                              index > 0 &&
+                              milestone.deliveryDays <= milestones[index - 1].deliveryDays
+                            }
                             value={milestone.deliveryDays}
                             onChange={(event) =>
                               updateMilestone(
@@ -608,6 +616,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                       What will be delivered?
                       <textarea
                         rows={3}
+                        aria-invalid={Boolean(error) && milestone.deliverable.trim().length < 10}
                         value={milestone.deliverable}
                         onChange={(event) =>
                           updateMilestone(milestone.id, "deliverable", event.target.value)
@@ -620,6 +629,9 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                       How will success be confirmed?
                       <textarea
                         rows={3}
+                        aria-invalid={
+                          Boolean(error) && milestone.acceptanceCriteria.trim().length < 5
+                        }
                         value={milestone.acceptanceCriteria}
                         onChange={(event) =>
                           updateMilestone(milestone.id, "acceptanceCriteria", event.target.value)
@@ -631,6 +643,9 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                     <label>
                       What proof should be provided?
                       <input
+                        aria-invalid={
+                          Boolean(error) && milestone.evidenceRequirements.trim().length < 5
+                        }
                         value={milestone.evidenceRequirements}
                         onChange={(event) =>
                           updateMilestone(milestone.id, "evidenceRequirements", event.target.value)

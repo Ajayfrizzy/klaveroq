@@ -54,6 +54,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
   const [submitting, setSubmitting] = useState(false);
   const {
     root: workRoot,
+    requestValidationFocus,
     status: workStatus,
     markSaved,
   } = useWorkProtection(
@@ -74,6 +75,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
   };
 
   const validate = () => {
+    requestValidationFocus();
     const nextErrors: string[] = [];
     if (step === 0 && title.trim().length < 5)
       nextErrors.push("Add a clear job title with at least 5 characters.");

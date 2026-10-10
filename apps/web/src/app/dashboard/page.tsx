@@ -40,6 +40,7 @@ export default async function DashboardPage() {
       <IntentPanel
         userId={current.user.id}
         profileReady={profileComplete}
+        hasHistory={data.activeJobCount > 0}
         published={Boolean(current.profile?.isPublic)}
       />
 
@@ -167,9 +168,11 @@ export default async function DashboardPage() {
           <div className="readiness-copy">
             <div>
               <h2 id="readiness-title">
-                {allChecksRecorded
-                  ? "Account verification complete"
-                  : "Finish account verification"}
+                {betaIdentityDisabled
+                  ? "Account security"
+                  : allChecksRecorded
+                    ? "Account verification complete"
+                    : "Finish account verification"}
               </h2>
               {allChecksRecorded && (
                 <span className="verified-label">
@@ -181,7 +184,7 @@ export default async function DashboardPage() {
               {allChecksRecorded
                 ? "Email, identity, and wallet ownership are verified."
                 : betaIdentityDisabled
-                  ? "Review your email and wallet verification. Identity checks are not required during community beta."
+                  ? "Review your email and sign-in security. Wallet ownership is optional during community beta."
                   : "Review your email, identity, and wallet verification."}
             </p>
           </div>
@@ -200,7 +203,11 @@ export default async function DashboardPage() {
             </span>
             <span>
               {data.verification.wallet && <Check size={15} />} Wallet{" "}
-              {data.verification.wallet ? "verified" : "pending"}
+              {data.verification.wallet
+                ? "verified"
+                : betaIdentityDisabled
+                  ? "optional"
+                  : "pending"}
             </span>
           </div>
           <Link href="/wallet">

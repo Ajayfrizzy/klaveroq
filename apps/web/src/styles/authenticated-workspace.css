@@ -95,13 +95,14 @@
   padding: 0 0 24px;
   margin-bottom: 24px;
 }
-.app-shell .intent-panel > .eyebrow {
+.app-shell .intent-panel .eyebrow {
   display: none;
 }
 .app-shell .intent-panel h2 {
   font-size: 17px;
 }
-.app-shell .intent-panel > p {
+.app-shell .intent-panel > p,
+.app-shell #workspace-focus-options > p {
   color: var(--text-muted);
   font-size: 13px;
 }
@@ -479,6 +480,9 @@
   .proposal-workspace .proposal-actions > button {
     flex: 1 1 180px;
   }
+  .proposal-workspace .proposal-review .proposal-actions > button {
+    flex: 0 0 auto;
+  }
   .app-shell .security-score ul {
     display: grid;
   }
@@ -670,5 +674,21 @@
   .app-shell .listing-form > .wizard-actions .primary-button {
     grid-column: 1 / -1;
     width: 100%;
+  }
+}
+
+.app-shell .intent-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.app-shell .intent-current p {
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .app-shell .security-layout > aside {
+    grid-row: 1;
   }
 }

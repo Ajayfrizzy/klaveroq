@@ -7,6 +7,11 @@ export default defineConfig({
   ...beta,
   projects: [
     {
+      name: "authenticated-firefox",
+      testMatch: /authenticated-workspace\.spec\.ts/,
+      use: { ...devices["Desktop Firefox"] },
+    },
+    {
       name: "authenticated-workspace",
       testMatch: /(?:authenticated-workspace|identity-beta|uploads-beta)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },

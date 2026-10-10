@@ -5,9 +5,17 @@ import { useState } from "react";
 
 type Challenge = { id: string; message: string; nonce: string; expiresAt: string };
 
-export function WalletVerificationForm({ initialMessage = "" }: { initialMessage?: string }) {
+export function WalletVerificationForm({
+  initialMessage = "",
+  defaultNetwork,
+  communityBeta = false,
+}: {
+  initialMessage?: string;
+  defaultNetwork: "mainnet" | "testnet";
+  communityBeta?: boolean;
+}) {
   const [address, setAddress] = useState("");
-  const [network, setNetwork] = useState<"mainnet" | "testnet">("mainnet");
+  const [network, setNetwork] = useState<"mainnet" | "testnet">(defaultNetwork);
   const [purpose, setPurpose] = useState<"FUNDING" | "PAYOUT" | "BOTH">("BOTH");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [signature, setSignature] = useState("");
@@ -81,6 +89,18 @@ export function WalletVerificationForm({ initialMessage = "" }: { initialMessage
         </div>
         <WalletCards size={20} />
       </div>
+      {communityBeta && (
+        <p className="wallet-beta-explanation">
+          Wallet verification is optional. Email or Google sign-in remains your primary account
+          access. Verifying ownership records that you control an address. It does not activate
+          payments, balances, funding, payouts, or payment protection during community beta.
+        </p>
+      )}
+      {communityBeta && (
+        <p className="form-feedback">
+          Intended use is recorded as funding and payout for future use only.
+        </p>
+      )}
       {!challenge ? (
         <form className="wallet-connect-form" onSubmit={requestChallenge}>
           <label>
@@ -93,17 +113,19 @@ export function WalletVerificationForm({ initialMessage = "" }: { initialMessage
               <option value="testnet">CKB testnet</option>
             </select>
           </label>
-          <label>
-            Purpose
-            <select
-              value={purpose}
-              onChange={(event) => setPurpose(event.target.value as typeof purpose)}
-            >
-              <option value="BOTH">Funding and payout</option>
-              <option value="FUNDING">Funding</option>
-              <option value="PAYOUT">Payout</option>
-            </select>
-          </label>
+          {!communityBeta && (
+            <label>
+              Purpose
+              <select
+                value={purpose}
+                onChange={(event) => setPurpose(event.target.value as typeof purpose)}
+              >
+                <option value="BOTH">Funding and payout</option>
+                <option value="FUNDING">Funding</option>
+                <option value="PAYOUT">Payout</option>
+              </select>
+            </label>
+          )}
           <label className="full-field">
             Wallet address
             <input
@@ -159,7 +181,7 @@ export function WalletVerificationForm({ initialMessage = "" }: { initialMessage
           </details>
           <p className="form-feedback">
             Sign this exact message in your CKB wallet. It expires{" "}
-            {new Date(challenge.expiresAt).toLocaleString()} and does not authorize a payment.
+            {new Date(challenge.expiresAt).toLocaleString()}.
           </p>
           <details className="signature-fields">
             <summary>2. Enter your signature and public key</summary>

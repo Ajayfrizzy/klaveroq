@@ -79,6 +79,7 @@ export function ProposalComposer({
   const [assistantNote, setAssistantNote] = useState("");
   const {
     root: workRoot,
+    requestValidationFocus,
     status: workStatus,
     markSaved,
   } = useWorkProtection(JSON.stringify({ coverLetter, items }), errors.join(" "));
@@ -99,6 +100,7 @@ export function ProposalComposer({
   };
 
   const validate = () => {
+    requestValidationFocus();
     const next: string[] = [];
     if (coverLetter.trim().length < 40)
       next.push("Write at least 40 characters in your cover letter.");
@@ -469,6 +471,12 @@ export function ProposalComposer({
                     type="number"
                     min={index ? items[index - 1].deliveryDays + 1 : 1}
                     max={365}
+                    aria-invalid={
+                      errors.length > 0 &&
+                      (item.deliveryDays < 1 ||
+                        item.deliveryDays > 365 ||
+                        (index > 0 && item.deliveryDays <= items[index - 1].deliveryDays))
+                    }
                     value={item.deliveryDays}
                     onChange={(event) =>
                       update(item.id, "deliveryDays", Number(event.target.value))

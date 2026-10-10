@@ -62,7 +62,16 @@ test("anonymous landing, jobs and talent render real public data without private
   ).toBeVisible();
   expect(await page.locator(".home-talent-card").count()).toBe(6);
   await expect(page.getByRole("link", { name: "Browse all talent" })).toBeVisible();
-  await expect(page.locator(".home-talent-card").first()).toContainText("New on Klaveroq");
+  // Discovery rotates daily and the full suite also creates experienced professionals.
+  // Verify each displayed reputation against its actual records, independent of ordering.
+  for (const card of await page.locator(".home-talent-card").all()) {
+    const userId = (await card.getAttribute("href"))!.split("/").at(-1)!;
+    const [record] = await sql`select count(*)::int as completed from jobs
+      where worker_user_id = ${userId} and status = 'COMPLETED'`;
+    await expect(card.locator("small")).toHaveText(
+      record.completed ? `${record.completed} completed Klaveroq engagements` : "New on Klaveroq",
+    );
+  }
 });
 
 test("pagination, relevance, unpublishing and direct routes enforce publication at every read", async ({

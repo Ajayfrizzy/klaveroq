@@ -22,7 +22,7 @@ test("authenticated dashboard smoke: renders and survives an RSC navigation and 
   await expect(page.getByRole("heading", { name: "Welcome, Dashboard" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Recent activity", exact: true })).toBeVisible();
   await expect(
-    page.getByText("Payment integration is not connected.", { exact: false }),
+    page.locator(".network-card").getByText("Payment network not connected", { exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: "View all", exact: true }).click();
   await page.getByRole("link", { name: "Overview", exact: true }).click();

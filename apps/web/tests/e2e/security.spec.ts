@@ -44,6 +44,7 @@ test("identity, wallet ownership, and session security workflows enforce their b
   await page.getByRole("button", { name: "Create signing message" }).click();
   const challenge = (await (await challengeResponse).json()).data;
   const signed = await signer.signMessage(challenge.message);
+  await page.locator(".signature-fields > summary").click();
   await page.getByLabel("Signature").fill(signed.signature);
   await page.getByLabel("Public key").fill(signer.publicKey);
   const verificationResponse = page.waitForResponse(

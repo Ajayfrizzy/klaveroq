@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 import base from "./playwright.config";
 
+process.env.TEST_DATABASE_URL ??= process.env.DATABASE_URL;
+
 process.env.PLAYWRIGHT_BASE_URL = "http://127.0.0.1:3201";
 
 const server = !Array.isArray(base.webServer) ? base.webServer : undefined;
@@ -11,7 +13,7 @@ export default defineConfig({
     {
       name: "beta-identity",
       testMatch:
-        /(?:identity-beta|uploads-beta|dashboard-smoke|profile\.integration|marketplace\.integration)\.spec\.ts/,
+        /(?:authenticated-workspace|identity-beta|uploads-beta|dashboard-smoke|profile\.integration|marketplace\.integration)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
   ],

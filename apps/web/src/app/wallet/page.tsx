@@ -110,7 +110,7 @@ export default async function WalletPage({
           </Link>
         }
       />
-      <section className="panel security-score">
+      <section className="panel security-score account-security-summary">
         <ShieldCheck size={27} />
         <h2>Account security</h2>
         <p>
@@ -148,8 +148,55 @@ export default async function WalletPage({
           </li>
         </ul>
       </section>
-      <div className="security-layout">
+      <div className="security-layout security-workspace">
         <div>
+          {activeHolds.length > 0 && (
+            <section className="panel security-settings">
+              <h2>Active security holds</h2>
+              {activeHolds.map((hold) => (
+                <div key={hold.id}>
+                  <LockKeyhole size={16} />
+                  <span>
+                    <strong>{label(hold.type)}</strong>
+                    <small>
+                      {hold.expiresAt
+                        ? `Expires ${hold.expiresAt.toLocaleString()}`
+                        : "No expiry recorded"}
+                    </small>
+                  </span>
+                </div>
+              ))}
+            </section>
+          )}
+
+          <section className="panel security-settings">
+            <h2>Sign-in security</h2>
+            <div>
+              <LockKeyhole size={16} />
+              <span>
+                <strong>Password credential</strong>
+                <small>{current.user.passwordHash ? "Configured" : "Not configured"}</small>
+              </span>
+            </div>
+            <div>
+              <Smartphone size={16} />
+              <span>
+                <strong>Two-factor authentication</strong>
+                <small>{mfa?.verifiedAt ? "Enabled" : "Not enabled"}</small>
+              </span>
+            </div>
+            <div>
+              <Clock3 size={16} />
+              <span>
+                <strong>Active sessions</strong>
+                <small>
+                  {sessionRecords.length} recorded{" "}
+                  {sessionRecords.length === 1 ? "session" : "sessions"}
+                </small>
+              </span>
+            </div>
+          </section>
+
           <MfaPanel
             initialEnabled={Boolean(mfa?.verifiedAt)}
             recoveryCodesRemaining={mfa?.recoveryCodeHashes.length ?? 0}
@@ -161,19 +208,8 @@ export default async function WalletPage({
               current: session.id === current.sessionId,
             }))}
           />
-          <section className="panel security-settings">
-            <h2>Identity</h2>
-            <p>
-              {identityConfiguration().betaDisabled
-                ? "Identity verification is not required during beta."
-                : identityVerified
-                  ? "Identity verified."
-                  : "Review your identity verification status."}
-            </p>
-            <Link className="secondary-button" href="/identity">
-              Manage identity
-            </Link>
-          </section>
+        </div>
+        <div>
           <WalletVerificationForm
             defaultNetwork={defaultNetwork}
             communityBeta={communityBeta}
@@ -238,54 +274,6 @@ export default async function WalletPage({
             </section>
           )}
         </div>
-        <aside>
-          {activeHolds.length > 0 && (
-            <section className="panel security-settings">
-              <h2>Active security holds</h2>
-              {activeHolds.map((hold) => (
-                <div key={hold.id}>
-                  <LockKeyhole size={16} />
-                  <span>
-                    <strong>{label(hold.type)}</strong>
-                    <small>
-                      {hold.expiresAt
-                        ? `Expires ${hold.expiresAt.toLocaleString()}`
-                        : "No expiry recorded"}
-                    </small>
-                  </span>
-                </div>
-              ))}
-            </section>
-          )}
-
-          <section className="panel security-settings">
-            <h2>Sign-in security</h2>
-            <div>
-              <LockKeyhole size={16} />
-              <span>
-                <strong>Password credential</strong>
-                <small>{current.user.passwordHash ? "Configured" : "Not configured"}</small>
-              </span>
-            </div>
-            <div>
-              <Smartphone size={16} />
-              <span>
-                <strong>Two-factor authentication</strong>
-                <small>{mfa?.verifiedAt ? "Enabled" : "Not enabled"}</small>
-              </span>
-            </div>
-            <div>
-              <Clock3 size={16} />
-              <span>
-                <strong>Active sessions</strong>
-                <small>
-                  {sessionRecords.length} recorded{" "}
-                  {sessionRecords.length === 1 ? "session" : "sessions"}
-                </small>
-              </span>
-            </div>
-          </section>
-        </aside>
       </div>
     </AppShell>
   );

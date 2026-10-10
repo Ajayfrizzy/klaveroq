@@ -103,7 +103,7 @@ export function WalletVerificationForm({
       )}
       {!challenge ? (
         <form className="wallet-connect-form" onSubmit={requestChallenge}>
-          <label>
+          <label className={communityBeta ? "full-field" : undefined}>
             Network
             <select
               value={network}

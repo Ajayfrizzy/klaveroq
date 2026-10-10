@@ -302,6 +302,24 @@ test("wallet message stays exact while payload and signature fields are progress
   await expect(page.locator(".wallet-beta-explanation")).toContainText(
     "does not activate payments",
   );
+  await expect(page.getByRole("link", { name: "Manage identity", exact: true })).toHaveCount(1);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const networkBox = await page.getByRole("combobox", { name: /Network/ }).boundingBox();
+  const addressBox = await page.getByLabel("Wallet address").boundingBox();
+  expect(Math.abs(networkBox!.width - addressBox!.width)).toBeLessThan(2);
+  const sql = postgres(databaseUrl, { max: 1 });
+  const profile = await (await sessionRequest(page.request).get("/api/profile")).json();
+  await sql`update users set password_hash = null where id = ${profile.data.profile.userId}`;
+  await sql.end();
+  await page.reload();
+  await expect(page.getByLabel("Current password", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "Add an authenticator app to your account. You do not need a local password to set it up.",
+    ),
+  ).toBeVisible();
+  await reflow(page, "wallet-layout");
+  await audit(page);
   await page.getByLabel("Wallet address").fill("ckt-isolated-interface-test-address");
   await page.getByRole("button", { name: "Create signing message" }).click();
   await expect(page.getByRole("button", { name: "Copy message" })).toBeVisible();
@@ -468,6 +486,13 @@ test("published profile and portfolio display saved professional details without
   await expect(page.getByRole("button", { name: "Hire talent", exact: true })).toBeEnabled();
   await page.reload();
   await expect(page.locator(".intent-current")).toContainText("Current focus: Hire talent");
+  await expect(page.getByRole("group", { name: "Workspace focus" })).not.toBeVisible();
+  await expect(
+    page.locator(".intent-panel").getByRole("link", { name: "Post a job" }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".intent-panel").getByRole("link", { name: "Find talent" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Change", exact: true }).click();
   await page.getByRole("button", { name: "Find work", exact: true }).click();
   await expect(page.getByRole("button", { name: "Find work", exact: true })).toBeEnabled();

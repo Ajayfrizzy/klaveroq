@@ -105,31 +105,31 @@ export function IntentPanel({
             </button>
           ))}
         </div>
-        <p>
-          {intent === "hire"
-            ? "Post your brief, compare proposals, then agree on milestones."
-            : intent === "work"
-              ? "Publish your profile, find suitable work, and send a proposal."
-              : "Hire professionals or build your own work history. Switch your focus anytime."}
-        </p>
-        <div className="intent-options">
-          {intent !== "work" && (
-            <Link className="primary-button" href="/jobs/new/public">
-              Post a job
-            </Link>
-          )}
-          {intent !== "hire" && (
-            <Link
-              className={intent === "work" ? "primary-button" : "secondary-button"}
-              href={profileReady && published ? "/discover" : "/profile"}
-            >
-              {workLabel}
-            </Link>
-          )}
-          <Link className="secondary-button" href={intent === "work" ? "/discover" : "/talent"}>
-            {intent === "work" ? "Browse opportunities" : "Find talent"}
+      </div>
+      <p>
+        {intent === "hire"
+          ? "Post your brief, compare proposals, then agree on milestones."
+          : intent === "work"
+            ? "Publish your profile, find suitable work, and send a proposal."
+            : "Hire professionals or build your own work history. Switch your focus anytime."}
+      </p>
+      <div className="intent-options">
+        {intent !== "work" && (
+          <Link className="primary-button" href="/jobs/new/public">
+            Post a job
           </Link>
-        </div>
+        )}
+        {intent !== "hire" && (
+          <Link
+            className={intent === "work" ? "primary-button" : "secondary-button"}
+            href={profileReady && published ? "/discover" : "/profile"}
+          >
+            {workLabel}
+          </Link>
+        )}
+        <Link className="secondary-button" href={intent === "work" ? "/discover" : "/talent"}>
+          {intent === "work" ? "Browse opportunities" : "Find talent"}
+        </Link>
       </div>
       {(error || loadError) && (
         <p role="alert">

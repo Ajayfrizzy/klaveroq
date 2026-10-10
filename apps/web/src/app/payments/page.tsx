@@ -48,8 +48,9 @@ export default async function PaymentsPage({
         <div>
           <h2>Payment network not connected</h2>
           <p>
-            Funding, payouts, and reconciled balances are unavailable. Recorded operations below are
-            a history of payment events, not a current spendable or secured balance.
+            During community beta, payments are not connected and no balances are being held.
+            Funding and payouts are unavailable. Recorded operations below are a history of payment
+            events, not a current spendable or secured balance.
           </p>
         </div>
       </section>

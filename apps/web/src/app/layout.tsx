@@ -5,6 +5,7 @@ import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 import "@/styles/product-experience.css";
 import "@/styles/public-marketplace.css";
+import "@/styles/authenticated-workspace.css";
 import { RouteTitle } from "@/components/layout/route-title";
 
 export const metadata: Metadata = {

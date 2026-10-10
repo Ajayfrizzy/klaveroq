@@ -1,0 +1,674 @@
+/* Authenticated workspace refinements. Public marketplace styles remain independent. */
+.app-shell {
+  --canvas: #f8f8f6;
+  --border: #e5e5e9;
+  --radius-panel: 14px;
+  background: var(--canvas);
+}
+.app-shell .page-content {
+  max-width: 1240px;
+  margin-inline: auto;
+  padding: 32px clamp(20px, 3vw, 44px) 48px;
+}
+.app-shell .sidebar {
+  padding-inline: 16px;
+}
+.app-shell .nav-link {
+  gap: 12px;
+  padding-inline: 14px;
+  font-weight: 500;
+}
+.app-shell .nav-link.active {
+  color: var(--brand-strong);
+  font-weight: 650;
+}
+.app-shell .nav-group-label {
+  margin-top: 26px;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+}
+.app-shell .create-button {
+  background: white;
+  border: 1px solid var(--border);
+  color: var(--brand-strong);
+  box-shadow: none;
+}
+.app-shell .network-card {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  padding: 16px 8px 4px;
+}
+.app-shell .topbar {
+  background: #ffffff;
+  box-shadow: none;
+}
+.app-shell :is(.page-heading, .section-page-header) {
+  margin-bottom: 28px;
+}
+.app-shell :is(.page-heading, .section-page-header) h1 {
+  font-size: clamp(26px, 3vw, 34px);
+  letter-spacing: -0.035em;
+}
+.app-shell
+  :is(
+    .panel,
+    .listing-card,
+    .listing-detail,
+    .listing-sidebar > section,
+    .form-panel,
+    .funding-summary,
+    .profile-readiness
+  ) {
+  box-shadow: none;
+  border-radius: 14px;
+}
+.app-shell .section-heading {
+  padding: 22px 24px;
+}
+.app-shell .section-heading h2 {
+  font-size: 17px;
+  letter-spacing: -0.015em;
+}
+.app-shell :is(.primary-button, .secondary-button) {
+  min-height: 44px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.app-shell :is(input, select) {
+  min-height: 44px;
+}
+.app-shell textarea {
+  line-height: 1.6;
+  resize: vertical;
+}
+.app-shell :is(input, textarea, select):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.app-shell .intent-panel {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  padding: 0 0 24px;
+  margin-bottom: 24px;
+}
+.app-shell .intent-panel > .eyebrow {
+  display: none;
+}
+.app-shell .intent-panel h2 {
+  font-size: 17px;
+}
+.app-shell .intent-panel > p {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.app-shell .intent-options[role="group"] {
+  display: flex;
+  width: fit-content;
+  padding: 4px;
+  gap: 4px;
+  background: #eeedf1;
+  border-radius: 10px;
+}
+.app-shell .intent-options[role="group"] button {
+  align-items: center;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  background: transparent;
+  min-height: 40px;
+}
+.app-shell .intent-options[role="group"] button[aria-pressed="true"] {
+  background: white;
+  color: var(--brand-strong);
+  border-color: #d9d6ee;
+  box-shadow: none;
+}
+.app-shell .metrics-grid {
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.app-shell .metrics-grid > article {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+}
+.app-shell .dashboard-grid {
+  grid-template-columns: minmax(0, 1.65fr) minmax(260px, 1fr);
+  align-items: start;
+}
+.app-shell .compact-empty {
+  min-height: 0;
+  padding: 24px;
+}
+.app-shell .readiness-strip {
+  margin-top: 28px;
+  background: transparent;
+  border: 0;
+  border-block: 1px solid var(--border);
+  border-radius: 0;
+  padding: 20px 0;
+}
+.app-shell .readiness-copy h2 {
+  font-size: 15px;
+}
+.app-shell .activity-panel {
+  margin-top: 28px;
+}
+.app-shell .activity-row {
+  padding-block: 14px;
+}
+.app-shell .activity-group article {
+  padding-block: 16px;
+}
+.app-shell .discovery-filters {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+}
+.app-shell .saved-searches {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding-inline: 0;
+}
+.app-shell .listing-card {
+  padding: 24px;
+}
+.app-shell .listing-card h2 {
+  font-size: 19px;
+  line-height: 1.4;
+}
+.app-shell .listing-card > p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.app-shell .skill-list span {
+  border-radius: 6px;
+  background: #f3f3f6;
+  color: #4c5262;
+  font-size: 12px;
+}
+.app-shell .listing-detail-layout {
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 28px;
+}
+.app-shell .listing-detail {
+  border: 0;
+  background: transparent;
+}
+.app-shell .listing-detail-head,
+.app-shell .listing-detail > section:not(.owner-proposals) {
+  padding: 24px 0;
+}
+.app-shell .listing-detail h1 {
+  font-size: clamp(26px, 3vw, 36px);
+  letter-spacing: -0.03em;
+}
+.app-shell .listing-detail section > p {
+  max-width: 72ch;
+  font-size: 15px;
+}
+.app-shell .listing-facts :is(span, p) {
+  font-size: 13px;
+}
+.proposal-workspace {
+  scroll-margin-top: 90px;
+  margin-top: 32px;
+}
+.proposal-workspace:empty {
+  display: none;
+}
+.proposal-workspace .proposal-form {
+  width: 100%;
+  max-width: 940px;
+  margin-inline: auto;
+  border-radius: 14px;
+  box-shadow: none;
+}
+.proposal-workspace .proposal-fields,
+.proposal-workspace .proposal-review-body {
+  padding: clamp(16px, 3vw, 32px);
+  gap: 20px;
+}
+.proposal-workspace .proposal-form > .section-heading {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.editor-section-title {
+  margin: 12px 0 0;
+  font-size: 17px;
+  letter-spacing: -0.015em;
+}
+.proposal-workspace .proposal-guidance {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text-muted);
+}
+.milestone-disclosure {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+}
+.milestone-disclosure > summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 72px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+.milestone-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.milestone-disclosure > summary > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.milestone-disclosure summary strong {
+  display: block;
+  font-size: 14px;
+}
+.milestone-disclosure summary small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 3px;
+  font-weight: 400;
+}
+.milestone-disclosure-number {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+.milestone-disclosure-hint {
+  font-size: 12px;
+  color: var(--brand-strong);
+}
+.milestone-disclosure-hint::after {
+  content: " +";
+}
+.milestone-disclosure[open] .milestone-disclosure-hint::after {
+  content: " −";
+}
+.milestone-disclosure-body {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border-top: 1px solid var(--border);
+}
+.milestone-disclosure-body > .icon-button {
+  justify-self: end;
+}
+.app-shell .wizard-page,
+.app-shell .listing-create-page {
+  max-width: 1080px;
+  margin-inline: auto;
+}
+.app-shell .stepper {
+  margin-block: 28px;
+}
+.app-shell .form-section {
+  padding: clamp(18px, 3vw, 28px);
+}
+.app-shell .wizard-actions {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.app-shell .profile-step {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 16px 0;
+}
+.app-shell .profile-section-nav {
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+.app-shell .profile-section-nav a {
+  background: transparent;
+}
+.app-shell .profile-step .profile-form-section-heading {
+  display: none;
+}
+.app-shell .profile-readiness {
+  padding: 24px;
+  background: white;
+}
+.app-shell .readiness-summary h2 {
+  font-size: 17px;
+}
+.app-shell .readiness-requirements summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 12px;
+  color: var(--brand-strong);
+  font-size: 13px;
+}
+.app-shell .readiness-next {
+  font-size: 13px;
+}
+.text-button {
+  border: 0;
+  background: none;
+  color: var(--brand-strong);
+  text-decoration: underline;
+  padding: 8px 4px;
+  min-height: 44px;
+}
+.app-shell .profile-visibility {
+  background: transparent;
+  border-inline: 0;
+  border-radius: 0;
+}
+.app-shell .security-score {
+  padding: 24px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+.app-shell .security-score > svg {
+  display: none;
+}
+.app-shell .security-score ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-bottom: 0;
+}
+.app-shell .security-score li {
+  margin: 0;
+}
+.app-shell .security-layout {
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+.app-shell .security-settings {
+  padding: 24px;
+}
+.signing-payload summary,
+.signature-fields summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 12px;
+  color: var(--brand-strong);
+  font-weight: 600;
+}
+.signature-fields label {
+  margin-top: 16px;
+}
+.app-shell .wallet-sign-form > h3 {
+  font-size: 16px;
+  margin: 0;
+}
+.app-shell .wallet-sign-form > p {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.app-shell .wallet-sign-form .copy-message {
+  justify-self: start;
+}
+.app-shell .payment-notice {
+  background: white;
+  border-left: 3px solid var(--brand);
+}
+.app-shell .account-empty {
+  min-height: 0;
+  padding: 28px 24px;
+}
+.app-shell .support-cases > article {
+  box-shadow: none;
+}
+@media (max-width: 1100px) {
+  .app-shell .dashboard-grid,
+  .app-shell .security-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-shell .listing-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-shell .listing-sidebar {
+    position: static;
+  }
+}
+@media (max-width: 760px) {
+  .app-shell .page-content {
+    padding: 24px 16px 100px;
+  }
+  .app-shell .section-heading {
+    padding: 18px;
+  }
+  .app-shell .intent-options[role="group"] {
+    width: 100%;
+  }
+  .app-shell .intent-options[role="group"] button {
+    flex: 1;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+  .app-shell .metrics-grid {
+    gap: 16px;
+  }
+  .app-shell .listing-card {
+    padding: 20px;
+  }
+  .milestone-disclosure-body {
+    padding: 16px;
+  }
+  .proposal-workspace .proposal-term-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .proposal-workspace .proposal-actions {
+    flex-wrap: wrap;
+  }
+  .proposal-workspace .proposal-actions > button {
+    flex: 1 1 180px;
+  }
+  .app-shell .security-score ul {
+    display: grid;
+  }
+  .app-shell .profile-save-actions {
+    padding: 12px 0;
+  }
+}
+.app-shell .readiness-strip {
+  box-shadow: none;
+}
+.app-shell .listing-create {
+  max-width: 1040px;
+}
+.app-shell .listing-steps small {
+  font-size: 10px;
+}
+.app-shell .listing-steps strong {
+  font-size: 12px;
+}
+.app-shell .profile-layout {
+  grid-template-columns: minmax(0, 1fr) 260px;
+}
+.app-shell .reputation-card {
+  border: 0;
+  background: transparent;
+}
+.app-shell .profile-editor-heading {
+  padding-bottom: 24px;
+}
+.app-shell .portfolio-empty {
+  border: 0;
+  background: transparent;
+}
+@media (min-width: 761px) {
+  .proposal-workspace .milestone-disclosure-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .proposal-workspace
+    .milestone-disclosure-body
+    > :is(.icon-button, .proposal-term-fields, label:first-of-type, label:last-of-type) {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 1100px) {
+  .app-shell .profile-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.app-shell
+  :is(.proposal-fields, .listing-form, .profile-edit-form, .form-section)
+  :is(input, textarea, select) {
+  font-weight: 400;
+}
+.app-shell
+  :is(.proposal-total, .proposal-review-body, .listing-outcomes, .listing-review)
+  :is(small, dt, dd) {
+  font-size: 13px;
+}
+.app-shell .proposal-total span {
+  font-size: 13px;
+}
+.app-shell .listing-outcomes li p {
+  font-size: 14px;
+}
+.app-shell .profile-editor-heading .profile-avatar {
+  box-shadow: none;
+}
+.app-shell .wallet-sign-form textarea {
+  width: 100%;
+}
+.app-shell .wallet-sign-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+.app-shell .wallet-sign-form label {
+  font-size: 13px;
+}
+.app-shell .wallet-sign-form textarea {
+  font-size: 13px;
+}
+.milestone-disclosure .milestone-editor-head {
+  justify-content: flex-end;
+  margin: 0;
+}
+.milestone-disclosure .milestone-editor-head[hidden] {
+  display: none;
+}
+.proposal-context {
+  position: sticky;
+  top: 64px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 940px;
+  margin: 0 auto 16px;
+  padding: 12px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+}
+.proposal-context > div {
+  min-width: 0;
+}
+.proposal-context span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.proposal-context strong {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 14px;
+}
+.proposal-context a {
+  flex-shrink: 0;
+  color: var(--brand-strong);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+#job-summary {
+  scroll-margin-top: 88px;
+}
+.proposal-workspace :is(input, textarea, summary, button, h2) {
+  scroll-margin-top: 160px;
+}
+.app-shell .profile-media-control {
+  padding-block: 12px;
+  margin-block: 0 16px;
+}
+.app-shell .profile-media-control .form-help {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.app-shell .support-case-row {
+  padding: 16px 24px;
+  border-inline: 0;
+}
+.app-shell .support-case-row :is(strong, h3) {
+  font-size: 14px;
+}
+.app-shell .message-bubble {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 20px 0;
+  background: transparent;
+}
+.app-shell .message-bubble p {
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 75ch;
+}
+.app-shell .message-bubble time,
+.app-shell .activity-group time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.app-shell .reply-composer {
+  padding: 24px;
+  background: #fafafa;
+}
+.app-shell .activity-group article strong {
+  font-size: 14px;
+}
+.app-shell .portfolio-list > article > p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.app-shell .portfolio-list > article > div > span {
+  font-size: 12px;
+}
+.app-shell .listing-steps {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.app-shell .dashboard-grid > .actions-panel {
+  order: initial;
+}
+@media (max-width: 760px) {
+  .app-shell .listing-form > .wizard-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .app-shell .listing-form > .wizard-actions .primary-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}

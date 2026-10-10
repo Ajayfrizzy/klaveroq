@@ -1,5 +1,7 @@
 "use client";
 
+import { MilestoneEditor } from "@/components/ui/milestone-editor";
+
 import type { MilestoneDraft } from "@klaveroq/domain";
 import {
   ArrowLeft,
@@ -266,12 +268,13 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                 </div>
               </div>
               {milestones.map((milestone, index) => (
-                <div className="milestone-editor" key={milestone.id}>
-                  <div className="milestone-editor-head">
-                    <div>
-                      <span>{index + 1}</span>
-                      <strong>{milestone.title || `Milestone ${index + 1}`}</strong>
-                    </div>
+                <MilestoneEditor
+                  key={milestone.id}
+                  index={index}
+                  title={milestone.title}
+                  summary={`${milestone.amount || 0} CKB · ${milestone.dueDate || "Set a due date"}`}
+                >
+                  <div className="milestone-editor-head" hidden={milestones.length === 1}>
                     {milestones.length > 1 && (
                       <button
                         className="icon-button danger"
@@ -360,7 +363,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                       />
                     </label>
                   </div>
-                </div>
+                </MilestoneEditor>
               ))}
               <button
                 className="secondary-button add-milestone"

@@ -108,6 +108,41 @@ export default async function WalletPage({
           </Link>
         }
       />
+      <section className="panel security-score">
+        <ShieldCheck size={27} />
+        <h2>Recorded account checks</h2>
+        <p>These statuses come from your authorized account records.</p>
+        <ul>
+          <li>
+            {current.user.emailVerifiedAt ? <Check size={14} /> : <Clock3 size={14} />}
+            Email {current.user.emailVerifiedAt ? "verified" : "pending"}
+          </li>
+          <li>
+            {identityVerified ? <Check size={14} /> : <Clock3 size={14} />}
+            <Link href="/identity">
+              Identity{" "}
+              {identityVerified
+                ? "verified"
+                : identityConfiguration().betaDisabled
+                  ? "not required during beta"
+                  : identity?.status === "VERIFIED"
+                    ? "not verified"
+                    : identity
+                      ? label(identity.status)
+                      : "not started"}
+            </Link>
+          </li>
+          <li>
+            {verifiedWallets.length ? <Check size={14} /> : <Clock3 size={14} />}
+            {verifiedWallets.length
+              ? `${verifiedWallets.length} verified wallet record${verifiedWallets.length === 1 ? "" : "s"}`
+              : "No verified wallet record"}
+          </li>
+          <li>
+            <AlertCircle size={14} /> Payment protection unavailable
+          </li>
+        </ul>
+      </section>
       <div className="security-layout">
         <div>
           <WalletVerificationForm
@@ -188,42 +223,6 @@ export default async function WalletPage({
           />
         </div>
         <aside>
-          <section className="panel security-score">
-            <ShieldCheck size={27} />
-            <h2>Recorded account checks</h2>
-            <p>These statuses come from your authorized account records.</p>
-            <ul>
-              <li>
-                {current.user.emailVerifiedAt ? <Check size={14} /> : <Clock3 size={14} />}
-                Email {current.user.emailVerifiedAt ? "verified" : "pending"}
-              </li>
-              <li>
-                {identityVerified ? <Check size={14} /> : <Clock3 size={14} />}
-                <Link href="/identity">
-                  Identity{" "}
-                  {identityVerified
-                    ? "verified"
-                    : identityConfiguration().betaDisabled
-                      ? "not required during beta"
-                      : identity?.status === "VERIFIED"
-                        ? "not verified"
-                        : identity
-                          ? label(identity.status)
-                          : "not started"}
-                </Link>
-              </li>
-              <li>
-                {verifiedWallets.length ? <Check size={14} /> : <Clock3 size={14} />}
-                {verifiedWallets.length
-                  ? `${verifiedWallets.length} verified wallet record${verifiedWallets.length === 1 ? "" : "s"}`
-                  : "No verified wallet record"}
-              </li>
-              <li>
-                <AlertCircle size={14} /> Payment protection unavailable
-              </li>
-            </ul>
-          </section>
-
           {activeHolds.length > 0 && (
             <section className="panel security-settings">
               <h2>Active security holds</h2>

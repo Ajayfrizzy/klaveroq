@@ -111,7 +111,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
         <ArrowLeft size={16} /> Back to discovery
       </Link>
       <div className="listing-detail-layout">
-        <article className="listing-detail">
+        <article className="listing-detail" id="job-summary">
           <div className="listing-detail-head">
             <span>{record.listing.category.toLowerCase()}</span>
             <span className={`listing-status state-${record.listing.status.toLowerCase()}`}>
@@ -223,13 +223,9 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
             </p>
           </section>
           {!owner && canSubmit && (
-            <ProposalComposer
-              listingId={id}
-              signedIn={Boolean(current)}
-              existing={ownProposal}
-              budgetMin={record.listing.budgetMin.toString()}
-              budgetMax={record.listing.budgetMax.toString()}
-            />
+            <a className="primary-button proposal-entry" href="#proposal-workspace">
+              {ownProposal ? "Edit your proposal" : "Write a proposal"}
+            </a>
           )}
           {!owner && workerProposalId && current && (
             <ProposalThread
@@ -253,6 +249,26 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
             </section>
           )}
         </aside>
+      </div>
+      <div id="proposal-workspace" className="proposal-workspace">
+        {!owner && canSubmit && (
+          <>
+            <div className="proposal-context">
+              <div>
+                <span>Proposal for</span>
+                <strong>{record.listing.title}</strong>
+              </div>
+              <a href="#job-summary">View brief</a>
+            </div>
+            <ProposalComposer
+              listingId={id}
+              signedIn={Boolean(current)}
+              existing={ownProposal}
+              budgetMin={record.listing.budgetMin.toString()}
+              budgetMax={record.listing.budgetMax.toString()}
+            />
+          </>
+        )}
       </div>
     </MarketplaceLayout>
   );

@@ -38,7 +38,7 @@ export function IntentPanel({
       aria-labelledby="intent-title"
     >
       <p className="eyebrow">Your workspace</p>
-      <h2 id="intent-title">What would you like to do?</h2>
+      <h2 id="intent-title">Your next step</h2>
       <div className="intent-options" role="group" aria-label="Workspace focus">
         {[
           ["hire", "Hire talent", "Post a brief and choose a professional"],
@@ -72,7 +72,7 @@ export function IntentPanel({
             }}
           >
             <strong>{label}</strong>
-            <small>{description}</small>
+            <span className="sr-only">{description}</span>
           </button>
         ))}
       </div>
@@ -91,7 +91,7 @@ export function IntentPanel({
         )}
         {intent !== "hire" && (
           <Link
-            className={intent === "work" || !profileReady ? "primary-button" : "secondary-button"}
+            className={intent === "work" ? "primary-button" : "secondary-button"}
             href={profileReady && published ? "/discover" : "/profile"}
           >
             {workLabel}
@@ -101,7 +101,7 @@ export function IntentPanel({
           {intent === "work" ? "Browse opportunities" : "Find talent"}
         </Link>
       </div>
-      <small>Your workspace preference follows your Klaveroq account.</small>
+
       {(error || loadError) && (
         <p role="alert">
           {error || loadError}{" "}

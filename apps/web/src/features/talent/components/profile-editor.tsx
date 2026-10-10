@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useUploadsEnabled } from "@/features/files/upload-availability";
 import { MediaUploader } from "@/features/files/media-uploader";
 import { TagInput } from "@/components/ui/tag-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -140,6 +141,7 @@ export function ProfileEditor({
   const [portfolio, setPortfolio] = useState(initialPortfolio);
   const [avatar, setAvatar] = useState(initialAvatar);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const uploadsEnabled = useUploadsEnabled();
   const [editing, setEditing] = useState(false);
   const [portfolioForm, setPortfolioForm] = useState(emptyPortfolio);
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
@@ -833,15 +835,33 @@ export function ProfileEditor({
           >
             <span style={{ width: `${(readyCount / readiness.length) * 100}%` }} />
           </div>
-          <ul>
-            {readiness.map((item) => (
-              <li className={item.complete ? "complete" : ""} key={item.label}>
-                {item.complete ? <Check size={15} /> : <Circle size={15} />}
-                <span>{item.label}</span>
-                <small>{item.complete ? "Complete" : "Missing"}</small>
-              </li>
-            ))}
-          </ul>
+          {!profileReady && (
+            <p className="readiness-next">
+              Next: {readiness.find((item) => !item.complete)?.label}.{" "}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setEditing(true);
+                  document.querySelector(".profile-main")?.scrollIntoView({ block: "start" });
+                }}
+              >
+                Complete profile
+              </button>
+            </p>
+          )}
+          <details className="readiness-requirements">
+            <summary>View completed and missing requirements</summary>
+            <ul>
+              {readiness.map((item) => (
+                <li className={item.complete ? "complete" : ""} key={item.label}>
+                  {item.complete ? <Check size={15} /> : <Circle size={15} />}
+                  <span>{item.label}</span>
+                  <small>{item.complete ? "Complete" : "Missing"}</small>
+                </li>
+              ))}
+            </ul>
+          </details>
         </section>
       )}
 
@@ -885,16 +905,18 @@ export function ProfileEditor({
             <h2>Portfolio</h2>
             <p>Show clients relevant work, your role, and the technologies used.</p>
           </div>
-          <button
-            className="secondary-button"
-            onClick={() => {
-              setPortfolioId(null);
-              setPortfolioForm(emptyPortfolio);
-              setShowPortfolioForm(true);
-            }}
-          >
-            <Plus size={15} /> Add project
-          </button>
+          {(portfolio.length > 0 || showPortfolioForm) && (
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setPortfolioId(null);
+                setPortfolioForm(emptyPortfolio);
+                setShowPortfolioForm(true);
+              }}
+            >
+              <Plus size={15} /> Add project
+            </button>
+          )}
         </div>
         {showPortfolioForm && (
           <form className="portfolio-form" onSubmit={savePortfolio}>
@@ -1031,29 +1053,33 @@ export function ProfileEditor({
                     </button>
                   </div>
                 </footer>
-                <MediaUploader
-                  endpoint={`/api/profile/portfolio/${item.id}/media`}
-                  label="project media"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  altRequired
-                  initialMedia={item.media}
-                  onChange={(media) =>
-                    setPortfolio((items) =>
-                      items.map((candidate) =>
-                        candidate.id === item.id ? { ...candidate, media } : candidate,
-                      ),
-                    )
-                  }
-                />
+                {uploadsEnabled && (
+                  <MediaUploader
+                    endpoint={`/api/profile/portfolio/${item.id}/media`}
+                    label="project media"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    altRequired
+                    initialMedia={item.media}
+                    onChange={(media) =>
+                      setPortfolio((items) =>
+                        items.map((candidate) =>
+                          candidate.id === item.id ? { ...candidate, media } : candidate,
+                        ),
+                      )
+                    }
+                  />
+                )}
               </article>
             ))
           ) : (
             <div className="market-empty compact-empty portfolio-empty">
               <h3>No portfolio projects yet</h3>
               <p>Add one strong project to help clients understand the kind of work you do.</p>
-              <button className="secondary-button" onClick={() => setShowPortfolioForm(true)}>
-                <Plus size={15} /> Add project
-              </button>
+              {!showPortfolioForm && (
+                <button className="secondary-button" onClick={() => setShowPortfolioForm(true)}>
+                  <Plus size={15} /> Add project
+                </button>
+              )}
             </div>
           )}
         </div>

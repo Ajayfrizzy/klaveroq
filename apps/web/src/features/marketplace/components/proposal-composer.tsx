@@ -1,9 +1,11 @@
 "use client";
 
+import { MilestoneEditor } from "@/components/ui/milestone-editor";
+
 import { ArrowLeft, CheckCircle2, Info, Plus, Send, Sparkles, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useWorkProtection } from "@/components/ui/use-work-protection";
 
 type Milestone = {
@@ -68,6 +70,9 @@ export function ProposalComposer({
     })) ?? [blank()],
   );
   const [phase, setPhase] = useState<"edit" | "review">("edit");
+  useEffect(() => {
+    if (phase === "review") document.getElementById("proposal-review-title")?.focus();
+  }, [phase]);
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [assistantBusy, setAssistantBusy] = useState(false);
@@ -172,10 +177,6 @@ export function ProposalComposer({
     event.preventDefault();
     if (validate()) {
       setPhase("review");
-      window.scrollTo({
-        top: 0,
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      });
     }
   };
   const submit = async () => {
@@ -254,7 +255,9 @@ export function ProposalComposer({
       <section className="proposal-form proposal-review">
         <div className="section-heading">
           <div>
-            <h2>Review your proposal</h2>
+            <h2 id="proposal-review-title" tabIndex={-1}>
+              Review your proposal
+            </h2>
             <p>Confirm the terms before sending them to the client.</p>
           </div>
         </div>
@@ -356,6 +359,7 @@ export function ProposalComposer({
             <p>{assistantNote}</p>
           </div>
         )}
+        <h3 className="editor-section-title">1. Introduce your approach</h3>
         <label>
           Cover letter
           <textarea
@@ -377,6 +381,7 @@ export function ProposalComposer({
               : `${coverLetter.length}/5,000 characters · Minimum 40`}
           </small>
         </label>
+        <h3 className="editor-section-title">2. Define milestones, timing & proof</h3>
         <div className="proposal-guidance">
           <Info size={16} />
           <p>
@@ -385,8 +390,12 @@ export function ProposalComposer({
           </p>
         </div>
         {items.map((item, index) => (
-          <fieldset key={item.id}>
-            <legend>Milestone {index + 1}</legend>
+          <MilestoneEditor
+            key={item.id}
+            index={index}
+            title={item.title}
+            summary={`${item.amount || "0"} CKB · Day ${item.deliveryDays}`}
+          >
             {items.length > 1 && (
               <button
                 type="button"
@@ -482,7 +491,7 @@ export function ProposalComposer({
               />
               <small>Formal term: required proof</small>
             </label>
-          </fieldset>
+          </MilestoneEditor>
         ))}
         <button
           type="button"
@@ -497,6 +506,7 @@ export function ProposalComposer({
         >
           <Plus size={16} /> Add milestone <span>{items.length}/10</span>
         </button>
+        <h3 className="editor-section-title">3. Check your terms</h3>
         <div className={`proposal-total ${total > 0n && !withinBudget ? "outside-budget" : ""}`}>
           <div>
             <span>Proposal total</span>

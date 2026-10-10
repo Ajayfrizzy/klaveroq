@@ -1,5 +1,7 @@
 "use client";
 
+import { MilestoneEditor } from "@/components/ui/milestone-editor";
+
 import { JOB_CATEGORIES } from "@klaveroq/domain";
 import {
   ArrowLeft,
@@ -342,6 +344,8 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
         {stages.map((item) => (
           <li
             className={`${stage === item.number && !reviewing ? "active" : ""} ${stage > item.number || reviewing ? "complete" : ""}`}
+            aria-current={stage === item.number && !reviewing ? "step" : undefined}
+            aria-label={`Step ${item.number}: ${item.label}`}
             key={item.number}
           >
             <span>{stage > item.number || reviewing ? <Check size={15} /> : item.number}</span>
@@ -351,7 +355,11 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
             </div>
           </li>
         ))}
-        <li className={reviewing ? "active" : ""}>
+        <li
+          className={reviewing ? "active" : ""}
+          aria-current={reviewing ? "step" : undefined}
+          aria-label="Step 4: Review"
+        >
           <span>{reviewing ? 4 : <CheckCircle2 size={15} />}</span>
           <div>
             <small>Final check</small>
@@ -547,8 +555,12 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
               </div>
               <div className="listing-milestone-editors">
                 {milestones.map((milestone, index) => (
-                  <fieldset key={milestone.id}>
-                    <legend>Milestone {index + 1}</legend>
+                  <MilestoneEditor
+                    key={milestone.id}
+                    index={index}
+                    title={milestone.title}
+                    summary={`Delivery by day ${milestone.deliveryDays}`}
+                  >
                     {milestones.length > 1 && (
                       <button
                         type="button"
@@ -627,7 +639,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                       />
                       <small>Formal term: required proof</small>
                     </label>
-                  </fieldset>
+                  </MilestoneEditor>
                 ))}
                 <button
                   type="button"

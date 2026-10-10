@@ -109,8 +109,8 @@ export function WalletVerificationForm({
               value={network}
               onChange={(event) => setNetwork(event.target.value as "mainnet" | "testnet")}
             >
-              <option value="mainnet">CKB mainnet</option>
               <option value="testnet">CKB testnet</option>
+              <option value="mainnet">CKB mainnet</option>
             </select>
           </label>
           {!communityBeta && (

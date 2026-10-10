@@ -40,7 +40,7 @@ export default async function WalletPage({
   const { walletStatus } = await searchParams;
 
   const communityBeta = identityConfiguration().stage === "community_beta";
-  const defaultNetwork = process.env.CKB_NETWORK === "mainnet" ? "mainnet" : "testnet";
+  const defaultNetwork = "testnet" as const;
   const now = new Date();
   const [walletRecords, identityRows, sessionRecords, activeHolds, mfaRows] = await Promise.all([
     db

@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { and, countDistinct, desc, eq, gte, ilike, inArray, lt, or, sql } from "drizzle-orm";
+import { and, countDistinct, desc, eq, gte, ilike, inArray, lt, ne, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/server/db";
 import { jobs, marketplaceReviews, mediaFiles, portfolioItems, profiles } from "@/server/db/schema";
@@ -50,7 +50,7 @@ export function getTalentForViewer(userId: string, actorUserId?: string) {
   return getTalentProfile(userId, actorUserId);
 }
 
-export async function listTalent(input: z.infer<typeof talentQuerySchema>) {
+export async function listTalent(input: z.infer<typeof talentQuerySchema>, viewerUserId?: string) {
   const completedWork = db
     .select({
       userId: jobs.workerUserId,
@@ -86,6 +86,7 @@ export async function listTalent(input: z.infer<typeof talentQuerySchema>) {
     else 1 end`
     : sql<number>`0::integer`;
   const conditions = [eq(profiles.isPublic, true)];
+  if (viewerUserId) conditions.push(ne(profiles.userId, viewerUserId));
   if (input.query)
     conditions.push(
       or(

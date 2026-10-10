@@ -692,3 +692,109 @@
     grid-row: 1;
   }
 }
+
+/* Keep populated profile controls aligned and talent details easy to scan. */
+.app-shell .tag-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.app-shell .tag-field > label {
+  display: block;
+}
+.app-shell .tag-entry {
+  align-items: center;
+}
+.app-shell .tag-entry input {
+  min-width: 0;
+}
+.app-shell .tag-field > small {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.app-shell .tag-values {
+  margin: 0;
+  gap: 6px;
+}
+.app-shell .tag-values:empty {
+  display: none;
+}
+.app-shell .tag-values > span {
+  padding: 0 4px 0 12px;
+  min-height: 36px;
+  font-size: 13px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.app-shell .tag-values button {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+.app-shell .profile-step .two-fields {
+  align-items: start;
+}
+.app-shell .searchable-select {
+  gap: 10px;
+}
+.app-shell .searchable-select label {
+  gap: 8px;
+}
+.talent-grid .talent-card {
+  padding: 24px;
+  gap: 20px;
+}
+.talent-grid
+  .talent-card
+  > :is(
+    .skill-list,
+    .talent-meta,
+    .talent-portfolio-preview,
+    .talent-stats,
+    .trust-source,
+    .talent-profile-link
+  ) {
+  margin: 0;
+}
+.talent-grid .talent-card-head {
+  align-items: start;
+  gap: 14px;
+}
+.talent-grid .talent-card-head p {
+  line-height: 1.6;
+  margin-top: 6px;
+}
+.talent-grid .talent-meta {
+  gap: 12px 16px;
+}
+.talent-grid .talent-meta > :is(.timezone-context, .availability) {
+  flex-basis: 100%;
+}
+.talent-grid .talent-stats {
+  gap: 16px;
+  padding-top: 20px;
+}
+.talent-grid .talent-stats > div {
+  min-width: 0;
+}
+.talent-grid .talent-stats dt {
+  line-height: 1.5;
+  align-items: start;
+}
+.talent-grid .talent-stats dd {
+  margin-top: 8px;
+}
+.talent-grid .trust-source {
+  line-height: 1.6;
+}
+@media (max-width: 760px) {
+  .talent-grid .talent-card {
+    padding: 20px;
+  }
+  .talent-grid .talent-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

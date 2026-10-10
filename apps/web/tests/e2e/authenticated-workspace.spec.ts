@@ -359,9 +359,11 @@ test("direct agreement milestone disclosure reveals invalid fields and keeps edi
 
 test("published profile and portfolio display saved professional details without invented reputation", async ({
   page,
+  browser,
 }) => {
   test.setTimeout(60000);
   await account(page, "Tomi Adeyemi");
+  const role = `Designer-${crypto.randomUUID()}`;
   const headers = { Origin: origin };
   expect(
     (
@@ -370,7 +372,7 @@ test("published profile and portfolio display saved professional details without
         data: {
           displayName: "Tomi Adeyemi",
           headline: "Accessible product design for independent businesses",
-          primaryRole: "Product designer",
+          primaryRole: role,
           bio: "I design practical booking and service experiences with accessible interactions, clear delivery milestones, and a documented handoff.",
           skills: ["Product design", "Accessibility"],
           experienceLevel: "EXPERT",
@@ -411,7 +413,51 @@ test("published profile and portfolio display saved professional details without
   await reflow(page, "profile-published");
   await audit(page);
   await page.getByRole("button", { name: "Edit profile", exact: true }).click();
+  const skill = page.getByLabel("Skills", { exact: true });
+  const language = page.getByLabel("Spoken languages", { exact: true });
+  await skill.fill("React");
+  await skill.press("Enter");
+  await language.fill("English");
+  await language.press("Enter");
+  await expect(page.getByRole("button", { name: "Remove React", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Remove React", exact: true }).click();
+  await page.getByLabel("Filter available timezones").fill("Lagos");
+  await page.getByLabel("Timezone", { exact: true }).selectOption("Africa/Lagos");
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  expect(Math.abs((await skill.boundingBox())!.y - (await language.boundingBox())!.y)).toBeLessThan(
+    2,
+  );
   await reflow(page, "profile-edit-populated");
+  await audit(page);
+  await page.getByRole("button", { name: "Save profile", exact: true }).click();
+  await expect(page.getByText("Profile saved.", { exact: true })).toBeVisible();
+  const preview = page.getByRole("link", { name: "View public profile" });
+  const publicPath = (await preview.getAttribute("href"))!;
+  const ownerId = publicPath.split("/").at(-1)!;
+  await preview.click();
+  await expect(page).toHaveURL(new RegExp(ownerId));
+  await page.goto(`/talent?role=${role}`);
+  await expect(page.locator(".talent-card")).toHaveCount(0);
+  for (const sort of ["discover", "recent", "reputation", "completed"]) {
+    const result = await sessionRequest(page.request).get(
+      `/api/talent?role=${role}&sort=${sort}&limit=1`,
+    );
+    expect((await result.json()).data).toEqual([]);
+  }
+  const visitor = await browser.newContext();
+  const guest = await visitor.newPage();
+  const publicResult = await guest.request.get(`${origin}/api/talent?role=${role}`);
+  expect(
+    (await publicResult.json()).data.map(
+      (item: { profile: { userId: string } }) => item.profile.userId,
+    ),
+  ).toContain(ownerId);
+  await account(guest, "Talent Browser");
+  await guest.goto(`${origin}/talent?role=${role}`);
+  await expect(guest.locator(".talent-card")).toHaveCount(1);
+  await reflow(guest, "talent-populated");
+  await audit(guest);
+  await visitor.close();
   await page.goto("/dashboard");
   await page.getByRole("button", { name: "Both", exact: true }).click();
   await expect(page.locator(".intent-current")).toContainText("Current focus: Both");

@@ -103,26 +103,15 @@ const countries = Array.from({ length: 26 * 26 }, (_, index) => {
   .filter((item): item is readonly [string, string] => Boolean(item))
   .sort((left, right) => left[1].localeCompare(right[1]));
 
-const commonTimezones = [
-  "Africa/Accra",
-  "Africa/Cairo",
-  "Africa/Johannesburg",
-  "Africa/Lagos",
-  "Africa/Nairobi",
-  "America/Chicago",
-  "America/Los_Angeles",
-  "America/New_York",
-  "America/Sao_Paulo",
-  "Asia/Dubai",
-  "Asia/Kolkata",
-  "Asia/Singapore",
-  "Australia/Sydney",
-  "Europe/Berlin",
-  "Europe/Lisbon",
-  "Europe/London",
-  "Europe/Paris",
-  "UTC",
-];
+const timezoneOptions = [...new Set(["UTC", ...Intl.supportedValuesOf("timeZone")])]
+  .map(
+    (zone) =>
+      [
+        zone,
+        zone === "UTC" ? "UTC" : `${zone.split("/").at(-1)!.replaceAll("_", " ")} — ${zone}`,
+      ] as const,
+  )
+  .sort((left, right) => left[1].localeCompare(right[1]));
 
 export function ProfileEditor({
   initialProfile,
@@ -557,6 +546,7 @@ export function ProfileEditor({
               <div className="two-fields">
                 <TagInput
                   label="Skills"
+                  placeholder="Add a skill, e.g. React"
                   value={skillsText}
                   error={fieldError("skills")}
                   onChange={(value) => {
@@ -565,7 +555,12 @@ export function ProfileEditor({
                     setCanSaveAsPrivate(false);
                   }}
                 />
-                <TagInput label="Languages" value={languagesText} onChange={setLanguagesText} />
+                <TagInput
+                  label="Spoken languages"
+                  placeholder="Add a spoken language, e.g. English"
+                  value={languagesText}
+                  onChange={setLanguagesText}
+                />
               </div>
               <fieldset className="category-checks">
                 <legend>Preferred work categories</legend>
@@ -654,24 +649,19 @@ export function ProfileEditor({
                     <small className="field-error">{fieldError("countryCode")}</small>
                   )}
                 </div>
-                <label>
-                  Timezone
-                  <input
-                    list="klaveroq-timezones"
+                <div>
+                  <SearchableSelect
+                    label="Timezone"
+                    filterLabel="Filter available timezones"
                     value={profile.timezone ?? ""}
-                    onChange={(event) => set("timezone", event.target.value || null)}
-                    placeholder="Select your timezone"
-                    aria-invalid={Boolean(fieldError("timezone"))}
+                    options={timezoneOptions}
+                    onChange={(value) => set("timezone", value || null)}
+                    invalid={Boolean(fieldError("timezone"))}
                   />
-                  <datalist id="klaveroq-timezones">
-                    {commonTimezones.map((timezone) => (
-                      <option value={timezone} key={timezone} />
-                    ))}
-                  </datalist>
                   {fieldError("timezone") && (
                     <small className="field-error">{fieldError("timezone")}</small>
                   )}
-                </label>
+                </div>
               </div>
             </details>
             <details className="profile-step" id="profile-links">

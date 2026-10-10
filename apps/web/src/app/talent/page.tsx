@@ -44,8 +44,8 @@ export default async function TalentPage({
   const parsed = talentQuerySchema.safeParse(scalar);
   if (!parsed.success) redirect("/talent");
   const input = parsed.data;
-  const result = await listTalent(input);
   const current = await getCurrentUser();
+  const result = await listTalent(input, current?.user.id);
   const hasAppliedFilters = Boolean(
     input.query ||
     input.skill ||

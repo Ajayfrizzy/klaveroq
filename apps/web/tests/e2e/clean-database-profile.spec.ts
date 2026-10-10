@@ -131,10 +131,10 @@ test("empty database stays demo-free and profile changes persist through repeat 
       "I build reliable marketplace products with accessible interfaces, explicit milestones, and tested delivery workflows.",
     );
   await page.getByLabel("Skills").fill("TypeScript, React, testing");
-  await page.getByLabel("Languages").fill("English");
+  await page.getByLabel("Spoken languages").fill("English");
   await page.getByLabel("Experience level").selectOption("EXPERT");
   await page.getByLabel("Country").selectOption("NG");
-  await page.getByLabel("Timezone").fill("Africa/Lagos");
+  await page.getByLabel("Timezone", { exact: true }).selectOption("Africa/Lagos");
 
   let failNextSave = true;
   await page.route("**/api/profile", async (route) => {

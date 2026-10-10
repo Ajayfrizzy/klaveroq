@@ -7,11 +7,13 @@ export function TagInput({
   value,
   onChange,
   error,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  placeholder?: string;
 }) {
   const id = useId();
   const [entry, setEntry] = useState("");
@@ -33,23 +35,10 @@ export function TagInput({
   return (
     <div className="tag-field">
       <label htmlFor={id}>{label}</label>
-      <div className="tag-values">
-        {tags.map((tag) => (
-          <span key={tag}>
-            {tag}
-            <button
-              type="button"
-              aria-label={`Remove ${tag}`}
-              onClick={() => onChange(tags.filter((item) => item !== tag).join(", "))}
-            >
-              <X size={14} />
-            </button>
-          </span>
-        ))}
-      </div>
       <div className="tag-entry">
         <input
           id={id}
+          placeholder={placeholder}
           value={entry}
           aria-invalid={Boolean(error)}
           aria-describedby={`${id}-help`}
@@ -66,7 +55,21 @@ export function TagInput({
           Add
         </button>
       </div>
-      <small id={`${id}-help`}>{error || "Type an item and press Enter to add it."}</small>
+      <small id={`${id}-help`}>{error || "Press Enter or Add to include an item."}</small>
+      <div className="tag-values">
+        {tags.map((tag) => (
+          <span key={tag}>
+            {tag}
+            <button
+              type="button"
+              aria-label={`Remove ${tag}`}
+              onClick={() => onChange(tags.filter((item) => item !== tag).join(", "))}
+            >
+              <X size={14} />
+            </button>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

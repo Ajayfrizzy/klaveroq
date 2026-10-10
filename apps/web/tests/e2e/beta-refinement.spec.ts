@@ -116,6 +116,7 @@ test("expanded filters and workspace reflow at all target widths", async ({ page
 
 test("profile uploads, populated talent and invalid job forms have visual references", async ({
   page,
+  browser,
 }) => {
   test.setTimeout(120_000);
   const account = await reviewAccount(page);
@@ -157,16 +158,20 @@ test("profile uploads, populated talent and invalid job forms have visual refere
       await page.request.patch("/api/profile/visibility", { headers, data: { isPublic: true } })
     ).ok(),
   ).toBe(true);
+  const viewerContext = await browser.newContext();
+  const viewer = await viewerContext.newPage();
+  await reviewAccount(viewer);
   for (const width of [375, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
-    await page.goto(`/talent?role=${role}`);
-    await expect(page.locator(".talent-card")).toBeVisible();
-    await expect(page.locator(".talent-card")).toHaveCount(1);
-    await expect(page.locator(".sidebar-user strong")).toHaveText("Beta Review");
-    await expect.soft(page).toHaveScreenshot(`talent-populated-${width}.png`, {
+    await viewer.setViewportSize({ width, height: 1000 });
+    await viewer.goto(`/talent?role=${role}`);
+    await expect(viewer.locator(".talent-card")).toBeVisible();
+    await expect(viewer.locator(".talent-card")).toHaveCount(1);
+    await expect(viewer.locator(".sidebar-user strong")).toHaveText("Beta Review");
+    await expect.soft(viewer).toHaveScreenshot(`talent-populated-${width}.png`, {
       fullPage: true,
       caret: "initial",
-      mask: [page.locator(".sidebar-user small"), page.locator(".filter-chip")],
+      mask: [viewer.locator(".sidebar-user small"), viewer.locator(".filter-chip")],
       maxDiffPixelRatio: 0.002,
     });
     await page.goto("/profile");
@@ -208,4 +213,5 @@ test("profile uploads, populated talent and invalid job forms have visual refere
       maxDiffPixelRatio: 0.002,
     });
   }
+  await viewerContext.close();
 });

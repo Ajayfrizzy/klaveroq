@@ -27,8 +27,9 @@ export async function audit(
     entityId?: string;
     metadata?: Record<string, unknown>;
   },
+  executor: Pick<typeof db, "insert"> = db,
 ) {
-  await db.insert(auditLogs).values({
+  await executor.insert(auditLogs).values({
     ...input,
     actorUserId: input.actorUserId ?? null,
     entityId: input.entityId ?? null,

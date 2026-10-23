@@ -1,3 +1,5 @@
+import { acceptedInvitations } from "@/features/client-invites/server/service";
+import { AgreementLinks } from "@/features/client-invites/components/invites";
 import { SectionUnavailable } from "@/components/ui/section-unavailable";
 import { ArrowRight, Check, Clock3, ShieldCheck } from "lucide-react";
 import Link from "next/link";
@@ -18,6 +20,7 @@ export default async function DashboardPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/login?returnTo=/dashboard");
   const data = await getDashboardData(current.user.id, Boolean(current.user.emailVerifiedAt));
+  const invitations = await acceptedInvitations(current.user.id);
   const displayName = current.profile?.displayName?.split(" ")[0] || "there";
   const profileComplete = Boolean(
     current.profile && getMissingPublicationFields(current.profile).length === 0,
@@ -37,6 +40,17 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      <Link className="secondary-button" href="/client-invites">
+        Invite a Client
+      </Link>
+      {invitations
+        .filter((invite) => !invite.jobId)
+        .map((invite) => (
+          <section className="panel invite-panel" key={invite.id}>
+            <h2>Your next agreement</h2>
+            <AgreementLinks id={invite.id} name={invite.name ?? "your freelancer"} />
+          </section>
+        ))}
       <IntentPanel
         userId={current.user.id}
         profileReady={profileComplete}

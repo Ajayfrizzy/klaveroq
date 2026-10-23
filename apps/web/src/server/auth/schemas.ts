@@ -8,6 +8,7 @@ const password = z
   .regex(/[A-Z]/, "Use an uppercase letter")
   .regex(/[0-9]/, "Use a number");
 export const registerSchema = z.object({
+  returnTo: z.string().max(2048).optional(),
   email: z
     .string()
     .email()

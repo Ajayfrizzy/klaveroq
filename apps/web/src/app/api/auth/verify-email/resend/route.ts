@@ -12,8 +12,9 @@ import { allowsLocalAuthDelivery } from "@/server/auth/local-mode";
 
 export const POST = withApi(async (request: Request) => {
   assertSameOrigin(request);
-  const { email } = z
+  const { email, returnTo } = z
     .object({
+      returnTo: z.string().max(2048).optional(),
       email: z
         .string()
         .email()
@@ -37,7 +38,7 @@ export const POST = withApi(async (request: Request) => {
   if (user) {
     token = await issueAuthToken(user.id, "VERIFY_EMAIL");
     try {
-      await sendVerificationEmail(user.email, token);
+      await sendVerificationEmail(user.email, token, returnTo);
     } catch {
       console.error("Verification email could not be queued.");
     }

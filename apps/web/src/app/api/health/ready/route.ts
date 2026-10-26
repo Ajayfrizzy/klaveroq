@@ -28,7 +28,7 @@ export const GET = withApi(async () => {
         fileUploads: fileUploadsEnabled() ? "enabled" : "disabled",
         fileStorage: betaWithoutUploads()
           ? "not_required_uploads_disabled"
-          : process.env.FILE_STORAGE_BACKEND === "spaces"
+          : ["spaces", "s3"].includes(process.env.FILE_STORAGE_BACKEND ?? "")
             ? "configured"
             : "local_or_unconfigured",
         fileScanner: betaWithoutUploads()

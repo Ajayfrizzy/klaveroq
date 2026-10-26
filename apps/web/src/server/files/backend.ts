@@ -8,7 +8,11 @@ import {
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { ApiError } from "../http/errors";
-import { spacesConfiguration } from "./config";
+import {
+  objectStorageConfiguration,
+  spacesConfiguration,
+  type ObjectStorageConfiguration,
+} from "./config";
 import { allowsLocalFileScanner } from "./scanner";
 
 export type StoredObject = { key: string; modifiedAt: Date };
@@ -85,12 +89,13 @@ export function createFilesystemStorage(root: string): FileStorage {
   };
 }
 
-export function createSpacesStorage(
-  config = spacesConfiguration(),
+export function createS3Storage(
+  config: ObjectStorageConfiguration,
   client = new S3Client({
     endpoint: config.endpoint,
     region: config.region,
     credentials: config.credentials,
+    forcePathStyle: config.forcePathStyle,
     maxAttempts: 3,
     requestChecksumCalculation: "WHEN_REQUIRED",
     responseChecksumValidation: "WHEN_REQUIRED",
@@ -114,7 +119,7 @@ export function createSpacesStorage(
         Body: bytes,
         ContentLength: bytes.length,
         ContentType: contentType,
-        ACL: "private",
+        ACL: config.privateAcl === false ? undefined : "private",
         CacheControl: "private, no-store",
       }),
     );
@@ -163,16 +168,20 @@ export function createSpacesStorage(
   };
 }
 
+export function createSpacesStorage(config = spacesConfiguration()) {
+  return createS3Storage(config);
+}
+
 let cachedSpaces: { configuration: string; storage: FileStorage } | undefined;
 
 export function getFileStorage(): FileStorage {
   const backend = process.env.FILE_STORAGE_BACKEND ?? "filesystem";
-  if (backend === "spaces") {
+  if (backend === "spaces" || backend === "s3") {
     try {
-      const config = spacesConfiguration();
+      const config = objectStorageConfiguration();
       const configuration = JSON.stringify(config);
       if (cachedSpaces?.configuration !== configuration)
-        cachedSpaces = { configuration, storage: createSpacesStorage(config) };
+        cachedSpaces = { configuration, storage: createS3Storage(config) };
       return cachedSpaces.storage;
     } catch {
       throw new ApiError(503, "FILE_STORAGE_UNAVAILABLE", "File storage is not configured.");

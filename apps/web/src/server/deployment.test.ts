@@ -57,6 +57,24 @@ describe("identity sandbox deployment guard", () => {
       "malware_scanner",
     );
   });
+  it("accepts configured S3-compatible storage and rejects missing credentials", () => {
+    const s3 = {
+      ...hosted,
+      DEPLOYMENT_STAGE: "community_beta",
+      IDENTITY_PROVIDER: "disabled",
+      FILE_STORAGE_BACKEND: "s3",
+      S3_ENDPOINT: "https://objects.example.test",
+      S3_REGION: "us-east-1",
+      S3_BUCKET: "private-files",
+      S3_PREFIX: "community-beta/",
+      S3_ACCESS_KEY_ID: "test-key",
+      S3_SECRET_ACCESS_KEY: "test-secret",
+    };
+    expect(productionConfigurationIssues(s3)).toEqual([]);
+    expect(productionConfigurationIssues({ ...s3, S3_SECRET_ACCESS_KEY: "" })).toContain(
+      "file_storage",
+    );
+  });
   it("allows the explicit low-cost beta without upload providers, never full production", () => {
     const beta = {
       ...hosted,

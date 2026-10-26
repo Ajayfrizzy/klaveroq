@@ -1,5 +1,5 @@
 import { betaWithoutUploads } from "@/features/files/upload-policy";
-import { spacesConfiguration } from "./files/config";
+import { objectStorageConfiguration } from "./files/config";
 
 type DeploymentEnvironment = Record<string, string | undefined>;
 import { emailAppUrl, validEmailSender } from "./email/templates";
@@ -80,9 +80,7 @@ export function productionConfigurationIssues(
     if (environment.FILE_SCANNER !== "clamav" || !environment.CLAMAV_HOST)
       issues.push("malware_scanner");
     try {
-      if (environment.FILE_STORAGE_BACKEND !== "spaces")
-        throw new Error("Durable storage required.");
-      spacesConfiguration(environment);
+      objectStorageConfiguration(environment);
     } catch {
       issues.push("file_storage");
     }

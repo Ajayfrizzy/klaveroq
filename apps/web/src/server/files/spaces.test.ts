@@ -70,6 +70,39 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("private Spaces lifecycle", () => {
+  it("supports a separate S3 provider through upload, read, list and delete", async () => {
+    for (const [key, value] of Object.entries({
+      FILE_STORAGE_BACKEND: "s3",
+      S3_ENDPOINT: "https://objects.example.test",
+      S3_REGION: "us-east-1",
+      S3_BUCKET: "provider-files",
+      S3_PREFIX: "provider/",
+      S3_ACCESS_KEY_ID: "provider-key",
+      S3_SECRET_ACCESS_KEY: "provider-secret",
+      S3_FORCE_PATH_STYLE: "true",
+      S3_PRIVATE_ACL: "false",
+    }))
+      vi.stubEnv(key, value);
+    const storage = getFileStorage();
+    const stored = await storePrivateFile(file(), {}, { storage, scan: async () => "CLEAN" });
+    expect(remote.configs.at(-1)).toMatchObject({
+      endpoint: "https://objects.example.test",
+      region: "us-east-1",
+      forcePathStyle: true,
+      credentials: { accessKeyId: "provider-key", secretAccessKey: "provider-secret" },
+    });
+    expect([...remote.objects.keys()]).toEqual(["provider/" + stored.storageKey]);
+    expect(Buffer.from(await readPrivateFile(stored.storageKey)).toString()).toBe("beta evidence");
+    expect((await storage.list("clean/")).objects[0].key).toBe(stored.storageKey);
+    for (const [command] of remote.send.mock.calls) {
+      expect(command.input.Bucket).toBe("provider-files");
+      if (command.constructor.name === "PutObjectCommand")
+        expect(command.input.ACL).toBeUndefined();
+    }
+    await deletePrivateFile(stored.storageKey);
+    expect(remote.objects.size).toBe(0);
+  });
+
   it("scans quarantined bytes before promotion and returns compatible metadata", async () => {
     const scan = vi.fn(async (bytes: Buffer) => {
       expect([...remote.objects.keys()]).toHaveLength(1);

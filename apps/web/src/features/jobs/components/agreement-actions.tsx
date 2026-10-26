@@ -126,6 +126,8 @@ function ProofFileUploader({
 
 export function AgreementActions({
   jobId,
+  clientInvitation = false,
+  termsAccepted = false,
   status,
   role,
   userId,
@@ -134,6 +136,8 @@ export function AgreementActions({
   openDisputeReference,
 }: {
   jobId: string;
+  clientInvitation?: boolean;
+  termsAccepted?: boolean;
   status: string;
   role: "client" | "worker";
   userId: string;
@@ -246,13 +250,32 @@ export function AgreementActions({
   return (
     <div className="agreement-actions" ref={workRoot}>
       {workDirty && workStatus}
+      {clientInvitation && (
+        <section className="agreement-status-note">
+          <h3>Agreement terms</h3>
+          <p>
+            {termsAccepted
+              ? "The freelancer has accepted these terms. No payment was initiated."
+              : "Review the scope, budget, milestones, deliverables, and deadlines above. Accepting terms is free and does not initiate payment."}
+          </p>
+          {role === "worker" && status === "INVITED" && !termsAccepted && (
+            <button
+              className="primary-button"
+              disabled={Boolean(busy)}
+              onClick={() => act("accept-terms", `/api/jobs/${jobId}/accept-terms`, {})}
+            >
+              Accept agreement terms
+            </button>
+          )}
+        </section>
+      )}
       {status === "DRAFT" && (
         <p className="agreement-status-note">
           This is an agreement draft created from the awarded proposal. It is not funded and does
           not represent an escrow payment.
         </p>
       )}
-      {["INVITED", "AWAITING_FUNDING"].includes(status) && (
+      {!clientInvitation && ["INVITED", "AWAITING_FUNDING"].includes(status) && (
         <p className="agreement-status-note">
           Funding is unavailable until PactAgent provides an authoritative confirmation. Worker
           acceptance, proof submission, and milestone review remain locked.

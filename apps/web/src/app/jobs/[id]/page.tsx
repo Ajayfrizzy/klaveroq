@@ -19,6 +19,7 @@ import { agreementNextAction } from "@/features/jobs/next-action";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { db } from "@/server/db";
 import {
+  clientInvites,
   disputes,
   disputeDecisions,
   disputeEvidence,
@@ -63,6 +64,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     (record.job.clientUserId !== current.user.id && record.job.workerUserId !== current.user.id)
   )
     notFound();
+  const [clientInvite] = await db
+    .select({ id: clientInvites.id })
+    .from(clientInvites)
+    .where(eq(clientInvites.jobId, id))
+    .limit(1);
   const [items, existingReviews, proofs, proofFileRows, disputeRecords, cancellationOperations] =
     await Promise.all([
       db
@@ -343,6 +349,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               <ConfirmDraftButton jobId={id} />
             )}
             <AgreementActions
+              clientInvitation={Boolean(clientInvite)}
+              termsAccepted={Boolean(record.job.termsAcceptedAt)}
               jobId={id}
               status={record.job.status}
               role={role}

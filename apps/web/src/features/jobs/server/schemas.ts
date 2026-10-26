@@ -9,6 +9,7 @@ export const createJobSchema = z
   .object({
     title: z.string().trim().min(5).max(90),
     description: z.string().trim().min(20).max(5000),
+    clientInviteId: z.string().uuid().optional(),
     workerUserId: z.string().uuid().optional(),
     workerEmail: z
       .string()

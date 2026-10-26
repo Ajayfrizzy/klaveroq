@@ -1,3 +1,4 @@
+import { expireClientInvitations } from "@/features/client-invites/server/expiry";
 import { timingSafeEqual } from "node:crypto";
 import { audit } from "@/server/audit";
 import { sql } from "drizzle-orm";
@@ -27,12 +28,14 @@ export const POST = withApi(async (request: Request) => {
       sql`select pg_try_advisory_xact_lock(72849102) as locked`,
     );
     if (!lock.locked) return Response.json({ data: { skipped: "already_running" } });
+    const expiredInvitations = await expireClientInvitations(request);
     const enqueued = await enqueueSecurityEmails();
     const outcomes = await retryPendingNotificationEmails(25);
     const counts = await db.execute(
       sql`select status, count(*)::int as count from notification_deliveries group by status`,
     );
     const result = {
+      expiredInvitations,
       enqueued,
       processed: outcomes.length,
       acceptedOrSimulated: outcomes.filter(Boolean).length,

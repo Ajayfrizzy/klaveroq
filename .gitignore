@@ -28,3 +28,5 @@ out/
 npm-debug.log*
 
 DEVLOG.md
+!docs/CLIENT_INVITES.md
+!docs/client-invites/

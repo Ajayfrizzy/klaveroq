@@ -8131,3 +8131,72 @@ button {
     padding-right: 8px;
   }
 }
+
+.client-invites {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+}
+.invite-landing {
+  padding: 24px;
+  min-height: 100dvh;
+}
+.invite-panel {
+  padding: clamp(18px, 4vw, 32px);
+  margin-block: 20px;
+}
+.invite-panel form,
+.invite-panel label {
+  display: grid;
+  gap: 10px;
+}
+.invite-panel form {
+  gap: 20px;
+}
+.invite-panel input,
+.invite-panel textarea {
+  width: 100%;
+  min-width: 0;
+}
+.invite-panel p {
+  margin-block: 12px;
+  overflow-wrap: anywhere;
+}
+.invite-message {
+  white-space: pre-wrap;
+}
+.invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-block: 16px;
+}
+.invite-actions a {
+  text-align: center;
+  white-space: normal;
+}
+.invite-history {
+  list-style: none;
+  padding: 0;
+}
+.invite-history li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  padding-block: 18px;
+  overflow-wrap: anywhere;
+}
+.invite-history li > div {
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 480px) {
+  .invite-actions > * {
+    width: 100%;
+  }
+  .invite-landing {
+    padding: 12px;
+  }
+}

@@ -1,6 +1,15 @@
+import { invitationAgreement, inviteUser } from "@/features/client-invites/server/service";
 import { and, desc, eq, gt, or } from "drizzle-orm";
 import { db } from "@/server/db";
-import { feeQuotes, jobs, milestones, operations, profiles, users } from "@/server/db/schema";
+import {
+  clientInvites,
+  feeQuotes,
+  jobs,
+  milestones,
+  operations,
+  profiles,
+  users,
+} from "@/server/db/schema";
 import { requireUser } from "@/server/auth/session";
 import { ApiError, withApi } from "@/server/http/errors";
 import { assertSameOrigin } from "@/server/http/security";
@@ -26,6 +35,15 @@ export const POST = withApi(async (request: Request) => {
   const current = await requireUser();
   const { user } = current;
   const input = createJobSchema.parse(await request.json());
+  const invitation = input.clientInviteId
+    ? await invitationAgreement(input.clientInviteId, (await inviteUser()).user.id)
+    : null;
+  if (invitation && input.workerUserId !== invitation.ownerUserId)
+    throw new ApiError(
+      403,
+      "INVITATION_WORKER_MISMATCH",
+      "Use the freelancer who sent this invitation.",
+    );
   const idempotencyKey = scopedIdempotencyKey(
     "create-job",
     user.id,
@@ -59,25 +77,31 @@ export const POST = withApi(async (request: Request) => {
       "FEE_QUOTE_INVALID",
       "Create a new fee quote for the exact milestone subtotal.",
     );
-  const [worker] = input.workerUserId
+  const [worker] = invitation
     ? await db
         .select({ id: users.id, email: users.email })
         .from(users)
-        .innerJoin(profiles, eq(profiles.userId, users.id))
-        .where(
-          and(
-            eq(users.id, input.workerUserId),
-            eq(users.status, "ACTIVE"),
-            eq(profiles.isPublic, true),
-            or(eq(profiles.availability, "AVAILABLE"), eq(profiles.availability, "LIMITED")),
-          ),
-        )
+        .where(and(eq(users.id, invitation.ownerUserId), eq(users.status, "ACTIVE")))
         .limit(1)
-    : await db
-        .select({ id: users.id, email: users.email })
-        .from(users)
-        .where(and(eq(users.email, input.workerEmail!), eq(users.status, "ACTIVE")))
-        .limit(1);
+    : input.workerUserId
+      ? await db
+          .select({ id: users.id, email: users.email })
+          .from(users)
+          .innerJoin(profiles, eq(profiles.userId, users.id))
+          .where(
+            and(
+              eq(users.id, input.workerUserId),
+              eq(users.status, "ACTIVE"),
+              eq(profiles.isPublic, true),
+              or(eq(profiles.availability, "AVAILABLE"), eq(profiles.availability, "LIMITED")),
+            ),
+          )
+          .limit(1)
+      : await db
+          .select({ id: users.id, email: users.email })
+          .from(users)
+          .where(and(eq(users.email, input.workerEmail!), eq(users.status, "ACTIVE")))
+          .limit(1);
   if (input.workerUserId && !worker)
     throw new ApiError(404, "TALENT_NOT_FOUND", "The selected professional is unavailable.");
   if (!worker)
@@ -94,6 +118,13 @@ export const POST = withApi(async (request: Request) => {
     );
   const reference = createJobReference();
   const job = await db.transaction(async (tx) => {
+    const lockedInvite = input.clientInviteId
+      ? await invitationAgreement(input.clientInviteId, user.id, tx)
+      : null;
+    if (lockedInvite?.jobId) {
+      const [existing] = await tx.select().from(jobs).where(eq(jobs.id, lockedInvite.jobId));
+      return existing;
+    }
     const [created] = await tx
       .insert(jobs)
       .values({
@@ -132,6 +163,22 @@ export const POST = withApi(async (request: Request) => {
       status: "CONFIRMED",
       metadata: { reference },
     });
+    if (lockedInvite) {
+      await tx
+        .update(clientInvites)
+        .set({ jobId: created.id, updatedAt: new Date() })
+        .where(eq(clientInvites.id, lockedInvite.id));
+      await audit(
+        request,
+        {
+          actorUserId: user.id,
+          action: "client_invite.agreement_created",
+          entityType: "job",
+          entityId: created.id,
+        },
+        tx,
+      );
+    }
     return created;
   });
   await notifyUser({

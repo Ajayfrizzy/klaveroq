@@ -12,6 +12,7 @@ if (
 )
   throw new Error("Playwright requires an isolated loopback database ending in _test.");
 process.env.DATABASE_URL = databaseUrl;
+process.env.TEST_DATABASE_URL = databaseUrl;
 
 export default defineConfig({
   tsconfig: "./tests/tsconfig.json",

@@ -42,10 +42,18 @@ export type SelectedTalent = {
   identityVerified: boolean;
 };
 
-export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent }) {
+export function JobWizard({
+  selectedTalent,
+  clientInviteId,
+  initialTitle = "",
+}: {
+  selectedTalent?: SelectedTalent;
+  clientInviteId?: string;
+  initialTitle?: string;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState("");
   const [worker, setWorker] = useState("");
   const [milestones, setMilestones] = useState<MilestoneDraft[]>([emptyMilestone(1)]);
@@ -115,7 +123,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
 
   const submit = async () => {
     if (!termsAccepted)
-      return setErrors(["Confirm the agreement terms before creating the funding request."]);
+      return setErrors(["Confirm the agreement terms before creating the agreement."]);
     setSubmitting(true);
     setErrors([]);
     try {
@@ -146,6 +154,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
         },
         body: JSON.stringify({
           title,
+          clientInviteId,
           description,
           ...(selectedTalent ? { workerUserId: selectedTalent.userId } : { workerEmail: worker }),
           asset: "CKB",
@@ -176,8 +185,8 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
         </Link>
         <div>
           <p className="eyebrow">Direct agreement</p>
-          <h1>Create a new job</h1>
-          <p>Set the work, milestones, and funding terms before inviting your worker.</p>
+          <h1>{clientInviteId ? "Create Agreement" : "Create a new job"}</h1>
+          <p>Set the work, milestones, and deadlines for your freelancer to review.</p>
         </div>
       </div>
 
@@ -388,7 +397,9 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                 <div>
                   <h2>Invite your worker</h2>
                   <p>
-                    They can inspect the terms immediately and accept after funding is confirmed.
+                    {clientInviteId
+                      ? "Your freelancer can review and accept these terms without a wallet or payment."
+                      : "They can inspect the terms immediately and accept after funding is confirmed."}
                   </p>
                 </div>
               </div>
@@ -401,9 +412,11 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                       selectedTalent.primaryRole ||
                       "Klaveroq professional"}
                   </p>
-                  <Link href="/talent" className="secondary-button">
-                    Change professional
-                  </Link>
+                  {!clientInviteId && (
+                    <Link href="/talent" className="secondary-button">
+                      Change professional
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <label>
@@ -497,7 +510,9 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                 />
                 <span>
                   I confirm the scope, milestone amounts, fees, review window, and
-                  funding-before-acceptance process.
+                  {clientInviteId
+                    ? "terms review process. Creating this agreement is free and does not move funds."
+                    : "funding-before-acceptance process."}
                 </span>
               </label>
             </div>
@@ -520,7 +535,12 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
               </button>
             ) : (
               <button className="primary-button" disabled={submitting} onClick={submit}>
-                <ShieldCheck size={17} /> {submitting ? "Creating..." : "Create invitation"}
+                <ShieldCheck size={17} />{" "}
+                {submitting
+                  ? "Creating..."
+                  : clientInviteId
+                    ? "Create Agreement"
+                    : "Create invitation"}
               </button>
             )}
           </div>

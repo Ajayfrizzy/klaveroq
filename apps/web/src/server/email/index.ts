@@ -1,3 +1,4 @@
+import { safeReturnTo } from "../auth/google";
 import { LocalEmailProvider, ResendEmailProvider } from "./provider";
 import type { EmailMessage, EmailProvider } from "./provider";
 import { allowsLocalAuthDelivery } from "../auth/local-mode";
@@ -23,9 +24,10 @@ export async function sendEmail(message: EmailMessage, idempotencyKey: string) {
 
 const appUrl = emailAppUrl;
 
-export function verificationUrl(token: string) {
+export function verificationUrl(token: string, returnTo?: string) {
   const url = new URL("/verify-email", appUrl());
   url.searchParams.set("token", token);
+  if (returnTo) url.searchParams.set("returnTo", safeReturnTo(returnTo));
   return url.toString();
 }
 
@@ -35,8 +37,8 @@ export function passwordResetUrl(token: string) {
   return url.toString();
 }
 
-export async function sendVerificationEmail(email: string, token: string) {
-  const url = verificationUrl(token);
+export async function sendVerificationEmail(email: string, token: string, returnTo?: string) {
+  const url = verificationUrl(token, returnTo);
   const { queueAuthEmail } = await import("./outbox");
   return queueAuthEmail(
     email,

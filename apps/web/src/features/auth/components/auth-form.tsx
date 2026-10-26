@@ -38,7 +38,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          mode === "register" ? { email, password, displayName } : { email, password, returnTo },
+          mode === "register"
+            ? { email, password, displayName, returnTo }
+            : { email, password, returnTo },
         ),
       });
       const body = await response.json();

@@ -5,6 +5,8 @@ import {
   notificationDeliveries as deliveries,
   notificationPreferences,
   verificationTokens,
+  clientInvites,
+  users,
 } from "../db/schema";
 import { sendEmail } from ".";
 import { EmailProviderError, type EmailMessage } from "./provider";
@@ -64,7 +66,31 @@ export async function deliverNotificationEmail(id: string) {
       await finish("EXPIRED", { textBody: "", htmlBody: "" });
       return false;
     }
-    if (delivery.tokenHash) {
+    if (delivery.category === "CLIENT_INVITE") {
+      const [invite] = await db
+        .select({ id: clientInvites.id })
+        .from(clientInvites)
+        .where(
+          and(
+            eq(clientInvites.tokenHash, delivery.tokenHash ?? ""),
+            eq(clientInvites.status, "PENDING"),
+            gt(clientInvites.expiresAt, now),
+          ),
+        );
+      if (!invite) {
+        await finish("EXPIRED", { textBody: "", htmlBody: "" });
+        return false;
+      }
+      const [recipient] = await db
+        .select({ preferences: notificationPreferences })
+        .from(users)
+        .leftJoin(notificationPreferences, eq(notificationPreferences.userId, users.id))
+        .where(eq(users.email, delivery.recipient));
+      if (!preferenceAllowsEmail("JOB", recipient?.preferences)) {
+        await finish("SUPPRESSED", { textBody: "", htmlBody: "" });
+        return false;
+      }
+    } else if (delivery.tokenHash) {
       const [token] = await db
         .select({ id: verificationTokens.id })
         .from(verificationTokens)
@@ -80,7 +106,7 @@ export async function deliverNotificationEmail(id: string) {
         return false;
       }
     }
-    if (!["SECURITY", "AUTH"].includes(delivery.category)) {
+    if (!["SECURITY", "AUTH", "CLIENT_INVITE"].includes(delivery.category)) {
       const [preferences] = await db
         .select()
         .from(notificationPreferences)
@@ -104,7 +130,9 @@ export async function deliverNotificationEmail(id: string) {
       acceptedAt: receipt.status === "ACCEPTED" ? new Date() : null,
       deliveredAt: null,
       lastError: null,
-      ...(delivery.category === "AUTH" ? { textBody: "", htmlBody: "" } : {}),
+      ...(["AUTH", "CLIENT_INVITE"].includes(delivery.category)
+        ? { textBody: "", htmlBody: "" }
+        : {}),
     });
     return true;
   } catch (error) {
@@ -135,7 +163,12 @@ export async function retryPendingNotificationEmails(limit = 25) {
   await db
     .update(deliveries)
     .set({ textBody: "", htmlBody: "", updatedAt: new Date() })
-    .where(and(eq(deliveries.category, "AUTH"), lte(deliveries.expiresAt, new Date())));
+    .where(
+      and(
+        inArray(deliveries.category, ["AUTH", "CLIENT_INVITE"]),
+        lte(deliveries.expiresAt, new Date()),
+      ),
+    );
   await db
     .update(deliveries)
     .set({

@@ -18,6 +18,16 @@ describe("authentication email links", () => {
     });
   });
 
+  it("preserves invitation continuation in verification emails without permitting external redirects", () => {
+    const destination = `/client-invites/respond?token=${"a".repeat(64)}`;
+    expect(new URL(verificationUrl("verification", destination)).searchParams.get("returnTo")).toBe(
+      destination,
+    );
+    expect(
+      new URL(verificationUrl("verification", "//evil.test")).searchParams.get("returnTo"),
+    ).toBe("/");
+  });
+
   it("sends the expected payload through the production provider", async () => {
     const request = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
       void _input;

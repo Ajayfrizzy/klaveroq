@@ -5,6 +5,14 @@ const baseURL = "http://127.0.0.1:3199";
 const password = "KlaveroqTest123";
 const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
 const unique = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+// All browser suites share the loopback IP. Keep fixture registrations from
+// exhausting the quota for unrelated tests while retaining limits within a test.
+test.beforeEach(async () => {
+  await sql`delete from auth_rate_limits where action = 'register'`;
+});
+test.afterEach(async () => {
+  await sql`delete from auth_rate_limits where action = 'register'`;
+});
 async function account(name: string) {
   const email = `invite-${name.toLowerCase().replace(/[^a-z0-9]/g, "")}-${unique()}@example.test`;
   const api = await request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL } });

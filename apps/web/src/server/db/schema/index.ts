@@ -458,6 +458,26 @@ export const wallets = pgTable(
   ],
 );
 
+export const vellumIdentityBindings = pgTable(
+  "vellum_identity_bindings",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    walletId: uuid("wallet_id")
+      .notNull()
+      .references(() => wallets.id),
+    did: varchar("did", { length: 80 }).notNull(),
+    displayName: varchar("display_name", { length: 160 }),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }).defaultNow().notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("vellum_identity_did_unique").on(table.did),
+    index("vellum_identity_wallet_idx").on(table.walletId),
+  ],
+);
+
 export const walletChallenges = pgTable(
   "wallet_challenges",
   {

@@ -120,6 +120,13 @@
       "when": 1790604156545,
       "tag": "0016_panoramic_mister_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793072130326,
+      "tag": "0017_tidy_jackal",
+      "breakpoints": true
     }
   ]
 }

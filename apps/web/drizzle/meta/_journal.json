@@ -127,6 +127,13 @@
       "when": 1793072130326,
       "tag": "0017_tidy_jackal",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793072845997,
+      "tag": "0018_kind_virginia_dare",
+      "breakpoints": true
     }
   ]
 }

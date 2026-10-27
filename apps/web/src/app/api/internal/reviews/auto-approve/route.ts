@@ -45,7 +45,7 @@ export const POST = withApi(async (request: Request) => {
           idempotencyKey: `auto-release:${row.milestone.id}:${row.proof.version}`,
           amount: row.milestone.amount,
           asset: row.job.asset,
-          metadata: { automatic: true },
+          metadata: { automatic: true, proofId: row.proof.id },
         })
         .onConflictDoNothing();
       processed++;

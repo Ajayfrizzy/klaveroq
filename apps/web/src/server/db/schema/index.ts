@@ -143,6 +143,13 @@ export const operationStatusEnum = pgEnum("operation_status", [
   "SECURITY_HOLD",
   "CANCELLED",
 ]);
+export const vellumClaimIssuanceStatusEnum = pgEnum("vellum_claim_issuance_status", [
+  "PREPARING",
+  "PREPARED",
+  "SUBMITTED",
+  "CONFIRMED",
+  "REVIEW_REQUIRED",
+]);
 export const disputeStatusEnum = pgEnum("dispute_status", [
   "OPEN",
   "EVIDENCE_COLLECTION",
@@ -992,6 +999,74 @@ export const operations = pgTable(
     ...timestamps,
   },
   (table) => [uniqueIndex("operations_idempotency_unique").on(table.idempotencyKey)],
+);
+
+export type VellumSettlementClaimPayload = {
+  engagement_id: string;
+  milestone_id: string;
+  delivery_id: string;
+  milestone_sequence: number;
+  approval_method: "client" | "review_timeout";
+  settled_at: number;
+  settlement_tx_hash: string;
+};
+
+export const vellumClaimIssuances = pgTable(
+  "vellum_claim_issuances",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    milestoneId: uuid("milestone_id")
+      .notNull()
+      .references(() => milestones.id),
+    settlementOperationId: uuid("settlement_operation_id")
+      .notNull()
+      .references(() => operations.id),
+    subjectDid: varchar("subject_did", { length: 80 }).notNull(),
+    issuerDid: varchar("issuer_did", { length: 80 }).notNull(),
+    payload: jsonb("payload").$type<VellumSettlementClaimPayload>().notNull(),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull(),
+    status: vellumClaimIssuanceStatusEnum("status").default("PREPARING").notNull(),
+    leaseToken: uuid("lease_token").notNull(),
+    claimId: varchar("claim_id", { length: 66 }),
+    outputIndex: integer("output_index"),
+    signedTransaction: text("signed_transaction"),
+    transactionHash: varchar("transaction_hash", { length: 66 }),
+    lastErrorCode: varchar("last_error_code", { length: 80 }),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    revision: integer("revision").default(1).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("vellum_claim_issuance_milestone_unique").on(table.milestoneId),
+    uniqueIndex("vellum_claim_issuance_operation_unique").on(table.settlementOperationId),
+    uniqueIndex("vellum_claim_issuance_claim_unique").on(table.claimId),
+    uniqueIndex("vellum_claim_issuance_transaction_unique").on(table.transactionHash),
+    index("vellum_claim_issuance_subject_idx").on(table.subjectDid),
+    index("vellum_claim_issuance_status_idx").on(table.status, table.updatedAt),
+    check("vellum_claim_issuance_revision_positive", sql`${table.revision} > 0`),
+    check(
+      "vellum_claim_issuance_prepared_fields",
+      sql`${table.status} = 'PREPARING' OR (${table.claimId} IS NOT NULL AND ${table.outputIndex} >= 0 AND ${table.signedTransaction} IS NOT NULL AND ${table.transactionHash} IS NOT NULL)`,
+    ),
+    check(
+      "vellum_claim_issuance_confirmation_fields",
+      sql`(${table.status} = 'CONFIRMED' AND ${table.confirmedAt} IS NOT NULL) OR (${table.status} <> 'CONFIRMED' AND ${table.confirmedAt} IS NULL)`,
+    ),
+  ],
+);
+
+export const vellumIssuerLeases = pgTable(
+  "vellum_issuer_leases",
+  {
+    key: varchar("key", { length: 32 }).primaryKey(),
+    token: uuid("token").notNull(),
+    issuanceId: uuid("issuance_id").references(() => vellumClaimIssuances.id),
+    transactionHash: varchar("transaction_hash", { length: 66 }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revision: integer("revision").default(1).notNull(),
+    ...timestamps,
+  },
+  (table) => [check("vellum_issuer_lease_revision_positive", sql`${table.revision} > 0`)],
 );
 
 export const auditLogs = pgTable(

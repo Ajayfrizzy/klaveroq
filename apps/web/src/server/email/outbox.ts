@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, gt, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { db } from "../db";
 import {
   notificationDeliveries as deliveries,
@@ -36,8 +37,8 @@ export async function deliverNotificationEmail(id: string) {
       and(
         eq(deliveries.id, id),
         inArray(deliveries.status, retryable),
-        // Retry scheduling uses the application clock; use it when claiming too.
-        lte(deliveries.nextAttemptAt, now),
+        // Due times default to PostgreSQL now(); compare with that same clock.
+        lte(deliveries.nextAttemptAt, sql`now()`),
         lt(deliveries.attempts, MAX_EMAIL_ATTEMPTS),
       ),
     )
@@ -48,7 +49,7 @@ export async function deliverNotificationEmail(id: string) {
     eq(deliveries.status, "PROCESSING"),
     eq(deliveries.attempts, delivery.attempts),
   );
-  async function finish(status: string, extra: Partial<typeof deliveries.$inferInsert> = {}) {
+  async function finish(status: string, extra: PgUpdateSetSource<typeof deliveries> = {}) {
     await db
       .update(deliveries)
       .set({ status, updatedAt: new Date(), ...extra })
@@ -145,13 +146,10 @@ export async function deliverNotificationEmail(id: string) {
           ? "REVIEW_REQUIRED"
           : "FAILED",
       {
-        nextAttemptAt: new Date(
-          Date.now() +
-            Math.max(
-              retryDelayMs(delivery.attempts),
-              error instanceof EmailProviderError ? error.retryAfterMs : 0,
-            ),
-        ),
+        nextAttemptAt: sql`now() + ${Math.max(
+          retryDelayMs(delivery.attempts),
+          error instanceof EmailProviderError ? error.retryAfterMs : 0,
+        )} * interval '1 millisecond'`,
         lastError: error instanceof EmailProviderError ? error.code : "EMAIL_SEND_UNCONFIRMED",
       },
     );
@@ -174,7 +172,7 @@ export async function retryPendingNotificationEmails(limit = 25) {
     .update(deliveries)
     .set({
       status: "FAILED",
-      nextAttemptAt: new Date(),
+      nextAttemptAt: sql`now()`,
       lastError: "INTERRUPTED_ATTEMPT",
       updatedAt: new Date(),
     })
@@ -199,7 +197,7 @@ export async function retryPendingNotificationEmails(limit = 25) {
     .where(
       and(
         inArray(deliveries.status, retryable),
-        lte(deliveries.nextAttemptAt, new Date()),
+        lte(deliveries.nextAttemptAt, sql`now()`),
         lt(deliveries.attempts, MAX_EMAIL_ATTEMPTS),
       ),
     )

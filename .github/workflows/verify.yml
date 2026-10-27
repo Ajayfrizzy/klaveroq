@@ -20,7 +20,7 @@ jobs:
       - name: Check standalone server startup
         run: |
           docker run --detach --name klaveroq-smoke -p 127.0.0.1:8080:8080 klaveroq-web:ci
-          curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 --retry-max-time 30 http://127.0.0.1:8080/api/health/live
+          curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 1 --retry-max-time 30 http://127.0.0.1:8080/api/health/live
           curl --fail --silent --show-error --output /dev/null http://127.0.0.1:8080/login
       - name: Container logs
         if: always()

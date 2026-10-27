@@ -10,10 +10,10 @@ import { assertSameOrigin } from "@/server/http/security";
 import {
   listControlledIdentities,
   resolveControlledIdentity,
-  type VellumIdentityOption,
   vellumClient,
   VellumIdentityError,
 } from "@/features/vellum/server/identity";
+import type { VellumIdentityOption } from "@/features/vellum/identity-binding";
 
 const bindingInput = z.object({
   did: z.string().max(80).refine(isDidCkb, "The Vellum DID is invalid."),
@@ -112,13 +112,14 @@ export const PUT = withApi(async (request: Request) => {
   }
 
   const now = new Date();
+  const displayName = identity.displayName ?? null;
   const [binding] = await db
     .insert(vellumIdentityBindings)
     .values({
       userId: user.id,
       walletId: identity.walletId,
       did: identity.did,
-      displayName: identity.displayName,
+      displayName,
       verifiedAt: now,
     })
     .onConflictDoUpdate({
@@ -126,12 +127,16 @@ export const PUT = withApi(async (request: Request) => {
       set: {
         walletId: identity.walletId,
         did: identity.did,
-        displayName: identity.displayName,
+        displayName,
         verifiedAt: now,
         updatedAt: now,
       },
     })
-    .returning()
+    .returning({
+      did: vellumIdentityBindings.did,
+      displayName: vellumIdentityBindings.displayName,
+      walletId: vellumIdentityBindings.walletId,
+    })
     .catch((error: unknown) => {
       if (isDuplicateDid(error)) {
         throw new ApiError(

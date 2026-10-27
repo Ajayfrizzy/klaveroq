@@ -23,7 +23,11 @@ export default async function IdentityPage() {
       .orderBy(desc(identityVerifications.createdAt))
       .limit(1),
     db
-      .select()
+      .select({
+        did: vellumIdentityBindings.did,
+        displayName: vellumIdentityBindings.displayName,
+        walletId: vellumIdentityBindings.walletId,
+      })
       .from(vellumIdentityBindings)
       .where(eq(vellumIdentityBindings.userId, current.user.id))
       .limit(1),

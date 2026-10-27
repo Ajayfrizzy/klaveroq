@@ -67,7 +67,13 @@ function requirePrepared(issuance: SettlementClaimIssuance): {
   signedTransaction: ccc.Hex;
   transactionHash: ccc.Hex;
 } {
-  if (!issuance.signedTransaction || !issuance.transactionHash) {
+  if (
+    !issuance.claimId ||
+    !Number.isSafeInteger(issuance.outputIndex) ||
+    issuance.outputIndex! < 0 ||
+    !issuance.signedTransaction ||
+    !issuance.transactionHash
+  ) {
     throw new Error("Persisted Claim Cell transaction is incomplete.");
   }
   return {

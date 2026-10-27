@@ -4,21 +4,13 @@ import { CheckCircle2, ExternalLink, Fingerprint, RefreshCw } from "lucide-react
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  isCurrentVellumIdentitySelection,
+  type VellumIdentityBindingDto,
+  type VellumIdentityOption,
+} from "@/features/vellum/identity-binding";
 
-type IdentityOption = {
-  did: string;
-  displayName?: string;
-  walletId: string;
-};
-
-type IdentityBinding = {
-  did: string;
-  displayName: string | null;
-  walletId: string;
-  verifiedAt: Date | string;
-};
-
-function identityLabel(identity: Pick<IdentityOption, "did" | "displayName">): string {
+function identityLabel(identity: Pick<VellumIdentityOption, "did" | "displayName">): string {
   return identity.displayName ? `${identity.displayName} - ${identity.did}` : identity.did;
 }
 
@@ -26,12 +18,12 @@ export function VellumIdentityPanel({
   binding,
   hasVerifiedTestnetWallet,
 }: {
-  binding: IdentityBinding | null;
+  binding: VellumIdentityBindingDto | null;
   hasVerifiedTestnetWallet: boolean;
 }) {
   const router = useRouter();
   const [current, setCurrent] = useState(binding);
-  const [identities, setIdentities] = useState<IdentityOption[]>([]);
+  const [identities, setIdentities] = useState<VellumIdentityOption[]>([]);
   const [selectedDid, setSelectedDid] = useState(binding?.did ?? "");
   const [loading, setLoading] = useState(hasVerifiedTestnetWallet);
   const [saving, setSaving] = useState(false);
@@ -48,7 +40,7 @@ export function VellumIdentityPanel({
       if (!response.ok) {
         throw new Error(body.error?.message ?? "Vellum identities could not be loaded.");
       }
-      const options = body.data as IdentityOption[];
+      const options = body.data as VellumIdentityOption[];
       setIdentities(options);
       setSelectedDid((selection) =>
         options.some((identity) => identity.did === selection)
@@ -71,6 +63,7 @@ export function VellumIdentityPanel({
     () => identities.find((identity) => identity.did === selectedDid),
     [identities, selectedDid],
   );
+  const selectionIsCurrent = isCurrentVellumIdentitySelection(current, selected);
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
@@ -179,11 +172,14 @@ export function VellumIdentityPanel({
             <button className="secondary-button" type="button" onClick={() => void load()}>
               <RefreshCw size={15} /> Refresh
             </button>
-            <button
-              className="primary-button"
-              disabled={saving || !selected || current?.did === selected.did}
-            >
-              {saving ? "Saving..." : current ? "Change identity" : "Link identity"}
+            <button className="primary-button" disabled={saving || !selected || selectionIsCurrent}>
+              {saving
+                ? "Saving..."
+                : !current
+                  ? "Link identity"
+                  : current.did === selected?.did
+                    ? "Update identity"
+                    : "Change identity"}
             </button>
           </div>
         </form>

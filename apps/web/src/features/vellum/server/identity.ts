@@ -1,11 +1,6 @@
 import { ccc } from "@ckb-ccc/core";
 import { listDidCkbsByLock, resolveDidCkb } from "@ckb-ccc/did-ckb";
-
-export type VellumIdentityOption = {
-  did: string;
-  displayName?: string;
-  walletId: string;
-};
+import type { VellumIdentityOption } from "@/features/vellum/identity-binding";
 
 type VellumEnvironment = Record<string, string | undefined>;
 

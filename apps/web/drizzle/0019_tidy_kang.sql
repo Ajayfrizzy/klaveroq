@@ -1,0 +1,2 @@
+ALTER TABLE "vellum_claim_issuances" DROP CONSTRAINT "vellum_claim_issuance_prepared_fields";--> statement-breakpoint
+ALTER TABLE "vellum_claim_issuances" ADD CONSTRAINT "vellum_claim_issuance_prepared_fields" CHECK ("vellum_claim_issuances"."status" = 'PREPARING' OR ("vellum_claim_issuances"."claim_id" IS NOT NULL AND "vellum_claim_issuances"."output_index" IS NOT NULL AND "vellum_claim_issuances"."output_index" >= 0 AND "vellum_claim_issuances"."signed_transaction" IS NOT NULL AND "vellum_claim_issuances"."transaction_hash" IS NOT NULL));

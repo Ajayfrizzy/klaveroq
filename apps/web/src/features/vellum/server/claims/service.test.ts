@@ -323,6 +323,21 @@ describe("Klaveroq settlement claim issuance", () => {
     expect(setup.broadcast).toHaveBeenCalledTimes(1);
   });
 
+  it("rejects a persisted transaction without a complete claim output location", async () => {
+    const setup = fixture();
+    await runSettlementClaimIssuance(CONFIGURATION, setup.dependencies);
+    if (!setup.store.issuance) throw new Error("Expected a settlement claim issuance");
+    setup.store.issuance.status = "PREPARED";
+    setup.store.issuance.outputIndex = null;
+    setup.advance(10 * 60_000 + 1);
+
+    await expect(runSettlementClaimIssuance(CONFIGURATION, setup.dependencies)).rejects.toThrow(
+      "Persisted Claim Cell transaction is incomplete",
+    );
+    expect(setup.prepare).toHaveBeenCalledTimes(1);
+    expect(setup.broadcast).toHaveBeenCalledTimes(1);
+  });
+
   it("stops the issuer queue when the stored transaction is rejected", async () => {
     const setup = fixture();
     await runSettlementClaimIssuance(CONFIGURATION, setup.dependencies);

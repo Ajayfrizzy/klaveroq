@@ -1046,7 +1046,7 @@ export const vellumClaimIssuances = pgTable(
     check("vellum_claim_issuance_revision_positive", sql`${table.revision} > 0`),
     check(
       "vellum_claim_issuance_prepared_fields",
-      sql`${table.status} = 'PREPARING' OR (${table.claimId} IS NOT NULL AND ${table.outputIndex} >= 0 AND ${table.signedTransaction} IS NOT NULL AND ${table.transactionHash} IS NOT NULL)`,
+      sql`${table.status} = 'PREPARING' OR (${table.claimId} IS NOT NULL AND ${table.outputIndex} IS NOT NULL AND ${table.outputIndex} >= 0 AND ${table.signedTransaction} IS NOT NULL AND ${table.transactionHash} IS NOT NULL)`,
     ),
     check(
       "vellum_claim_issuance_confirmation_fields",

@@ -77,6 +77,9 @@ production. `AUTH_EXPOSE_LOCAL_TOKENS=1` is reserved for the isolated browser-te
 never be configured in a hosted environment. Set a unique, high-entropy `SESSION_SECRET` in every
 hosted environment.
 
+See [Vellum integration](docs/VELLUM.md) for Testnet identity linking and settled-milestone Claim
+Cell issuer setup.
+
 ### Runtime data
 
 Hosted environments always use `DATABASE_URL`. If the database is missing or unavailable, the

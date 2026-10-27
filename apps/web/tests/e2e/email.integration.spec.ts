@@ -10,7 +10,6 @@ import { POST as webhook } from "../../src/app/api/webhooks/resend/route";
 import { POST as cron } from "../../src/app/api/internal/notifications/retry/route";
 import { issueAuthToken } from "../../src/server/auth/tokens";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../../src/server/email";
-import { sqlClient } from "../../src/server/db";
 
 test("email outbox: real provider contract, retries, security, preferences and signed receipts", async ({
   page,
@@ -268,6 +267,5 @@ test("email outbox: real provider contract, retries, security, preferences and s
     for (const key of Object.keys(process.env)) if (!(key in originalEnv)) delete process.env[key];
     Object.assign(process.env, originalEnv);
     await sql.end();
-    await sqlClient.end();
   }
 });

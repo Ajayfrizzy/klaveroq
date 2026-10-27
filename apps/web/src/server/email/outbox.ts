@@ -36,7 +36,8 @@ export async function deliverNotificationEmail(id: string) {
       and(
         eq(deliveries.id, id),
         inArray(deliveries.status, retryable),
-        lte(deliveries.nextAttemptAt, sql`now()`),
+        // Retry scheduling uses the application clock; use it when claiming too.
+        lte(deliveries.nextAttemptAt, now),
         lt(deliveries.attempts, MAX_EMAIL_ATTEMPTS),
       ),
     )

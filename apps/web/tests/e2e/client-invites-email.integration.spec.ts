@@ -3,7 +3,6 @@ import { randomBytes, randomUUID, createHash } from "node:crypto";
 import postgres from "postgres";
 import { deliverNotificationEmail } from "../../src/server/email/outbox";
 import { expireClientInvitations } from "../../src/features/client-invites/server/expiry";
-import { sqlClient } from "../../src/server/db";
 
 test("invitation email failure, retry, expiry and token rotation use the durable outbox", async () => {
   const database = new URL(process.env.DATABASE_URL!);
@@ -61,6 +60,5 @@ test("invitation email failure, retry, expiry and token rotation use the durable
     globalThis.fetch = savedFetch;
     process.env = savedEnv;
     await sql.end();
-    await sqlClient.end();
   }
 });

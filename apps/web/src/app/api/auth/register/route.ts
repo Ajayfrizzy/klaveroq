@@ -41,7 +41,7 @@ export const POST = withApi(async (request: Request) => {
   let emailSent = false;
   let emailStatus = "FAILED";
   try {
-    const delivery = await sendVerificationEmail(user.email, verificationToken);
+    const delivery = await sendVerificationEmail(user.email, verificationToken, input.returnTo);
     emailStatus = delivery.status;
     emailSent = ["ACCEPTED", "DELIVERED"].includes(delivery.status);
   } catch {

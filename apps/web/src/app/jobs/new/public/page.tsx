@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ListingWizard, type ListingDraft } from "@/features/marketplace/components/listing-wizard";
 import { getCurrentUser } from "@/server/auth/session";
 import { db } from "@/server/db";
@@ -12,10 +12,13 @@ export default async function PublicJobPage({
   searchParams: Promise<{ draft?: string }>;
 }) {
   const { draft: draftId } = await searchParams;
+  const current = await getCurrentUser();
+  if (!current)
+    redirect(
+      `/login?returnTo=${encodeURIComponent(`/jobs/new/public${draftId ? `?draft=${draftId}` : ""}`)}`,
+    );
   let initialDraft: ListingDraft | undefined;
   if (draftId) {
-    const current = await getCurrentUser();
-    if (!current) notFound();
     const [listing] = await db
       .select()
       .from(jobListings)

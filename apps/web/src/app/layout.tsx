@@ -1,18 +1,23 @@
+import { connection } from "next/server";
+import { fileUploadsEnabled } from "@/features/files/upload-policy";
+import { UploadAvailabilityProvider } from "@/features/files/upload-availability";
 import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 import "@/styles/product-experience.css";
+import "@/styles/public-marketplace.css";
+import "@/styles/authenticated-workspace.css";
 import { RouteTitle } from "@/components/layout/route-title";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://klaveroq.com"),
+  metadataBase: new URL(process.env.APP_URL || "http://localhost:3000"),
   title: { default: "Klaveroq", template: "%s | Klaveroq" },
   description:
     "Klaveroq is a work marketplace where clients discover talent, professionals find opportunities, and both sides structure milestone-based work with verifiable delivery.",
   applicationName: "Klaveroq",
-  alternates: { canonical: "/" },
+  robots: { index: false, follow: false },
   openGraph: {
     type: "website",
-    url: "https://klaveroq.com",
+
     siteName: "Klaveroq",
     title: "Klaveroq",
     description:
@@ -31,7 +36,8 @@ export const viewport: Viewport = {
   themeColor: "#4F46E5",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  await connection();
   return (
     <html lang="en">
       <body>
@@ -40,7 +46,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </a>
         <RouteTitle />
         <div id="main-content" tabIndex={-1}>
-          {children}
+          <UploadAvailabilityProvider enabled={fileUploadsEnabled()}>
+            {children}
+          </UploadAvailabilityProvider>
         </div>
       </body>
     </html>

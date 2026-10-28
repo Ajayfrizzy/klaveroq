@@ -3,6 +3,7 @@
 import { AlertTriangle, Clock3, FileText, LoaderCircle, Paperclip, Scale } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
+import { useUploadsEnabled, UploadsUnavailable } from "@/features/files/upload-availability";
 import { uploadFormData } from "@/features/files/upload";
 import { useWorkProtection } from "@/components/ui/use-work-protection";
 
@@ -38,6 +39,7 @@ const serverReady = () => false;
 export function DisputeWorkspace({ disputes }: { disputes: DisputeRecord[] }) {
   // Do not accept edits into SSR controls before React can retain their state.
   const hydrated = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
+  const uploadsEnabled = useUploadsEnabled();
   const router = useRouter();
   const [note, setNote] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -61,12 +63,24 @@ export function DisputeWorkspace({ disputes }: { disputes: DisputeRecord[] }) {
     form.append("note", note);
     files.forEach((file) => form.append("files", file));
     try {
-      await uploadFormData(
-        `/api/disputes/${disputeId}/evidence`,
-        form,
-        new AbortController().signal,
-        setProgress,
-      );
+      if (uploadsEnabled && files.length) {
+        await uploadFormData(
+          `/api/disputes/${disputeId}/evidence`,
+          form,
+          new AbortController().signal,
+          setProgress,
+        );
+      } else {
+        const response = await fetch(`/api/disputes/${disputeId}/evidence`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note }),
+        });
+        if (!response.ok) {
+          const body = await response.json();
+          throw new Error(body.error?.message ?? "Evidence could not be submitted.");
+        }
+      }
       setNote("");
       setFiles([]);
       markSaved(JSON.stringify({ note: "", files: [] }));
@@ -125,11 +139,12 @@ export function DisputeWorkspace({ disputes }: { disputes: DisputeRecord[] }) {
                     onChange={(event) => setNote(event.target.value)}
                   />
                 </label>
+                {!uploadsEnabled && <UploadsUnavailable />}
                 <label>
                   Supporting files
                   <input
                     type="file"
-                    disabled={!hydrated}
+                    disabled={!hydrated || !uploadsEnabled}
                     multiple
                     accept="image/jpeg,image/png,image/webp,application/pdf,text/plain"
                     onChange={(event) => setFiles(Array.from(event.target.files ?? []))}

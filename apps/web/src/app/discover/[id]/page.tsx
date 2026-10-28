@@ -22,6 +22,7 @@ import { ProposalThread } from "@/features/marketplace/components/proposal-threa
 import { getReputationSummary } from "@/features/reputation/server/queries";
 import { getProposalUnreadCounts } from "@/features/marketplace/server/unread";
 export const dynamic = "force-dynamic";
+export { publicListingMetadata as generateMetadata } from "@/features/marketplace/server/metadata";
 const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
 export default async function ListingDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -37,7 +38,9 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   ]);
   if (!record || record.listing.status === "DRAFT" || record.listing.status === "CANCELLED")
     notFound();
-  const clientReputation = await getReputationSummary(record.listing.clientUserId);
+  const clientReputation = record.clientPublished
+    ? await getReputationSummary(record.listing.clientUserId)
+    : null;
   const owner = current?.user.id === record.listing.clientUserId;
   const canSubmit =
     record.listing.status === "OPEN" && record.listing.proposalDeadline > new Date();
@@ -104,11 +107,11 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
   }
   return (
     <MarketplaceLayout>
-      <Link className="back-link" href="/discover">
+      <Link className="back-link" href="/jobs">
         <ArrowLeft size={16} /> Back to discovery
       </Link>
       <div className="listing-detail-layout">
-        <article className="listing-detail">
+        <article className="listing-detail" id="job-summary">
           <div className="listing-detail-head">
             <span>{record.listing.category.toLowerCase()}</span>
             <span className={`listing-status state-${record.listing.status.toLowerCase()}`}>
@@ -220,13 +223,9 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
             </p>
           </section>
           {!owner && canSubmit && (
-            <ProposalComposer
-              listingId={id}
-              signedIn={Boolean(current)}
-              existing={ownProposal}
-              budgetMin={record.listing.budgetMin.toString()}
-              budgetMax={record.listing.budgetMax.toString()}
-            />
+            <a className="primary-button proposal-entry" href="#proposal-workspace">
+              {ownProposal ? "Edit your proposal" : "Write a proposal"}
+            </a>
           )}
           {!owner && workerProposalId && current && (
             <ProposalThread
@@ -250,6 +249,26 @@ export default async function ListingDetail({ params }: { params: Promise<{ id: 
             </section>
           )}
         </aside>
+      </div>
+      <div id="proposal-workspace" className="proposal-workspace">
+        {!owner && canSubmit && (
+          <>
+            <div className="proposal-context">
+              <div>
+                <span>Proposal for</span>
+                <strong>{record.listing.title}</strong>
+              </div>
+              <a href="#job-summary">View brief</a>
+            </div>
+            <ProposalComposer
+              listingId={id}
+              signedIn={Boolean(current)}
+              existing={ownProposal}
+              budgetMin={record.listing.budgetMin.toString()}
+              budgetMax={record.listing.budgetMax.toString()}
+            />
+          </>
+        )}
       </div>
     </MarketplaceLayout>
   );

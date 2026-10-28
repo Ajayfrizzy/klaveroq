@@ -1,3 +1,4 @@
+import { assertFileUploadsEnabled } from "@/server/files/upload-policy";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { audit } from "@/server/audit";
@@ -12,6 +13,7 @@ const imageTypes = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export const POST = withApi(async (request: Request) => {
   assertSameOrigin(request);
+  assertFileUploadsEnabled();
   const current = await requireUser();
   if (!current.profile) throw new ApiError(404, "PROFILE_NOT_FOUND", "Your profile was not found.");
   const form = await request.formData();

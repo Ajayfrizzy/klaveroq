@@ -57,7 +57,7 @@ test("permission denial is explicit and an expired session returns to sign in", 
             where user_id = (select id from users where email = ${email})`;
   await sql.end();
 
-  await page.goto("/jobs");
+  await page.goto("/jobs?view=agreements");
   await expect(page).toHaveURL(/\/login\?returnTo=/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });

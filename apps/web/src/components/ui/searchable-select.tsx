@@ -7,12 +7,14 @@ export function SearchableSelect({
   options,
   onChange,
   invalid,
+  filterLabel = "Filter available locations",
 }: {
   label: string;
   value: string;
   options: readonly (readonly [string, string])[];
   onChange: (value: string) => void;
   invalid?: boolean;
+  filterLabel?: string;
 }) {
   const id = useId();
   const [query, setQuery] = useState("");
@@ -23,7 +25,7 @@ export function SearchableSelect({
   return (
     <div className="searchable-select">
       <label htmlFor={`${id}-search`}>
-        Filter available locations
+        {filterLabel}
         <input
           id={`${id}-search`}
           type="search"
@@ -52,7 +54,9 @@ export function SearchableSelect({
           ))}
         </select>
       </label>
-      <small role="status">{filtered.length} options</small>
+      <small role="status">
+        {filtered.length} {filtered.length === 1 ? "option" : "options"}
+      </small>
     </div>
   );
 }

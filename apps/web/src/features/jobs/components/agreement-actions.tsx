@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useUploadsEnabled, UploadsUnavailable } from "@/features/files/upload-availability";
 import { uploadFormData } from "@/features/files/upload";
 import { useWorkProtection } from "@/components/ui/use-work-protection";
 
@@ -34,12 +35,13 @@ function ProofFileUploader({
   proof: NonNullable<MilestoneAction["latestProof"]>;
   onComplete: () => void;
 }) {
+  const uploadsEnabled = useUploadsEnabled();
   const [files, setFiles] = useState<File[]>([]);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [controller, setController] = useState<AbortController | null>(null);
   async function upload() {
-    if (!files.length) return;
+    if (!uploadsEnabled || !files.length) return;
     setError("");
     const nextController = new AbortController();
     setController(nextController);
@@ -73,10 +75,12 @@ function ProofFileUploader({
           ))}
         </div>
       )}
+      {!uploadsEnabled && <UploadsUnavailable />}
       <label>
         Add evidence files
         <input
           type="file"
+          disabled={!uploadsEnabled}
           multiple
           accept="image/jpeg,image/png,image/webp,application/pdf,text/plain"
           onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
@@ -104,7 +108,7 @@ function ProofFileUploader({
           <button
             className="secondary-button"
             type="button"
-            disabled={!files.length}
+            disabled={!uploadsEnabled || !files.length}
             onClick={upload}
           >
             <Paperclip size={14} /> {error ? "Retry upload" : "Upload files"}
@@ -122,6 +126,8 @@ function ProofFileUploader({
 
 export function AgreementActions({
   jobId,
+  clientInvitation = false,
+  termsAccepted = false,
   status,
   role,
   userId,
@@ -130,6 +136,8 @@ export function AgreementActions({
   openDisputeReference,
 }: {
   jobId: string;
+  clientInvitation?: boolean;
+  termsAccepted?: boolean;
   status: string;
   role: "client" | "worker";
   userId: string;
@@ -137,6 +145,7 @@ export function AgreementActions({
   cancellationRequestedBy?: string;
   openDisputeReference?: string;
 }) {
+  const uploadsEnabled = useUploadsEnabled();
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -180,7 +189,7 @@ export function AgreementActions({
   };
 
   const uploadProofFiles = async (proofId: string, files: File[]) => {
-    if (!files.length) return;
+    if (!uploadsEnabled || !files.length) return;
     const form = new FormData();
     files.forEach((file) => form.append("files", file));
     const controller = new AbortController();
@@ -241,13 +250,32 @@ export function AgreementActions({
   return (
     <div className="agreement-actions" ref={workRoot}>
       {workDirty && workStatus}
+      {clientInvitation && (
+        <section className="agreement-status-note">
+          <h3>Agreement terms</h3>
+          <p>
+            {termsAccepted
+              ? "The freelancer has accepted these terms. No payment was initiated."
+              : "Review the scope, budget, milestones, deliverables, and deadlines above. Accepting terms is free and does not initiate payment."}
+          </p>
+          {role === "worker" && status === "INVITED" && !termsAccepted && (
+            <button
+              className="primary-button"
+              disabled={Boolean(busy)}
+              onClick={() => act("accept-terms", `/api/jobs/${jobId}/accept-terms`, {})}
+            >
+              Accept agreement terms
+            </button>
+          )}
+        </section>
+      )}
       {status === "DRAFT" && (
         <p className="agreement-status-note">
           This is an agreement draft created from the awarded proposal. It is not funded and does
           not represent an escrow payment.
         </p>
       )}
-      {["INVITED", "AWAITING_FUNDING"].includes(status) && (
+      {!clientInvitation && ["INVITED", "AWAITING_FUNDING"].includes(status) && (
         <p className="agreement-status-note">
           Funding is unavailable until PactAgent provides an authoritative confirmation. Worker
           acceptance, proof submission, and milestone review remain locked.
@@ -305,10 +333,12 @@ export function AgreementActions({
               placeholder="One https:// link per line"
             />
           </label>
+          {!uploadsEnabled && <UploadsUnavailable />}
           <label className="proof-file-picker">
             Evidence files
             <input
               type="file"
+              disabled={!uploadsEnabled}
               multiple
               accept="image/jpeg,image/png,image/webp,application/pdf,text/plain"
               onChange={(event) => setProofFiles(Array.from(event.target.files ?? []))}

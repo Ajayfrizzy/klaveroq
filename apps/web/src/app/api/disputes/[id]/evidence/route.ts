@@ -1,3 +1,4 @@
+import { assertFileUploadsEnabled } from "@/server/files/upload-policy";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/server/db";
@@ -21,9 +22,11 @@ const schema = z.object({
 export const POST = withApi(
   async (request: Request, context: RouteContext<"/api/disputes/[id]/evidence">) => {
     assertSameOrigin(request);
+    // Text evidence uses JSON. Reject multipart before buffering any uploaded bytes.
+    const multipart = request.headers.get("content-type")?.includes("multipart/form-data");
+    if (multipart) assertFileUploadsEnabled();
     const { user } = await requireUser();
     const { id } = await context.params;
-    const multipart = request.headers.get("content-type")?.includes("multipart/form-data");
     const form = multipart ? await request.formData() : null;
     const input = schema.parse(form ? { note: form.get("note") } : await request.json());
     const files = form

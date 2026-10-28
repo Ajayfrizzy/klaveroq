@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useUploadsEnabled } from "@/features/files/upload-availability";
 import { MediaUploader } from "@/features/files/media-uploader";
 import { TagInput } from "@/components/ui/tag-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -102,26 +103,15 @@ const countries = Array.from({ length: 26 * 26 }, (_, index) => {
   .filter((item): item is readonly [string, string] => Boolean(item))
   .sort((left, right) => left[1].localeCompare(right[1]));
 
-const commonTimezones = [
-  "Africa/Accra",
-  "Africa/Cairo",
-  "Africa/Johannesburg",
-  "Africa/Lagos",
-  "Africa/Nairobi",
-  "America/Chicago",
-  "America/Los_Angeles",
-  "America/New_York",
-  "America/Sao_Paulo",
-  "Asia/Dubai",
-  "Asia/Kolkata",
-  "Asia/Singapore",
-  "Australia/Sydney",
-  "Europe/Berlin",
-  "Europe/Lisbon",
-  "Europe/London",
-  "Europe/Paris",
-  "UTC",
-];
+const timezoneOptions = [...new Set(["UTC", ...Intl.supportedValuesOf("timeZone")])]
+  .map(
+    (zone) =>
+      [
+        zone,
+        zone === "UTC" ? "UTC" : `${zone.split("/").at(-1)!.replaceAll("_", " ")} — ${zone}`,
+      ] as const,
+  )
+  .sort((left, right) => left[1].localeCompare(right[1]));
 
 export function ProfileEditor({
   initialProfile,
@@ -140,6 +130,7 @@ export function ProfileEditor({
   const [portfolio, setPortfolio] = useState(initialPortfolio);
   const [avatar, setAvatar] = useState(initialAvatar);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const uploadsEnabled = useUploadsEnabled();
   const [editing, setEditing] = useState(false);
   const [portfolioForm, setPortfolioForm] = useState(emptyPortfolio);
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
@@ -428,9 +419,11 @@ export function ProfileEditor({
             </div>
           </div>
           <div className="profile-editor-actions">
-            <Link className="secondary-button" href={`/talent/${profile.userId}`}>
-              <ExternalLink size={15} /> Preview profile
-            </Link>
+            {profile.isPublic && (
+              <Link className="secondary-button" href={`/talent/${profile.userId}`}>
+                <ExternalLink size={15} /> View public profile
+              </Link>
+            )}
             <button
               className="secondary-button"
               onClick={() => (editing ? cancelProfileEdit() : setEditing(true))}
@@ -553,6 +546,7 @@ export function ProfileEditor({
               <div className="two-fields">
                 <TagInput
                   label="Skills"
+                  placeholder="Add a skill, e.g. React"
                   value={skillsText}
                   error={fieldError("skills")}
                   onChange={(value) => {
@@ -561,7 +555,12 @@ export function ProfileEditor({
                     setCanSaveAsPrivate(false);
                   }}
                 />
-                <TagInput label="Languages" value={languagesText} onChange={setLanguagesText} />
+                <TagInput
+                  label="Spoken languages"
+                  placeholder="Add a spoken language, e.g. English"
+                  value={languagesText}
+                  onChange={setLanguagesText}
+                />
               </div>
               <fieldset className="category-checks">
                 <legend>Preferred work categories</legend>
@@ -650,24 +649,19 @@ export function ProfileEditor({
                     <small className="field-error">{fieldError("countryCode")}</small>
                   )}
                 </div>
-                <label>
-                  Timezone
-                  <input
-                    list="klaveroq-timezones"
+                <div>
+                  <SearchableSelect
+                    label="Timezone"
+                    filterLabel="Filter available timezones"
                     value={profile.timezone ?? ""}
-                    onChange={(event) => set("timezone", event.target.value || null)}
-                    placeholder="Select your timezone"
-                    aria-invalid={Boolean(fieldError("timezone"))}
+                    options={timezoneOptions}
+                    onChange={(value) => set("timezone", value || null)}
+                    invalid={Boolean(fieldError("timezone"))}
                   />
-                  <datalist id="klaveroq-timezones">
-                    {commonTimezones.map((timezone) => (
-                      <option value={timezone} key={timezone} />
-                    ))}
-                  </datalist>
                   {fieldError("timezone") && (
                     <small className="field-error">{fieldError("timezone")}</small>
                   )}
-                </label>
+                </div>
               </div>
             </details>
             <details className="profile-step" id="profile-links">
@@ -831,15 +825,33 @@ export function ProfileEditor({
           >
             <span style={{ width: `${(readyCount / readiness.length) * 100}%` }} />
           </div>
-          <ul>
-            {readiness.map((item) => (
-              <li className={item.complete ? "complete" : ""} key={item.label}>
-                {item.complete ? <Check size={15} /> : <Circle size={15} />}
-                <span>{item.label}</span>
-                <small>{item.complete ? "Complete" : "Missing"}</small>
-              </li>
-            ))}
-          </ul>
+          {!profileReady && (
+            <p className="readiness-next">
+              Next: {readiness.find((item) => !item.complete)?.label}.{" "}
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setEditing(true);
+                  document.querySelector(".profile-main")?.scrollIntoView({ block: "start" });
+                }}
+              >
+                Complete profile
+              </button>
+            </p>
+          )}
+          <details className="readiness-requirements">
+            <summary>View completed and missing requirements</summary>
+            <ul>
+              {readiness.map((item) => (
+                <li className={item.complete ? "complete" : ""} key={item.label}>
+                  {item.complete ? <Check size={15} /> : <Circle size={15} />}
+                  <span>{item.label}</span>
+                  <small>{item.complete ? "Complete" : "Missing"}</small>
+                </li>
+              ))}
+            </ul>
+          </details>
         </section>
       )}
 
@@ -853,8 +865,8 @@ export function ProfileEditor({
             <strong>{profile.isPublic ? "Public" : "Private"}</strong>
             <p>
               {profile.isPublic
-                ? "Your professional profile, portfolio and Klaveroq reputation can appear in Talent Discovery."
-                : "Your profile is only visible to you and participants in existing Klaveroq engagements where required."}
+                ? "Your professional profile, portfolio and Klaveroq reputation are publicly discoverable, including by visitors without an account."
+                : "Publishing makes your professional profile and portfolio discoverable on the public homepage, talent directory, and profile page. Keep contact details and sensitive information out of these fields. Your private profile is only visible to you and existing engagement participants where required."}
             </p>
           </div>
         </div>
@@ -883,16 +895,18 @@ export function ProfileEditor({
             <h2>Portfolio</h2>
             <p>Show clients relevant work, your role, and the technologies used.</p>
           </div>
-          <button
-            className="secondary-button"
-            onClick={() => {
-              setPortfolioId(null);
-              setPortfolioForm(emptyPortfolio);
-              setShowPortfolioForm(true);
-            }}
-          >
-            <Plus size={15} /> Add project
-          </button>
+          {(portfolio.length > 0 || showPortfolioForm) && (
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setPortfolioId(null);
+                setPortfolioForm(emptyPortfolio);
+                setShowPortfolioForm(true);
+              }}
+            >
+              <Plus size={15} /> Add project
+            </button>
+          )}
         </div>
         {showPortfolioForm && (
           <form className="portfolio-form" onSubmit={savePortfolio}>
@@ -1029,29 +1043,33 @@ export function ProfileEditor({
                     </button>
                   </div>
                 </footer>
-                <MediaUploader
-                  endpoint={`/api/profile/portfolio/${item.id}/media`}
-                  label="project media"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  altRequired
-                  initialMedia={item.media}
-                  onChange={(media) =>
-                    setPortfolio((items) =>
-                      items.map((candidate) =>
-                        candidate.id === item.id ? { ...candidate, media } : candidate,
-                      ),
-                    )
-                  }
-                />
+                {uploadsEnabled && (
+                  <MediaUploader
+                    endpoint={`/api/profile/portfolio/${item.id}/media`}
+                    label="project media"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    altRequired
+                    initialMedia={item.media}
+                    onChange={(media) =>
+                      setPortfolio((items) =>
+                        items.map((candidate) =>
+                          candidate.id === item.id ? { ...candidate, media } : candidate,
+                        ),
+                      )
+                    }
+                  />
+                )}
               </article>
             ))
           ) : (
             <div className="market-empty compact-empty portfolio-empty">
               <h3>No portfolio projects yet</h3>
               <p>Add one strong project to help clients understand the kind of work you do.</p>
-              <button className="secondary-button" onClick={() => setShowPortfolioForm(true)}>
-                <Plus size={15} /> Add project
-              </button>
+              {!showPortfolioForm && (
+                <button className="secondary-button" onClick={() => setShowPortfolioForm(true)}>
+                  <Plus size={15} /> Add project
+                </button>
+              )}
             </div>
           )}
         </div>

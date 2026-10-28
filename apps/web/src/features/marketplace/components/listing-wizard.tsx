@@ -1,5 +1,7 @@
 "use client";
 
+import { MilestoneEditor } from "@/components/ui/milestone-editor";
+
 import { JOB_CATEGORIES } from "@klaveroq/domain";
 import {
   ArrowLeft,
@@ -98,6 +100,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const {
     root: workRoot,
+    requestValidationFocus,
     dirty: workDirty,
     status: workStatus,
     markSaved,
@@ -126,6 +129,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
     );
 
   const validate = (target: Stage | "all") => {
+    requestValidationFocus();
     if ((target === 1 || target === "all") && description.trim().length < 40)
       return "Describe the work and expected outcome in at least 40 characters.";
     if ((target === 1 || target === "all") && title.trim().length < 5)
@@ -342,6 +346,8 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
         {stages.map((item) => (
           <li
             className={`${stage === item.number && !reviewing ? "active" : ""} ${stage > item.number || reviewing ? "complete" : ""}`}
+            aria-current={stage === item.number && !reviewing ? "step" : undefined}
+            aria-label={`Step ${item.number}: ${item.label}`}
             key={item.number}
           >
             <span>{stage > item.number || reviewing ? <Check size={15} /> : item.number}</span>
@@ -351,7 +357,11 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
             </div>
           </li>
         ))}
-        <li className={reviewing ? "active" : ""}>
+        <li
+          className={reviewing ? "active" : ""}
+          aria-current={reviewing ? "step" : undefined}
+          aria-label="Step 4: Review"
+        >
           <span>{reviewing ? 4 : <CheckCircle2 size={15} />}</span>
           <div>
             <small>Final check</small>
@@ -547,8 +557,12 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
               </div>
               <div className="listing-milestone-editors">
                 {milestones.map((milestone, index) => (
-                  <fieldset key={milestone.id}>
-                    <legend>Milestone {index + 1}</legend>
+                  <MilestoneEditor
+                    key={milestone.id}
+                    index={index}
+                    title={milestone.title}
+                    summary={`Delivery by day ${milestone.deliveryDays}`}
+                  >
                     {milestones.length > 1 && (
                       <button
                         type="button"
@@ -566,6 +580,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                       <label>
                         Milestone title
                         <input
+                          aria-invalid={Boolean(error) && milestone.title.trim().length < 2}
                           value={milestone.title}
                           onChange={(event) =>
                             updateMilestone(milestone.id, "title", event.target.value)
@@ -579,6 +594,11 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                             type="number"
                             min={index ? milestones[index - 1].deliveryDays + 1 : 1}
                             max={365}
+                            aria-invalid={
+                              Boolean(error) &&
+                              index > 0 &&
+                              milestone.deliveryDays <= milestones[index - 1].deliveryDays
+                            }
                             value={milestone.deliveryDays}
                             onChange={(event) =>
                               updateMilestone(
@@ -596,6 +616,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                       What will be delivered?
                       <textarea
                         rows={3}
+                        aria-invalid={Boolean(error) && milestone.deliverable.trim().length < 10}
                         value={milestone.deliverable}
                         onChange={(event) =>
                           updateMilestone(milestone.id, "deliverable", event.target.value)
@@ -608,6 +629,9 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                       How will success be confirmed?
                       <textarea
                         rows={3}
+                        aria-invalid={
+                          Boolean(error) && milestone.acceptanceCriteria.trim().length < 5
+                        }
                         value={milestone.acceptanceCriteria}
                         onChange={(event) =>
                           updateMilestone(milestone.id, "acceptanceCriteria", event.target.value)
@@ -619,6 +643,9 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                     <label>
                       What proof should be provided?
                       <input
+                        aria-invalid={
+                          Boolean(error) && milestone.evidenceRequirements.trim().length < 5
+                        }
                         value={milestone.evidenceRequirements}
                         onChange={(event) =>
                           updateMilestone(milestone.id, "evidenceRequirements", event.target.value)
@@ -627,7 +654,7 @@ export function ListingWizard({ initialDraft }: { initialDraft?: ListingDraft })
                       />
                       <small>Formal term: required proof</small>
                     </label>
-                  </fieldset>
+                  </MilestoneEditor>
                 ))}
                 <button
                   type="button"

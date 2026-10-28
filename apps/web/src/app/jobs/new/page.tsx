@@ -1,7 +1,10 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/server/auth/session";
 import { ArrowRight, BriefcaseBusiness, Mail } from "lucide-react";
 import Link from "next/link";
 import { MarketplaceLayout } from "@/features/marketplace/components/marketplace-layout";
-export default function NewJobPage() {
+export default async function NewJobPage() {
+  if (!(await getCurrentUser())) redirect("/login?returnTo=/jobs/new");
   return (
     <MarketplaceLayout>
       <div className="creation-choice">

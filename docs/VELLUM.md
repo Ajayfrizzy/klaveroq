@@ -28,14 +28,16 @@ provisioned its real issuer DID and published the intended scoring rule.
 
 Claim issuance is disabled unless `KLAVEROQ_VELLUM_ISSUER_ENABLED=1`. Before enabling it:
 
-1. Apply the current database migrations.
-2. Create a dedicated CKB Testnet issuer DID and fund its controller with enough capacity for Claim
+1. Deploy the PactAgent settlement integration that records the authoritative transaction and marks
+   the release `CONFIRMED`.
+2. Apply the current database migrations.
+3. Create a dedicated CKB Testnet issuer DID and fund its controller with enough capacity for Claim
    Cells and fees.
-3. Store the controller key only in the deployment secret manager as
+4. Store the controller key only in the deployment secret manager as
    `KLAVEROQ_VELLUM_ISSUER_CKB_PRIVATE_KEY`.
-4. Set `KLAVEROQ_VELLUM_ISSUER_DID`, `KLAVEROQ_VELLUM_MIN_CONFIRMATIONS`, `CKB_NETWORK=testnet`, and
+5. Set `KLAVEROQ_VELLUM_ISSUER_DID`, `KLAVEROQ_VELLUM_MIN_CONFIRMATIONS`, `CKB_NETWORK=testnet`, and
    an explicit `CKB_RPC_URL`.
-5. Run the deployment readiness check before serving traffic.
+6. Run the deployment readiness check before serving traffic.
 
 The configured private key must control the live issuer DID. Key rotation keeps the issuer DID
 stable: rotate the DID controller first, replace the deployment credential, and verify readiness

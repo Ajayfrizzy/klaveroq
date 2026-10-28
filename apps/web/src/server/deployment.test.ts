@@ -16,6 +16,13 @@ describe("identity sandbox deployment guard", () => {
     RESEND_WEBHOOK_SECRET: "whsec_test",
     FILE_SCANNER: "clamav",
     CLAMAV_HOST: "scanner",
+    FILE_STORAGE_BACKEND: "spaces",
+    SPACES_REGION: "ams3",
+    SPACES_ENDPOINT: "https://ams3.digitaloceanspaces.com",
+    SPACES_BUCKET: "test-beta",
+    SPACES_PREFIX: "community-beta/",
+    SPACES_ACCESS_KEY_ID: "mock-key",
+    SPACES_SECRET_ACCESS_KEY: "mock-secret",
     CRON_SECRET: "c".repeat(32),
   };
   it("accepts intentionally disabled beta identity while retaining other production checks", () => {
@@ -34,6 +41,71 @@ describe("identity sandbox deployment guard", () => {
         RESEND_API_KEY: "",
       }),
     ).toContain("email_provider");
+  });
+  it("requires durable storage and valid scanner ports in hosted beta", () => {
+    const beta = { ...hosted, DEPLOYMENT_STAGE: "community_beta", IDENTITY_PROVIDER: "disabled" };
+    expect(
+      productionConfigurationIssues({ ...beta, FILE_STORAGE_BACKEND: "filesystem" }),
+    ).toContain("file_storage");
+    expect(productionConfigurationIssues({ ...beta, SPACES_SECRET_ACCESS_KEY: "" })).toContain(
+      "file_storage",
+    );
+    expect(
+      productionConfigurationIssues({ ...beta, SPACES_ENDPOINT: "https://cdn.example.com" }),
+    ).toContain("file_storage");
+    expect(productionConfigurationIssues({ ...beta, CLAMAV_PORT: "65536" })).toContain(
+      "malware_scanner",
+    );
+  });
+  it("accepts configured S3-compatible storage and rejects missing credentials", () => {
+    const s3 = {
+      ...hosted,
+      DEPLOYMENT_STAGE: "community_beta",
+      IDENTITY_PROVIDER: "disabled",
+      FILE_STORAGE_BACKEND: "s3",
+      S3_ENDPOINT: "https://objects.example.test",
+      S3_REGION: "us-east-1",
+      S3_BUCKET: "private-files",
+      S3_PREFIX: "community-beta/",
+      S3_ACCESS_KEY_ID: "test-key",
+      S3_SECRET_ACCESS_KEY: "test-secret",
+    };
+    expect(productionConfigurationIssues(s3)).toEqual([]);
+    expect(productionConfigurationIssues({ ...s3, S3_SECRET_ACCESS_KEY: "" })).toContain(
+      "file_storage",
+    );
+  });
+  it("allows the explicit low-cost beta without upload providers, never full production", () => {
+    const beta = {
+      ...hosted,
+      DEPLOYMENT_STAGE: "community_beta",
+      IDENTITY_PROVIDER: "disabled",
+      IDENTITY_SANDBOX_ENABLED: "0",
+      FILE_UPLOADS_ENABLED: "false",
+      FILE_SCANNER: undefined,
+      CLAMAV_HOST: undefined,
+      FILE_STORAGE_BACKEND: undefined,
+      SPACES_SECRET_ACCESS_KEY: undefined,
+    };
+    expect(productionConfigurationIssues(beta)).toEqual([]);
+    expect(productionConfigurationIssues({ ...beta, DEPLOYMENT_STAGE: "production" })).toEqual(
+      expect.arrayContaining(["file_storage", "malware_scanner", "identity_provider"]),
+    );
+    for (const value of ["true", undefined, "FALSE", "typo"]) {
+      expect(productionConfigurationIssues({ ...beta, FILE_UPLOADS_ENABLED: value })).toEqual(
+        expect.arrayContaining(["file_storage", "malware_scanner"]),
+      );
+    }
+    expect(productionConfigurationIssues({ ...beta, FILE_UPLOADS_ENABLED: "typo" })).toContain(
+      "file_uploads_enabled",
+    );
+    expect(productionConfigurationIssues({ ...beta, IDENTITY_SANDBOX_ENABLED: "1" })).toContain(
+      "file_storage",
+    );
+    expect(productionConfigurationIssues({ ...beta, RESEND_API_KEY: "" })).toContain(
+      "email_provider",
+    );
+    expect(productionConfigurationIssues({ ...beta, CRON_SECRET: "" })).toContain("cron_secret");
   });
   it.each(["disabled", "sandbox", "", "unknown", "production"])(
     "rejects %s as a production identity provider",

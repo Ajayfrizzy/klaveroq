@@ -1,0 +1,104 @@
+# Single-service community beta. Merge into the existing app spec so domains,
+# encrypted secrets and the existing DATABASE_URL are preserved.
+# No new database, bucket, scanner or worker is provisioned by this template.
+name: klaveroq
+region: ams
+services:
+  - name: web
+    github:
+      repo: Ajayfrizzy/klaveroq
+      branch: staging
+      deploy_on_push: false
+    source_dir: /
+    environment_slug: node-js
+    build_command: npm ci --include=dev && npm run build
+    run_command: npm exec --workspace=@klaveroq/web -- next start --hostname 0.0.0.0 --port 8080
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    health_check:
+      http_path: /api/health/ready
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      failure_threshold: 12
+      success_threshold: 1
+    liveness_health_check:
+      http_path: /api/health/live
+      initial_delay_seconds: 30
+      period_seconds: 30
+      timeout_seconds: 5
+      failure_threshold: 3
+      success_threshold: 1
+    envs:
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: production
+      - key: DEPLOYMENT_STAGE
+        scope: RUN_TIME
+        value: community_beta
+      - key: IDENTITY_PROVIDER
+        scope: RUN_TIME
+        value: disabled
+      - key: IDENTITY_SANDBOX_ENABLED
+        scope: RUN_TIME
+        value: "0"
+      - key: FILE_UPLOADS_ENABLED
+        scope: RUN_TIME
+        value: "false"
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_WITH_EXISTING_BETA_DATABASE_SECRET
+      - key: APP_URL
+        scope: RUN_TIME
+        value: https://REPLACE_EXISTING_BETA_DOMAIN
+      - key: SESSION_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_WITH_EXISTING_SECRET
+      - key: MFA_ENCRYPTION_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_WITH_EXISTING_SECRET
+      - key: EMAIL_PROVIDER
+        scope: RUN_TIME
+        value: resend
+      - key: EMAIL_FROM
+        scope: RUN_TIME
+        value: Klaveroq <REPLACE_VERIFIED_SENDER>
+      - key: RESEND_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_WITH_EXISTING_SECRET
+      - key: RESEND_WEBHOOK_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_WITH_EXISTING_SECRET
+      - key: GOOGLE_CLIENT_ID
+        scope: RUN_TIME
+        value: REPLACE_WITH_EXISTING_CLIENT_ID
+      - key: GOOGLE_CLIENT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_WITH_EXISTING_SECRET
+      - key: CRON_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_WITH_EXISTING_SECRET
+      - key: SESSION_COOKIE_NAME
+        scope: RUN_TIME
+        value: klaveroq_session
+      - key: SESSION_TTL_DAYS
+        scope: RUN_TIME
+        value: "30"
+      - key: CKB_NETWORK
+        scope: RUN_TIME
+        value: testnet
+ingress:
+  rules:
+    - component:
+        name: web
+      match:
+        path:
+          prefix: /

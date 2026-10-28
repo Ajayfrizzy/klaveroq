@@ -9,6 +9,10 @@ import { MarketplaceLayout } from "@/features/marketplace/components/marketplace
 import { listPublicListings } from "@/features/marketplace/server/queries";
 import { listingQuerySchema } from "@/features/marketplace/server/schemas";
 export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "Find work",
+  description: "Browse open marketplace jobs with clear deliverables and milestones.",
+};
 const ckb = (value: bigint) => new Intl.NumberFormat().format(Number(value) / 100_000_000);
 export default async function DiscoverPage({
   searchParams,
@@ -61,7 +65,7 @@ export default async function DiscoverPage({
       {result.data.length ? (
         <section className="listing-grid">
           {result.data.map(({ listing, client, proposalCount }) => (
-            <Link className="listing-card" href={`/discover/${listing.id}`} key={listing.id}>
+            <Link className="listing-card" href={`/jobs/${listing.id}`} key={listing.id}>
               <div className="listing-card-top">
                 <span>{listing.category.toLowerCase()}</span>
                 <small>{new Date(listing.publishedAt!).toLocaleDateString()}</small>
@@ -130,7 +134,7 @@ export default async function DiscoverPage({
         <Link
           className="secondary-button load-more"
           href={{
-            pathname: "/discover",
+            pathname: "/jobs",
             query: { ...scalar, cursor: result.nextCursor },
           }}
         >

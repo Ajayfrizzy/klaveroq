@@ -169,7 +169,7 @@ test("Phase 6 discovery, talent ranking, workspace filters, and authorization", 
     `;
   }
   await sql`
-    update profiles set updated_at = ${talentDate}
+    update profiles set updated_at = ${talentDate}, primary_role = ${`Phase6-${suffix}`}
     where user_id in ${sql(talents.map((talent) => talent.id))}
   `;
   const talentPageOne = await getJson(
@@ -180,8 +180,18 @@ test("Phase 6 discovery, talent ranking, workspace filters, and authorization", 
     anonymous,
     `/api/talent?query=Phase%20Six%20Talent&minCompletedJobs=1&limit=2&cursor=${encodeURIComponent(talentPageOne.nextCursor)}`,
   );
+  // Search uses relevance and daily discovery order, not rating order.
   expect(
-    talentPageOne.data.map(
+    [...talentPageOne.data, ...talentPageTwo.data]
+      .map((record: { reputation: { averageRating: number } }) => record.reputation.averageRating)
+      .sort((a, b) => b - a),
+  ).toEqual([5, 5, 4, 3]);
+  const reputationPage = await getJson(
+    anonymous,
+    `/api/talent?role=Phase6-${suffix}&sort=reputation&minCompletedJobs=1&limit=2`,
+  );
+  expect(
+    reputationPage.data.map(
       (record: { reputation: { averageRating: number } }) => record.reputation.averageRating,
     ),
   ).toEqual([5, 5]);

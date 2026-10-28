@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { confirmedFinancialSummary, formatAssetAmount, presentAssetTotals } from "./metrics";
 import { isFirstTimeUser, type OnboardingSignals } from "./onboarding";
 
@@ -12,6 +12,11 @@ const base = {
 };
 
 describe("confirmedFinancialSummary", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-25T12:00:00Z"));
+  });
+  afterEach(() => vi.useRealTimers());
   it("reports current secured funds as unavailable without reconciled balances", () => {
     const summary = confirmedFinancialSummary([
       { ...base, id: "fund", type: "FUND", amount: 120n },

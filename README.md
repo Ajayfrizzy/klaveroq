@@ -132,3 +132,7 @@ Marketplace assistance uses the server-side provider boundary in `features/ai`. 
 defaults to a deterministic template provider; generated job and proposal drafts are always
 editable and are never published or submitted automatically. PactAgent remains the infrastructure
 boundary for escrow, settlement, and proof-processing capabilities.
+
+Single-service community beta (uploads disabled): [DigitalOcean beta files runbook](docs/DIGITALOCEAN_BETA_FILES.md).
+
+For local file-upload development, explicitly set `FILE_UPLOADS_ENABLED=true`. Hosted uploads require the preserved [Spaces and ClamAV setup](docs/DIGITALOCEAN_UPLOADS.md).

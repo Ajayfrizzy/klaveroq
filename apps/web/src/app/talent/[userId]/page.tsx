@@ -13,10 +13,20 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MarketplaceLayout } from "@/features/marketplace/components/marketplace-layout";
-import { getTalentForViewer } from "@/features/talent/server/queries";
+import { getPublicTalent } from "@/features/talent/server/queries";
+import { externalReputationProvider } from "@/features/reputation/providers/external";
 import { getCurrentUser } from "@/server/auth/session";
 
 export const dynamic = "force-dynamic";
+export async function generateMetadata({ params }: { params: Promise<{ userId: string }> }) {
+  const talent = await getPublicTalent((await params).userId);
+  return talent
+    ? {
+        title: `${talent.profile.displayName} — ${talent.profile.headline || "Professional profile"}`,
+        description: talent.profile.bio?.slice(0, 160),
+      }
+    : { title: "Profile unavailable", robots: { index: false, follow: false } };
+}
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
 
 export default async function PublicTalentProfile({
@@ -27,16 +37,12 @@ export default async function PublicTalentProfile({
   const { userId } = await params;
   const current = await getCurrentUser();
   const isOwner = current?.user.id === userId;
-  const talent = await getTalentForViewer(userId, current?.user.id);
+  const talent = await getPublicTalent(userId);
   if (!talent) notFound();
   const { profile, portfolio, reputation, vellumIdentity } = talent;
+  const external = await externalReputationProvider.getPublishedClaims(userId);
   return (
     <MarketplaceLayout>
-      {isOwner && !current.profile?.isPublic && (
-        <p className="private-preview-notice">
-          Private profile preview. Other marketplace users cannot view this page.
-        </p>
-      )}
       <Link className="back-link" href="/talent">
         <ArrowLeft size={16} /> Back to talent
       </Link>
@@ -44,7 +50,7 @@ export default async function PublicTalentProfile({
         <div>
           <section className="public-profile-hero">
             <span className="profile-avatar">
-              {profile.avatarUrl ? (
+              {current && profile.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={profile.avatarUrl}
@@ -153,7 +159,8 @@ export default async function PublicTalentProfile({
               <div className="portfolio-public-grid">
                 {portfolio.map((item) => (
                   <article key={item.id}>
-                    {item.mediaUrl &&
+                    {current &&
+                      item.mediaUrl &&
                       (item.mediaContentType === "application/pdf" ? (
                         <a className="portfolio-media-file" href={item.mediaUrl}>
                           View project document
@@ -197,12 +204,19 @@ export default async function PublicTalentProfile({
           </section>
         </div>
         <aside>
-          {!isOwner && current && (
+          {!isOwner && (
             <section className="talent-hire-actions">
               <p className="eyebrow">Work together</p>
               <h2>Interested in this professional?</h2>
               <p>Structure the work with clear milestones. Payment protection is not connected.</p>
-              <Link className="primary-button" href={`/jobs/new/direct?talent=${profile.userId}`}>
+              <Link
+                className="primary-button"
+                href={
+                  current
+                    ? `/jobs/new/direct?talent=${profile.userId}`
+                    : `/login?returnTo=${encodeURIComponent(`/jobs/new/direct?talent=${profile.userId}`)}`
+                }
+              >
                 <Send size={16} /> Invite to a job
               </Link>
               <a className="secondary-button" href="#portfolio">
@@ -242,6 +256,14 @@ export default async function PublicTalentProfile({
             </dl>
             <p className="verified-work-note">
               <BadgeCheck size={14} /> Statistics are derived from completed Klaveroq engagements.
+            </p>
+          </section>
+          <section className="external-reputation">
+            <h2>External reputation</h2>
+            <p>{external ? "External provider connected" : "Credentials not connected"}</p>
+            <p>
+              Optional external credentials are separate from completed Klaveroq work. No
+              credentials are required to join.
             </p>
           </section>
         </aside>

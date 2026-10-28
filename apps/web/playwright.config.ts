@@ -12,11 +12,14 @@ if (
 )
   throw new Error("Playwright requires an isolated loopback database ending in _test.");
 process.env.DATABASE_URL = databaseUrl;
+process.env.TEST_DATABASE_URL = databaseUrl;
 
 export default defineConfig({
   tsconfig: "./tests/tsconfig.json",
   testDir: "./tests/e2e",
-  testIgnore: /identity-beta\.spec\.ts/,
+  // Beta-only journeys use port 3201 and disabled providers in playwright.beta.config.ts.
+  testIgnore:
+    /(?:authenticated-workspace|identity-beta|uploads-beta|dashboard-smoke|dashboard-reliability)\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -35,7 +38,8 @@ export default defineConfig({
     {
       name: "chromium",
       dependencies: ["clean-database"],
-      testIgnore: /(?:clean-database-profile|responsive|identity-beta)\.spec\.ts/,
+      testIgnore:
+        /(?:clean-database-profile|responsive|authenticated-workspace|identity-beta|uploads-beta|dashboard-smoke|dashboard-reliability)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -75,6 +79,8 @@ export default defineConfig({
             MFA_ENCRYPTION_KEY: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
             E2E_TEST_MODE: "1",
             CRON_SECRET: "phase7-e2e-cron-secret-at-least-32-characters",
+            FILE_UPLOADS_ENABLED: "true",
+            FILE_STORAGE_BACKEND: "filesystem",
             FILE_SCANNER: "local",
             FILE_STORAGE_ROOT: ".data/e2e-uploads",
             IDENTITY_PROVIDER: "sandbox",

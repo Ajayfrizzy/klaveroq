@@ -1,9 +1,11 @@
 "use client";
 
+import { MilestoneEditor } from "@/components/ui/milestone-editor";
+
 import { ArrowLeft, CheckCircle2, Info, Plus, Send, Sparkles, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useWorkProtection } from "@/components/ui/use-work-protection";
 
 type Milestone = {
@@ -68,12 +70,16 @@ export function ProposalComposer({
     })) ?? [blank()],
   );
   const [phase, setPhase] = useState<"edit" | "review">("edit");
+  useEffect(() => {
+    if (phase === "review") document.getElementById("proposal-review-title")?.focus();
+  }, [phase]);
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [assistantBusy, setAssistantBusy] = useState(false);
   const [assistantNote, setAssistantNote] = useState("");
   const {
     root: workRoot,
+    requestValidationFocus,
     status: workStatus,
     markSaved,
   } = useWorkProtection(JSON.stringify({ coverLetter, items }), errors.join(" "));
@@ -94,6 +100,7 @@ export function ProposalComposer({
   };
 
   const validate = () => {
+    requestValidationFocus();
     const next: string[] = [];
     if (coverLetter.trim().length < 40)
       next.push("Write at least 40 characters in your cover letter.");
@@ -126,7 +133,7 @@ export function ProposalComposer({
 
   const assist = async () => {
     if (!signedIn) {
-      router.push(`/login?returnTo=/discover/${listingId}`);
+      router.push(`/login?returnTo=/jobs/${listingId}`);
       return;
     }
     setAssistantBusy(true);
@@ -172,15 +179,11 @@ export function ProposalComposer({
     event.preventDefault();
     if (validate()) {
       setPhase("review");
-      window.scrollTo({
-        top: 0,
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      });
     }
   };
   const submit = async () => {
     if (!signedIn) {
-      router.push(`/login?returnTo=/discover/${listingId}`);
+      router.push(`/login?returnTo=/jobs/${listingId}`);
       return;
     }
     if (!validate()) {
@@ -235,12 +238,28 @@ export function ProposalComposer({
     setBusy(false);
   };
 
+  if (!signedIn)
+    return (
+      <section className="proposal-form">
+        <h2>Interested in this opportunity?</h2>
+        <p>Sign in or create an account to share your approach and apply.</p>
+        <Link
+          className="primary-button"
+          href={`/login?returnTo=${encodeURIComponent(`/jobs/${listingId}`)}`}
+        >
+          Sign in to apply <ArrowLeft size={16} style={{ rotate: "180deg" }} />
+        </Link>
+      </section>
+    );
+
   if (phase === "review")
     return (
       <section className="proposal-form proposal-review">
         <div className="section-heading">
           <div>
-            <h2>Review your proposal</h2>
+            <h2 id="proposal-review-title" tabIndex={-1}>
+              Review your proposal
+            </h2>
             <p>Confirm the terms before sending them to the client.</p>
           </div>
         </div>
@@ -342,6 +361,7 @@ export function ProposalComposer({
             <p>{assistantNote}</p>
           </div>
         )}
+        <h3 className="editor-section-title">1. Introduce your approach</h3>
         <label>
           Cover letter
           <textarea
@@ -363,6 +383,7 @@ export function ProposalComposer({
               : `${coverLetter.length}/5,000 characters · Minimum 40`}
           </small>
         </label>
+        <h3 className="editor-section-title">2. Define milestones, timing & proof</h3>
         <div className="proposal-guidance">
           <Info size={16} />
           <p>
@@ -371,8 +392,12 @@ export function ProposalComposer({
           </p>
         </div>
         {items.map((item, index) => (
-          <fieldset key={item.id}>
-            <legend>Milestone {index + 1}</legend>
+          <MilestoneEditor
+            key={item.id}
+            index={index}
+            title={item.title}
+            summary={`${item.amount || "0"} CKB · Day ${item.deliveryDays}`}
+          >
             {items.length > 1 && (
               <button
                 type="button"
@@ -446,6 +471,12 @@ export function ProposalComposer({
                     type="number"
                     min={index ? items[index - 1].deliveryDays + 1 : 1}
                     max={365}
+                    aria-invalid={
+                      errors.length > 0 &&
+                      (item.deliveryDays < 1 ||
+                        item.deliveryDays > 365 ||
+                        (index > 0 && item.deliveryDays <= items[index - 1].deliveryDays))
+                    }
                     value={item.deliveryDays}
                     onChange={(event) =>
                       update(item.id, "deliveryDays", Number(event.target.value))
@@ -468,7 +499,7 @@ export function ProposalComposer({
               />
               <small>Formal term: required proof</small>
             </label>
-          </fieldset>
+          </MilestoneEditor>
         ))}
         <button
           type="button"
@@ -483,6 +514,7 @@ export function ProposalComposer({
         >
           <Plus size={16} /> Add milestone <span>{items.length}/10</span>
         </button>
+        <h3 className="editor-section-title">3. Check your terms</h3>
         <div className={`proposal-total ${total > 0n && !withinBudget ? "outside-budget" : ""}`}>
           <div>
             <span>Proposal total</span>

@@ -1,0 +1,153 @@
+
+> klaveroq@0.1.0 build
+> npm run build --workspace=@klaveroq/web
+
+
+> @klaveroq/web@0.1.0 build
+> next build
+
+▲ Next.js 16.3.6 (Turbopack)
+✓ Running next.config.ts took 13ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 728ms
+  Running TypeScript ...
+  Finished TypeScript in 1541ms ...
+  Collecting page data using 10 workers ...
+  Generating static pages using 10 workers (0/67) ...
+  Generating static pages using 10 workers (16/67) 
+  Generating static pages using 10 workers (33/67) 
+  Generating static pages using 10 workers (50/67) 
+✓ Generating static pages using 10 workers (67/67) in 145ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /activity
+├ ƒ /admin
+├ ƒ /admin/disputes
+├ ƒ /admin/disputes/[id]
+├ ƒ /admin/login
+├ ƒ /admin/support
+├ ƒ /admin/support/[id]
+├ ƒ /api/admin/disputes/[id]/decision
+├ ƒ /api/admin/support/agents
+├ ƒ /api/admin/support/tickets
+├ ƒ /api/admin/support/tickets/[id]
+├ ƒ /api/admin/support/tickets/[id]/messages
+├ ƒ /api/ai/job-builder
+├ ƒ /api/ai/proposal-assistant
+├ ƒ /api/auth/google
+├ ƒ /api/auth/google/callback
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/me
+├ ƒ /api/auth/mfa
+├ ƒ /api/auth/mfa/challenge
+├ ƒ /api/auth/mfa/confirm
+├ ƒ /api/auth/mfa/disable
+├ ƒ /api/auth/password/request
+├ ƒ /api/auth/password/reset
+├ ƒ /api/auth/register
+├ ƒ /api/auth/sessions
+├ ƒ /api/auth/sessions/[id]
+├ ƒ /api/auth/verify-email
+├ ƒ /api/auth/verify-email/resend
+├ ƒ /api/dispute-files/[id]
+├ ƒ /api/disputes/[id]/evidence
+├ ƒ /api/fees/quote
+├ ƒ /api/files/[id]
+├ ƒ /api/health/live
+├ ƒ /api/health/ready
+├ ƒ /api/identity
+├ ƒ /api/identity/sandbox/complete
+├ ƒ /api/internal/files/cleanup
+├ ƒ /api/internal/jobs/[id]/sandbox-fund
+├ ƒ /api/internal/notifications/retry
+├ ƒ /api/internal/retention/purge
+├ ƒ /api/internal/reviews/auto-approve
+├ ƒ /api/internal/security-holds/release
+├ ƒ /api/jobs
+├ ƒ /api/jobs/[id]
+├ ƒ /api/jobs/[id]/accept
+├ ƒ /api/jobs/[id]/cancellation
+├ ƒ /api/jobs/[id]/confirm
+├ ƒ /api/jobs/[id]/disputes
+├ ƒ /api/jobs/[id]/reviews
+├ ƒ /api/marketplace/listings
+├ ƒ /api/marketplace/listings/[id]
+├ ƒ /api/marketplace/listings/[id]/cancel
+├ ƒ /api/marketplace/listings/[id]/close
+├ ƒ /api/marketplace/listings/[id]/proposal
+├ ƒ /api/marketplace/listings/[id]/proposals
+├ ƒ /api/marketplace/listings/[id]/publish
+├ ƒ /api/marketplace/proposals/[id]/award
+├ ƒ /api/marketplace/proposals/[id]/messages
+├ ƒ /api/marketplace/proposals/[id]/reject
+├ ƒ /api/marketplace/proposals/[id]/shortlist
+├ ƒ /api/media/avatar/[userId]
+├ ƒ /api/media/portfolio/[id]
+├ ƒ /api/milestones/[id]/proofs
+├ ƒ /api/milestones/[id]/review
+├ ƒ /api/notifications
+├ ƒ /api/notifications/[id]/read
+├ ƒ /api/notifications/preferences
+├ ƒ /api/notifications/read
+├ ƒ /api/notifications/unread
+├ ƒ /api/preferences
+├ ƒ /api/preferences/import
+├ ƒ /api/preferences/saved-searches
+├ ƒ /api/preferences/talent-shortlist
+├ ƒ /api/profile
+├ ƒ /api/profile/avatar
+├ ƒ /api/profile/portfolio
+├ ƒ /api/profile/portfolio/[id]
+├ ƒ /api/profile/portfolio/[id]/media
+├ ƒ /api/profile/visibility
+├ ƒ /api/proofs/[id]/files
+├ ƒ /api/support/attachments/[id]
+├ ƒ /api/support/tickets
+├ ƒ /api/support/tickets/[id]
+├ ƒ /api/support/tickets/[id]/attachments
+├ ƒ /api/support/tickets/[id]/close
+├ ƒ /api/support/tickets/[id]/messages
+├ ƒ /api/support/tickets/[id]/reopen
+├ ƒ /api/talent
+├ ƒ /api/talent/[id]
+├ ƒ /api/wallets
+├ ƒ /api/wallets/[id]
+├ ƒ /api/wallets/challenge
+├ ƒ /api/wallets/verify
+├ ƒ /api/webhooks/resend
+├ ƒ /dashboard
+├ ƒ /discover
+├ ƒ /discover/[id]
+├ ƒ /forgot-password
+├ ƒ /identity
+├ ƒ /identity/sandbox
+├ ƒ /jobs
+├ ƒ /jobs/[id]
+├ ƒ /jobs/new
+├ ƒ /jobs/new/direct
+├ ƒ /jobs/new/public
+├ ƒ /login
+├ ƒ /notifications
+├ ƒ /payments
+├ ƒ /profile
+├ ƒ /register
+├ ƒ /reset-password
+├ ○ /robots.txt
+├ ƒ /support
+├ ƒ /support/[id]
+├ ƒ /talent
+├ ƒ /talent/[userId]
+├ ƒ /verify-email
+└ ƒ /wallet
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

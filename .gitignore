@@ -7,6 +7,10 @@ docs/*
 !docs/STAGING_PROVIDER_CHECKLIST.md
 !docs/EMAIL_DELIVERY.md
 !docs/VELLUM.md
+!docs/DIGITALOCEAN_BETA_FILES.md
+!docs/DIGITALOCEAN_UPLOADS.md
+!docs/FUNCTIONAL_AUDIT.md
+!docs/DASHBOARD_RELIABILITY.md
 !docs/ui-refinement/
 node_modules/
 .next/
@@ -25,3 +29,5 @@ out/
 npm-debug.log*
 
 DEVLOG.md
+!docs/CLIENT_INVITES.md
+!docs/client-invites/

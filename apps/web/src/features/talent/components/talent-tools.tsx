@@ -29,67 +29,38 @@ const Selection = createContext<{ ids: string[]; disabled: boolean; toggle: (id:
 );
 
 export function TalentTools({ scope, children }: { scope: string; children: React.ReactNode }) {
-  const key = `klaveroq:shortlist:${scope}`;
-  const authenticated = scope !== "guest";
-  const { data, error, reload } = useAccountPreferences(authenticated);
-  const [localIds, setIds] = useState<string[]>([]);
-  const ids = authenticated ? (data?.talentIds ?? []) : localIds;
-  const [localReady, setReady] = useState(false);
-  const ready = authenticated ? Boolean(data) : localReady;
+  if (scope === "guest") return <>{children}</>;
+  return <AccountTalentTools>{children}</AccountTalentTools>;
+}
+
+function AccountTalentTools({ children }: { children: React.ReactNode }) {
+  const { data, error, reload } = useAccountPreferences(true);
+  const ids = data?.talentIds ?? [];
+  const ready = Boolean(data);
   const [message, setMessage] = useState("");
   const [comparison, setComparison] = useState<(Talent | null)[] | null>(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    if (authenticated) return;
-    const timer = setTimeout(() => {
-      try {
-        const stored: unknown = JSON.parse(localStorage.getItem(key) || "[]");
-        if (Array.isArray(stored))
-          setIds(
-            stored
-              .filter((id): id is string => typeof id === "string" && /^[0-9a-f-]{36}$/i.test(id))
-              .slice(0, 3),
-          );
-      } catch {
-        /* A damaged or unavailable preference does not block discovery. */
-      }
-      setReady(true);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [key, authenticated]);
   const toggle = async (id: string) => {
     if (!ready || busy) return;
     if (!ids.includes(id) && ids.length === 3) {
       setMessage("Compare up to 3 people. Remove someone before adding another.");
       return;
     }
-    const next = ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id];
-    if (authenticated) {
-      setBusy(true);
-      setMessage("");
-      try {
-        await preferenceRequest("/talent-shortlist", ids.includes(id) ? "DELETE" : "POST", {
-          talentUserId: id,
-        });
-        await reload();
-        setComparison(null);
-        setMessage("Shortlist saved to your account.");
-      } catch (reason) {
-        setMessage(
-          reason instanceof Error ? reason.message : "Shortlist could not be saved. Try again.",
-        );
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    setIds(next);
-    setComparison(null);
+    setBusy(true);
+    setMessage("");
     try {
-      localStorage.setItem(key, JSON.stringify(next));
-      setMessage("Shortlist saved on this device.");
-    } catch {
-      setMessage("Shortlist is available for this visit. Your browser could not save it.");
+      await preferenceRequest("/talent-shortlist", ids.includes(id) ? "DELETE" : "POST", {
+        talentUserId: id,
+      });
+      await reload();
+      setComparison(null);
+      setMessage("Shortlist saved to your account.");
+    } catch (reason) {
+      setMessage(
+        reason instanceof Error ? reason.message : "Shortlist could not be saved. Try again.",
+      );
+    } finally {
+      setBusy(false);
     }
   };
   const compare = async () => {
@@ -125,10 +96,7 @@ export function TalentTools({ scope, children }: { scope: string; children: Reac
         <section className="hiring-tools" aria-label="Talent shortlist">
           <div>
             <strong>Shortlist · {ids.length}/3</strong>
-            <p>
-              {authenticated ? "Saved to your account." : "Saved on this device."} Compare current
-              public profiles side by side.
-            </p>
+            <p>Saved to your account. Compare current public profiles side by side.</p>
           </div>
           <button
             className="secondary-button"

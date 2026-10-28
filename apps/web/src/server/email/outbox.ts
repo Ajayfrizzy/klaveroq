@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, gt, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { db } from "../db";
 import {
   notificationDeliveries as deliveries,
   notificationPreferences,
   verificationTokens,
+  clientInvites,
+  users,
 } from "../db/schema";
 import { sendEmail } from ".";
 import { EmailProviderError, type EmailMessage } from "./provider";
@@ -34,6 +37,7 @@ export async function deliverNotificationEmail(id: string) {
       and(
         eq(deliveries.id, id),
         inArray(deliveries.status, retryable),
+        // Due times default to PostgreSQL now(); compare with that same clock.
         lte(deliveries.nextAttemptAt, sql`now()`),
         lt(deliveries.attempts, MAX_EMAIL_ATTEMPTS),
       ),
@@ -45,7 +49,7 @@ export async function deliverNotificationEmail(id: string) {
     eq(deliveries.status, "PROCESSING"),
     eq(deliveries.attempts, delivery.attempts),
   );
-  async function finish(status: string, extra: Partial<typeof deliveries.$inferInsert> = {}) {
+  async function finish(status: string, extra: PgUpdateSetSource<typeof deliveries> = {}) {
     await db
       .update(deliveries)
       .set({ status, updatedAt: new Date(), ...extra })
@@ -64,7 +68,31 @@ export async function deliverNotificationEmail(id: string) {
       await finish("EXPIRED", { textBody: "", htmlBody: "" });
       return false;
     }
-    if (delivery.tokenHash) {
+    if (delivery.category === "CLIENT_INVITE") {
+      const [invite] = await db
+        .select({ id: clientInvites.id })
+        .from(clientInvites)
+        .where(
+          and(
+            eq(clientInvites.tokenHash, delivery.tokenHash ?? ""),
+            eq(clientInvites.status, "PENDING"),
+            gt(clientInvites.expiresAt, now),
+          ),
+        );
+      if (!invite) {
+        await finish("EXPIRED", { textBody: "", htmlBody: "" });
+        return false;
+      }
+      const [recipient] = await db
+        .select({ preferences: notificationPreferences })
+        .from(users)
+        .leftJoin(notificationPreferences, eq(notificationPreferences.userId, users.id))
+        .where(eq(users.email, delivery.recipient));
+      if (!preferenceAllowsEmail("JOB", recipient?.preferences)) {
+        await finish("SUPPRESSED", { textBody: "", htmlBody: "" });
+        return false;
+      }
+    } else if (delivery.tokenHash) {
       const [token] = await db
         .select({ id: verificationTokens.id })
         .from(verificationTokens)
@@ -80,7 +108,7 @@ export async function deliverNotificationEmail(id: string) {
         return false;
       }
     }
-    if (!["SECURITY", "AUTH"].includes(delivery.category)) {
+    if (!["SECURITY", "AUTH", "CLIENT_INVITE"].includes(delivery.category)) {
       const [preferences] = await db
         .select()
         .from(notificationPreferences)
@@ -104,7 +132,9 @@ export async function deliverNotificationEmail(id: string) {
       acceptedAt: receipt.status === "ACCEPTED" ? new Date() : null,
       deliveredAt: null,
       lastError: null,
-      ...(delivery.category === "AUTH" ? { textBody: "", htmlBody: "" } : {}),
+      ...(["AUTH", "CLIENT_INVITE"].includes(delivery.category)
+        ? { textBody: "", htmlBody: "" }
+        : {}),
     });
     return true;
   } catch (error) {
@@ -116,13 +146,10 @@ export async function deliverNotificationEmail(id: string) {
           ? "REVIEW_REQUIRED"
           : "FAILED",
       {
-        nextAttemptAt: new Date(
-          Date.now() +
-            Math.max(
-              retryDelayMs(delivery.attempts),
-              error instanceof EmailProviderError ? error.retryAfterMs : 0,
-            ),
-        ),
+        nextAttemptAt: sql`now() + ${Math.max(
+          retryDelayMs(delivery.attempts),
+          error instanceof EmailProviderError ? error.retryAfterMs : 0,
+        )} * interval '1 millisecond'`,
         lastError: error instanceof EmailProviderError ? error.code : "EMAIL_SEND_UNCONFIRMED",
       },
     );
@@ -135,12 +162,17 @@ export async function retryPendingNotificationEmails(limit = 25) {
   await db
     .update(deliveries)
     .set({ textBody: "", htmlBody: "", updatedAt: new Date() })
-    .where(and(eq(deliveries.category, "AUTH"), lte(deliveries.expiresAt, new Date())));
+    .where(
+      and(
+        inArray(deliveries.category, ["AUTH", "CLIENT_INVITE"]),
+        lte(deliveries.expiresAt, new Date()),
+      ),
+    );
   await db
     .update(deliveries)
     .set({
       status: "FAILED",
-      nextAttemptAt: new Date(),
+      nextAttemptAt: sql`now()`,
       lastError: "INTERRUPTED_ATTEMPT",
       updatedAt: new Date(),
     })
@@ -165,7 +197,7 @@ export async function retryPendingNotificationEmails(limit = 25) {
     .where(
       and(
         inArray(deliveries.status, retryable),
-        lte(deliveries.nextAttemptAt, new Date()),
+        lte(deliveries.nextAttemptAt, sql`now()`),
         lt(deliveries.attempts, MAX_EMAIL_ATTEMPTS),
       ),
     )

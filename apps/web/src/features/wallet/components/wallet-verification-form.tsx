@@ -5,15 +5,24 @@ import { useState } from "react";
 
 type Challenge = { id: string; message: string; nonce: string; expiresAt: string };
 
-export function WalletVerificationForm({ initialMessage = "" }: { initialMessage?: string }) {
+export function WalletVerificationForm({
+  initialMessage = "",
+  defaultNetwork,
+  communityBeta = false,
+}: {
+  initialMessage?: string;
+  defaultNetwork: "mainnet" | "testnet";
+  communityBeta?: boolean;
+}) {
   const [address, setAddress] = useState("");
-  const [network, setNetwork] = useState<"mainnet" | "testnet">("mainnet");
+  const [network, setNetwork] = useState<"mainnet" | "testnet">(defaultNetwork);
   const [purpose, setPurpose] = useState<"FUNDING" | "PAYOUT" | "BOTH">("BOTH");
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [signature, setSignature] = useState("");
   const [publicKey, setPublicKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [copyStatus, setCopyStatus] = useState("");
 
   async function requestChallenge(event: React.FormEvent) {
     event.preventDefault();
@@ -29,6 +38,7 @@ export function WalletVerificationForm({ initialMessage = "" }: { initialMessage
       if (!response.ok)
         throw new Error(body.error?.message ?? "A signing challenge could not be created.");
       setChallenge(body.data);
+      setCopyStatus("");
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "A signing challenge could not be created.",
@@ -79,29 +89,43 @@ export function WalletVerificationForm({ initialMessage = "" }: { initialMessage
         </div>
         <WalletCards size={20} />
       </div>
+      {communityBeta && (
+        <p className="wallet-beta-explanation">
+          Wallet verification is optional. Email or Google sign-in remains your primary account
+          access. Verifying ownership records that you control an address. It does not activate
+          payments, balances, funding, payouts, or payment protection during community beta.
+        </p>
+      )}
+      {communityBeta && (
+        <p className="form-feedback">
+          Intended use is recorded as funding and payout for future use only.
+        </p>
+      )}
       {!challenge ? (
         <form className="wallet-connect-form" onSubmit={requestChallenge}>
-          <label>
+          <label className={communityBeta ? "full-field" : undefined}>
             Network
             <select
               value={network}
               onChange={(event) => setNetwork(event.target.value as "mainnet" | "testnet")}
             >
-              <option value="mainnet">CKB mainnet</option>
               <option value="testnet">CKB testnet</option>
+              <option value="mainnet">CKB mainnet</option>
             </select>
           </label>
-          <label>
-            Purpose
-            <select
-              value={purpose}
-              onChange={(event) => setPurpose(event.target.value as typeof purpose)}
-            >
-              <option value="BOTH">Funding and payout</option>
-              <option value="FUNDING">Funding</option>
-              <option value="PAYOUT">Payout</option>
-            </select>
-          </label>
+          {!communityBeta && (
+            <label>
+              Purpose
+              <select
+                value={purpose}
+                onChange={(event) => setPurpose(event.target.value as typeof purpose)}
+              >
+                <option value="BOTH">Funding and payout</option>
+                <option value="FUNDING">Funding</option>
+                <option value="PAYOUT">Payout</option>
+              </select>
+            </label>
+          )}
           <label className="full-field">
             Wallet address
             <input
@@ -122,40 +146,64 @@ export function WalletVerificationForm({ initialMessage = "" }: { initialMessage
           </button>
         </form>
       ) : (
-        <form className="wallet-sign-form" onSubmit={verify}>
-          <label>
-            Message to sign
-            <textarea readOnly rows={8} value={challenge.message} />
-          </label>
+        <form
+          className="wallet-sign-form"
+          onSubmit={verify}
+          onInvalidCapture={(event) => {
+            const section = (event.target as HTMLElement).closest("details");
+            if (section) section.open = true;
+          }}
+        >
+          <h3>1. Copy and sign the message</h3>
+          <p>
+            Use your wallet’s message-signing tool. This proves ownership without authorizing a
+            payment.
+          </p>
           <button
-            className="secondary-button copy-message"
+            className="primary-button copy-message"
             type="button"
-            onClick={() => navigator.clipboard.writeText(challenge.message)}
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(challenge.message);
+                setCopyStatus("Message copied. Sign it in your CKB wallet.");
+              } catch {
+                setCopyStatus("Copy unavailable. Open the message below and copy it manually.");
+              }
+            }}
           >
             <Copy size={15} /> Copy message
           </button>
+          <p role="status">{copyStatus}</p>
+          <details className="signing-payload">
+            <summary>View message to sign</summary>
+            <label htmlFor="wallet-signing-message">Message to sign</label>
+            <textarea id="wallet-signing-message" readOnly rows={8} value={challenge.message} />
+          </details>
           <p className="form-feedback">
             Sign this exact message in your CKB wallet. It expires{" "}
-            {new Date(challenge.expiresAt).toLocaleString()} and does not authorize a payment.
+            {new Date(challenge.expiresAt).toLocaleString()}.
           </p>
-          <label>
-            Signature
-            <input
-              required
-              minLength={20}
-              value={signature}
-              onChange={(event) => setSignature(event.target.value.trim())}
-            />
-          </label>
-          <label>
-            Public key
-            <input
-              required
-              minLength={20}
-              value={publicKey}
-              onChange={(event) => setPublicKey(event.target.value.trim())}
-            />
-          </label>
+          <details className="signature-fields">
+            <summary>2. Enter your signature and public key</summary>
+            <label>
+              Signature
+              <input
+                required
+                minLength={20}
+                value={signature}
+                onChange={(event) => setSignature(event.target.value.trim())}
+              />
+            </label>
+            <label>
+              Public key
+              <input
+                required
+                minLength={20}
+                value={publicKey}
+                onChange={(event) => setPublicKey(event.target.value.trim())}
+              />
+            </label>
+          </details>
           <div className="wallet-form-actions">
             <button className="secondary-button" type="button" onClick={() => setChallenge(null)}>
               Cancel

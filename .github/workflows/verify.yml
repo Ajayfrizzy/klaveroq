@@ -3,13 +3,32 @@ name: Verify
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, staging]
 
 concurrency:
   group: verify-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build deployable workspace image
+        run: docker build -t klaveroq-web:ci .
+      - name: Check standalone server startup
+        run: |
+          docker run --detach --name klaveroq-smoke -p 127.0.0.1:8080:8080 klaveroq-web:ci
+          curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 1 --retry-max-time 30 http://127.0.0.1:8080/api/health/live
+          curl --fail --silent --show-error --output /dev/null http://127.0.0.1:8080/login
+      - name: Container logs
+        if: always()
+        run: docker logs klaveroq-smoke || true
+      - name: Stop smoke container
+        if: always()
+        run: docker rm -f klaveroq-smoke || true
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -43,7 +62,9 @@ jobs:
       - run: npm run build
       # Match the browser, system fonts and OS used for the Linux visual references.
       # Keep Linux native dependencies separate from the host installation.
-      - name: Browser regression suite
+      # test:e2e also runs beta-only workspace journeys and authenticated dashboard smoke.
+      # Real lock/timeout fault tests use a separate disposable database, not this smoke.
+      - name: Browser regressions and authenticated dashboard smoke
         run: |
           docker run --rm --init --ipc=host --network=host \
             -v "$GITHUB_WORKSPACE:/work" -v /work/node_modules \

@@ -142,7 +142,11 @@ export function MfaPanel({
         </div>
       ) : (
         <form className="mfa-start" onSubmit={start}>
-          <p>Require a time-based code after your password whenever you sign in.</p>
+          <p>
+            {passwordConfigured
+              ? "Require a time-based code after your password whenever you sign in."
+              : "Add an authenticator app to your account. You do not need a local password to set it up."}
+          </p>
           {passwordConfigured && (
             <label>
               Current password

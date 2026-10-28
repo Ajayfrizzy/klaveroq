@@ -13,7 +13,7 @@ describe("API response tracing", () => {
   it("preserves an immutable OAuth redirect instead of returning 500", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     const destination = "https://accounts.google.com/o/oauth2/v2/auth?state=test";
-    const handler = withApi(async (_request: Request) => Response.redirect(destination));
+    const handler = withApi<[Request]>(async () => Response.redirect(destination));
     const response = await handler(request());
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe(destination);
@@ -25,8 +25,8 @@ describe("API response tracing", () => {
     const headers = new Headers({ "content-type": "application/json" });
     headers.append("set-cookie", "session=one; Path=/; HttpOnly");
     headers.append("set-cookie", "nonce=two; Path=/api/auth/google; HttpOnly");
-    const handler = withApi(
-      async (_request: Request) => new Response('{"ok":true}', { status: 201, headers }),
+    const handler = withApi<[Request]>(
+      async () => new Response('{"ok":true}', { status: 201, headers }),
     );
     const response = await handler(request());
     expect(response.status).toBe(201);
@@ -35,7 +35,7 @@ describe("API response tracing", () => {
   });
 
   it("retains structured errors and request IDs", async () => {
-    const handler = withApi(async (_request: Request): Promise<Response> => {
+    const handler = withApi<[Request]>(async (): Promise<Response> => {
       throw new ApiError(403, "FORBIDDEN", "Access denied.");
     });
     const response = await handler(request());

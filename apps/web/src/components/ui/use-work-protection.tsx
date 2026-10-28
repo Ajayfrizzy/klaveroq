@@ -8,6 +8,7 @@ const approvedNavigations = new WeakSet<Event>();
 export function useWorkProtection(value: string, error = "") {
   const [savedValue, setSavedValue] = useState(value);
   const bypass = useRef(false);
+  const [validationAttempt, setValidationAttempt] = useState(0);
   const root = useRef<HTMLDivElement>(null);
   const attachRoot = useCallback((element: HTMLDivElement | null) => {
     root.current = element;
@@ -68,11 +69,14 @@ export function useWorkProtection(value: string, error = "") {
         parent = parent.parentElement;
       }
       if (!field) target.tabIndex = -1;
-      target.focus();
+      // Center the revealed field clear of the mobile navigation and sticky context.
+      target.scrollIntoView({ block: "center", behavior: "instant" });
+      target.focus({ preventScroll: true });
     }
-  }, [error]);
+  }, [error, validationAttempt]);
   return {
     root: attachRoot,
+    requestValidationFocus: () => setValidationAttempt((attempt) => attempt + 1),
     dirty,
     markSaved: (next = value) => {
       bypass.current = true;

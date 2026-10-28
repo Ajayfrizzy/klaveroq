@@ -119,7 +119,7 @@ test("empty database stays demo-free and profile changes persist through repeat 
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/dashboard");
   await page.goto("/profile");
   await expect(page.getByText("Product engineer", { exact: true })).toBeVisible();
 
@@ -131,10 +131,10 @@ test("empty database stays demo-free and profile changes persist through repeat 
       "I build reliable marketplace products with accessible interfaces, explicit milestones, and tested delivery workflows.",
     );
   await page.getByLabel("Skills").fill("TypeScript, React, testing");
-  await page.getByLabel("Languages").fill("English");
+  await page.getByLabel("Spoken languages").fill("English");
   await page.getByLabel("Experience level").selectOption("EXPERT");
   await page.getByLabel("Country").selectOption("NG");
-  await page.getByLabel("Timezone").fill("Africa/Lagos");
+  await page.getByLabel("Timezone", { exact: true }).selectOption("Africa/Lagos");
 
   let failNextSave = true;
   await page.route("**/api/profile", async (route) => {
@@ -208,7 +208,7 @@ test("empty database stays demo-free and profile changes persist through repeat 
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/dashboard");
   await page.goto("/profile");
   await expect(page.getByRole("heading", { name: "Published Profile Name" })).toBeVisible();
   await expect(page.getByText("Reliable marketplace product engineer")).toBeVisible();

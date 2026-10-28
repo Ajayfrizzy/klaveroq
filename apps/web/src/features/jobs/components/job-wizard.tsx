@@ -1,5 +1,7 @@
 "use client";
 
+import { MilestoneEditor } from "@/components/ui/milestone-editor";
+
 import type { MilestoneDraft } from "@klaveroq/domain";
 import {
   ArrowLeft,
@@ -40,10 +42,18 @@ export type SelectedTalent = {
   identityVerified: boolean;
 };
 
-export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent }) {
+export function JobWizard({
+  selectedTalent,
+  clientInviteId,
+  initialTitle = "",
+}: {
+  selectedTalent?: SelectedTalent;
+  clientInviteId?: string;
+  initialTitle?: string;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState("");
   const [worker, setWorker] = useState("");
   const [milestones, setMilestones] = useState<MilestoneDraft[]>([emptyMilestone(1)]);
@@ -52,6 +62,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
   const [submitting, setSubmitting] = useState(false);
   const {
     root: workRoot,
+    requestValidationFocus,
     status: workStatus,
     markSaved,
   } = useWorkProtection(
@@ -72,6 +83,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
   };
 
   const validate = () => {
+    requestValidationFocus();
     const nextErrors: string[] = [];
     if (step === 0 && title.trim().length < 5)
       nextErrors.push("Add a clear job title with at least 5 characters.");
@@ -111,7 +123,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
 
   const submit = async () => {
     if (!termsAccepted)
-      return setErrors(["Confirm the agreement terms before creating the funding request."]);
+      return setErrors(["Confirm the agreement terms before creating the agreement."]);
     setSubmitting(true);
     setErrors([]);
     try {
@@ -142,6 +154,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
         },
         body: JSON.stringify({
           title,
+          clientInviteId,
           description,
           ...(selectedTalent ? { workerUserId: selectedTalent.userId } : { workerEmail: worker }),
           asset: "CKB",
@@ -167,13 +180,13 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
     <div className="wizard-page" ref={workRoot}>
       {workStatus}
       <div className="wizard-heading">
-        <Link className="back-link" href="/">
+        <Link className="back-link" href="/dashboard">
           <ArrowLeft size={17} /> Overview
         </Link>
         <div>
           <p className="eyebrow">Direct agreement</p>
-          <h1>Create a new job</h1>
-          <p>Set the work, milestones, and funding terms before inviting your worker.</p>
+          <h1>{clientInviteId ? "Create Agreement" : "Create a new job"}</h1>
+          <p>Set the work, milestones, and deadlines for your freelancer to review.</p>
         </div>
       </div>
 
@@ -266,12 +279,13 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                 </div>
               </div>
               {milestones.map((milestone, index) => (
-                <div className="milestone-editor" key={milestone.id}>
-                  <div className="milestone-editor-head">
-                    <div>
-                      <span>{index + 1}</span>
-                      <strong>{milestone.title || `Milestone ${index + 1}`}</strong>
-                    </div>
+                <MilestoneEditor
+                  key={milestone.id}
+                  index={index}
+                  title={milestone.title}
+                  summary={`${milestone.amount || 0} CKB · ${milestone.dueDate || "Set a due date"}`}
+                >
+                  <div className="milestone-editor-head" hidden={milestones.length === 1}>
                     {milestones.length > 1 && (
                       <button
                         className="icon-button danger"
@@ -360,7 +374,7 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                       />
                     </label>
                   </div>
-                </div>
+                </MilestoneEditor>
               ))}
               <button
                 className="secondary-button add-milestone"
@@ -383,7 +397,9 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                 <div>
                   <h2>Invite your worker</h2>
                   <p>
-                    They can inspect the terms immediately and accept after funding is confirmed.
+                    {clientInviteId
+                      ? "Your freelancer can review and accept these terms without a wallet or payment."
+                      : "They can inspect the terms immediately and accept after funding is confirmed."}
                   </p>
                 </div>
               </div>
@@ -396,9 +412,11 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                       selectedTalent.primaryRole ||
                       "Klaveroq professional"}
                   </p>
-                  <Link href="/talent" className="secondary-button">
-                    Change professional
-                  </Link>
+                  {!clientInviteId && (
+                    <Link href="/talent" className="secondary-button">
+                      Change professional
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <label>
@@ -492,7 +510,9 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
                 />
                 <span>
                   I confirm the scope, milestone amounts, fees, review window, and
-                  funding-before-acceptance process.
+                  {clientInviteId
+                    ? "terms review process. Creating this agreement is free and does not move funds."
+                    : "funding-before-acceptance process."}
                 </span>
               </label>
             </div>
@@ -515,7 +535,12 @@ export function JobWizard({ selectedTalent }: { selectedTalent?: SelectedTalent 
               </button>
             ) : (
               <button className="primary-button" disabled={submitting} onClick={submit}>
-                <ShieldCheck size={17} /> {submitting ? "Creating..." : "Create invitation"}
+                <ShieldCheck size={17} />{" "}
+                {submitting
+                  ? "Creating..."
+                  : clientInviteId
+                    ? "Create Agreement"
+                    : "Create invitation"}
               </button>
             )}
           </div>

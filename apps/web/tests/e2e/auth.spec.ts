@@ -3,7 +3,7 @@ import postgres from "postgres";
 
 const password = "KlaveroqTest123";
 const replacementPassword = "KlaveroqChanged456";
-const origin = "http://127.0.0.1:3199";
+const origin = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3199";
 const testDatabaseUrl =
   process.env.TEST_DATABASE_URL ??
   "postgresql://klaveroq_test:klaveroq_test@127.0.0.1:55434/klaveroq_test";
@@ -13,7 +13,7 @@ test("email verification and password recovery are complete single-use workflows
 }) => {
   const email = `auth-${Date.now()}@example.test`;
 
-  await page.goto("/register");
+  await page.goto("/register?returnTo=/jobs");
   await page.getByLabel("Display name").fill("Authentication Test");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
@@ -31,6 +31,11 @@ test("email verification and password recovery are complete single-use workflows
   await expect(page).toHaveURL(/\/verify-email\?/);
   await page.getByRole("link", { name: "Open local verification link" }).click();
   await expect(page.getByRole("heading", { name: "Email verified" })).toBeVisible();
+  await page.getByRole("link", { name: "Continue to Klaveroq" }).click();
+  await expect(page).toHaveURL("/jobs");
+  await expect(
+    page.getByRole("heading", { name: "Find work built around clear, verifiable milestones" }),
+  ).toBeVisible();
 
   const replay = await page.request.post("/api/auth/verify-email", {
     headers: { Origin: origin },
@@ -60,7 +65,7 @@ test("email verification and password recovery are complete single-use workflows
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(replacementPassword);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/dashboard");
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const response = await page.request.post("/api/auth/password/request", {

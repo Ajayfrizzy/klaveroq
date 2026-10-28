@@ -57,6 +57,7 @@ test("mobile public navigation keeps hiring and sign-in reachable and preserves 
 test("compact filters support saved searches, removable chips and mobile reflow", async ({
   page,
 }) => {
+  await account(page.request, "UX Saved Search");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/discover");
   await expect(page.getByLabel("Category", { exact: true })).not.toBeVisible();
@@ -81,7 +82,7 @@ test("signed-in navigation, focus choice, profile tags and unsaved work protecti
   page,
 }) => {
   await account(page.request, "UX Profile");
-  await page.goto("/");
+  await page.goto("/dashboard");
   await page.getByRole("button", { name: "Hire talent", exact: true }).click();
   await page.reload();
   await expect(page.getByRole("button", { name: "Hire talent", exact: true })).toHaveAttribute(
@@ -115,13 +116,13 @@ test("signed-in navigation, focus choice, profile tags and unsaved work protecti
 
 test("authenticated pages and mobile menu support keyboard access", async ({ page }) => {
   await account(page.request, "UX Access");
-  for (const path of ["/jobs", "/wallet", "/notifications", "/support"]) {
+  for (const path of ["/jobs?view=agreements", "/wallet", "/notifications", "/support"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await accessible(page);
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/jobs");
+  await page.goto("/jobs?view=agreements");
   await expect(page.getByRole("heading", { name: "Jobs", exact: true })).toBeVisible();
   const open = page.getByRole("button", { name: "Open menu", exact: true });
   await open.click();

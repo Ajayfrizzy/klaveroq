@@ -4,7 +4,8 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 const exactTitles: Record<string, string> = {
-  "/": "Dashboard",
+  "/": "Work with trust. Deliver with proof.",
+  "/dashboard": "Dashboard",
   "/activity": "Activity",
   "/discover": "Find Work",
   "/talent": "Find Talent",
@@ -37,6 +38,13 @@ function pageTitle(pathname: string) {
 export function RouteTitle() {
   const pathname = usePathname();
   useEffect(() => {
+    if (
+      !pathname.startsWith("/jobs/new") &&
+      ["/", "/jobs", "/talent", "/discover"].some(
+        (route) => pathname === route || (route !== "/" && pathname.startsWith(`${route}/`)),
+      )
+    )
+      return;
     document.title = `${pageTitle(pathname)} | Klaveroq`;
   }, [pathname]);
   return null;

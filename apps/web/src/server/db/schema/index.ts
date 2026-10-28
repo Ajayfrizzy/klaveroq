@@ -541,6 +541,7 @@ export const jobs = pgTable(
     fundedAt: timestamp("funded_at", { withTimezone: true }),
     acceptedAt: timestamp("accepted_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
     externalAgreementId: varchar("external_agreement_id", { length: 160 }),
     ...timestamps,
   },
@@ -1244,3 +1245,40 @@ export const emailDeliveryRollout = pgTable("email_delivery_rollout", {
   id: integer("id").primaryKey(),
   installedAt: timestamp("installed_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Onboarding invitations grant no access to existing jobs or marketplace records.
+export const clientInvites = pgTable(
+  "client_invites",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id),
+    email: varchar("email", { length: 320 }).notNull(),
+    projectTitle: varchar("project_title", { length: 90 }).notNull().default(""),
+    message: varchar("message", { length: 2000 }).notNull().default(""),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    status: varchar("status", { length: 10 }).notNull().default("PENDING"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    recipientUserId: uuid("recipient_user_id").references(() => users.id),
+    jobId: uuid("job_id").references(() => jobs.id),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("client_invites_token_unique").on(t.tokenHash),
+    uniqueIndex("client_invites_pending_unique")
+      .on(t.ownerUserId, t.email)
+      .where(sql`${t.status} = 'PENDING'`),
+    uniqueIndex("client_invites_job_unique").on(t.jobId),
+    index("client_invites_recipient_idx").on(t.recipientUserId),
+    check(
+      "client_invites_status_check",
+      sql`${t.status} in ('PENDING','ACCEPTED','DECLINED','EXPIRED','REVOKED')`,
+    ),
+    check(
+      "client_invites_not_self",
+      sql`${t.recipientUserId} is null or ${t.ownerUserId} <> ${t.recipientUserId}`,
+    ),
+  ],
+);

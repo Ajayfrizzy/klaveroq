@@ -1,0 +1,43 @@
+[WebServer] (node:71053) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71053) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71061) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71070) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71062) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71063) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71065) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71067) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71069) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71066) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71064) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71068) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71072) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:71098) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 1 worker
+
+(node:71099) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [authenticated-workspace] › tests/e2e/authenticated-workspace.spec.ts:81:5 › authenticated screens reflow, preserve privacy and expose keyboard navigation (6.4s)
+  ✓  2 [authenticated-workspace] › tests/e2e/authenticated-workspace.spec.ts:117:5 › job and proposal editors preserve collapsed fields through review and submission (5.0s)
+  ✓  3 [authenticated-workspace] › tests/e2e/authenticated-workspace.spec.ts:207:5 › wallet message stays exact while payload and signature fields are progressively disclosed (1.8s)
+  ✓  4 [authenticated-workspace] › tests/e2e/authenticated-workspace.spec.ts:262:5 › direct agreement milestone disclosure reveals invalid fields and keeps edits (1.7s)
+  ✓  5 [authenticated-workspace] › tests/e2e/authenticated-workspace.spec.ts:280:5 › published profile and portfolio display saved professional details without invented reputation (1.4s)
+  ✓  6 [authenticated-workspace] › tests/e2e/authenticated-workspace.spec.ts:337:5 › support ticket and reply remain usable with attachments disabled (1.7s)
+  ✓  7 [authenticated-workspace] › tests/e2e/identity-beta.spec.ts:5:5 › community beta disables identity without creating records or exposing sandbox verification (1.2s)
+  ✓  8 [authenticated-workspace] › tests/e2e/uploads-beta.spec.ts:6:5 › disabled-upload beta preserves records and supports text profiles, portfolios and support (945ms)
+
+  8 passed (26.8s)

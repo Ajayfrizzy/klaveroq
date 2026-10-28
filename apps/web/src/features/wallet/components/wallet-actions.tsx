@@ -5,7 +5,9 @@ import { useState } from "react";
 
 export function WalletActions({
   wallet,
+  communityBeta = false,
 }: {
+  communityBeta?: boolean;
   wallet: {
     id: string;
     status: string;
@@ -48,7 +50,8 @@ export function WalletActions({
             disabled={busy || wallet.status !== "VERIFIED"}
             onClick={() => update("PATCH", "FUNDING")}
           >
-            <Landmark size={14} /> Set for funding
+            <Landmark size={14} />{" "}
+            {communityBeta ? "Set future funding default" : "Set for funding"}
           </button>
         )}
         {["PAYOUT", "BOTH"].includes(wallet.purpose) && !wallet.isDefaultPayout && (
@@ -56,7 +59,7 @@ export function WalletActions({
             disabled={busy || wallet.status !== "VERIFIED"}
             onClick={() => update("PATCH", "PAYOUT")}
           >
-            <Send size={14} /> Set for payout
+            <Send size={14} /> {communityBeta ? "Set future payout default" : "Set for payout"}
           </button>
         )}
         <button

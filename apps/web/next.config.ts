@@ -1,10 +1,14 @@
 import type { NextConfig } from "next";
+import { join } from "node:path";
 import { loadConfigEnvironment } from "./load-config-env";
 
 loadConfigEnvironment();
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["127.0.0.1"],
+  ...(process.env.NEXT_OUTPUT_STANDALONE === "1"
+    ? { output: "standalone" as const, outputFileTracingRoot: join(__dirname, "../..") }
+    : {}),
+  allowedDevOrigins: ["127.0.0.1", "127.0.2.2"],
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   transpilePackages: ["@klaveroq/domain"],
   async headers() {

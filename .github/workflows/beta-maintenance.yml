@@ -1,0 +1,40 @@
+name: Community beta maintenance
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Maintenance task
+        type: choice
+        required: true
+        default: notifications
+        options: [notifications, retention]
+  schedule:
+    - cron: "*/5 * * * *"
+    - cron: "17 3 * * *"
+permissions:
+  contents: read
+concurrency:
+  group: beta-maintenance-${{ github.event.schedule || inputs.task }}
+  cancel-in-progress: false
+jobs:
+  maintenance:
+    if: vars.BETA_MAINTENANCE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      APP_URL: ${{ vars.BETA_APP_URL }}
+      CRON_SECRET: ${{ secrets.BETA_CRON_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: staging
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Retry notification outbox
+        if: github.event.schedule == '*/5 * * * *' || inputs.task == 'notifications'
+        run: node scripts/run-beta-maintenance.mjs notifications
+      - name: Apply existing short-lived retention policy
+        if: github.event.schedule == '17 3 * * *' || inputs.task == 'retention'
+        run: node scripts/run-beta-maintenance.mjs retention

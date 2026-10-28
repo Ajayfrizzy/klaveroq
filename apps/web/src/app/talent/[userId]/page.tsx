@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   Clock3,
   ExternalLink,
+  Fingerprint,
   Github,
   Globe2,
   MapPin,
@@ -38,7 +39,7 @@ export default async function PublicTalentProfile({
   const isOwner = current?.user.id === userId;
   const talent = await getPublicTalent(userId);
   if (!talent) notFound();
-  const { profile, portfolio, reputation } = talent;
+  const { profile, portfolio, reputation, vellumIdentity } = talent;
   const external = await externalReputationProvider.getPublishedClaims(userId);
   return (
     <MarketplaceLayout>
@@ -82,6 +83,21 @@ export default async function PublicTalentProfile({
                   {profile.availability.toLowerCase()}
                 </span>
               </div>
+              {vellumIdentity && (
+                <a
+                  className="public-vellum-identity"
+                  href={`https://usevellum.xyz/profile/${encodeURIComponent(vellumIdentity.did)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Fingerprint size={16} />
+                  <span>
+                    <strong>{vellumIdentity.displayName || "Vellum identity"}</strong>
+                    <small>{vellumIdentity.did}</small>
+                  </span>
+                  <ExternalLink size={14} />
+                </a>
+              )}
             </div>
           </section>
           <section className="public-profile-section">

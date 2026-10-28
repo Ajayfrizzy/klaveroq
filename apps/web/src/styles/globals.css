@@ -2424,6 +2424,91 @@ button {
 .identity-panel {
   width: min(720px, 100%);
 }
+.identity-page-panels {
+  display: grid;
+  gap: 14px;
+}
+.vellum-identity-record,
+.vellum-selected-identity {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.vellum-identity-record {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid var(--soft-line);
+  border-radius: 7px;
+  background: var(--green-soft);
+}
+.vellum-identity-record > svg {
+  flex: 0 0 auto;
+  color: var(--green);
+}
+.vellum-identity-record > span,
+.vellum-selected-identity {
+  display: grid;
+  gap: 3px;
+}
+.vellum-identity-record > span {
+  flex: 1;
+}
+.vellum-identity-record strong,
+.vellum-selected-identity strong {
+  font-size: 11px;
+}
+.vellum-identity-record small,
+.vellum-selected-identity small {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: none;
+}
+.vellum-identity-record > a {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--green);
+}
+.vellum-identity-form,
+.vellum-identity-empty {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+.vellum-identity-form label {
+  display: grid;
+  gap: 6px;
+  color: #394946;
+  font-size: 10px;
+  font-weight: 700;
+}
+.vellum-identity-form select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 11px;
+  color: var(--ink);
+  background: white;
+}
+.vellum-identity-actions,
+.vellum-identity-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+.vellum-identity-empty p {
+  width: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
 .identity-panel-heading {
   display: flex;
   gap: 13px;
@@ -5200,6 +5285,37 @@ button {
 .public-profile-name h1 {
   margin: 0;
   font-size: 24px;
+}
+.public-vellum-identity {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--soft-line);
+  border-radius: 7px;
+  color: var(--ink);
+  background: white;
+}
+.public-vellum-identity > svg {
+  flex: 0 0 auto;
+  color: var(--green);
+}
+.public-vellum-identity > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.public-vellum-identity strong {
+  font-size: 10px;
+}
+.public-vellum-identity small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .public-profile-hero > div > p {
   margin: 6px 0 0;

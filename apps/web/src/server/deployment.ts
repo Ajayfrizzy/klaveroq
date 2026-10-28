@@ -4,6 +4,8 @@ import { objectStorageConfiguration } from "./files/config";
 type DeploymentEnvironment = Record<string, string | undefined>;
 import { emailAppUrl, validEmailSender } from "./email/templates";
 import { identityConfiguration } from "./identity/config";
+import { settlementClaimConfiguration } from "@/features/vellum/server/claims/config";
+import { vellumClient } from "@/features/vellum/server/identity";
 
 function usesLoopbackDatabase(databaseUrl?: string) {
   if (!databaseUrl) return false;
@@ -45,6 +47,12 @@ export function productionConfigurationIssues(
   const identity = identityConfiguration(environment);
   if (!identity.validStage) issues.push("deployment_stage");
   if (!identity.validProvider) issues.push("identity_provider");
+  try {
+    const vellum = settlementClaimConfiguration(environment);
+    if (vellum.enabled) vellumClient(environment);
+  } catch {
+    issues.push("vellum_issuer");
+  }
   if (
     environment.FILE_UPLOADS_ENABLED !== undefined &&
     !["true", "false"].includes(environment.FILE_UPLOADS_ENABLED)

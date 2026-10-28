@@ -16,9 +16,11 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1141.0",
-    "@ckb-ccc/core": "^1.18.0",
+    "@ckb-ccc/core": "1.19.1",
+    "@ckb-ccc/did-ckb": "0.2.9",
     "@klaveroq/domain": "*",
     "@node-rs/argon2": "^2.0.2",
+    "@usevellum/sdk": "0.1.1",
     "drizzle-orm": "^0.45.2",
     "jose": "^6.2.4",
     "lucide-react": "^0.468.0",

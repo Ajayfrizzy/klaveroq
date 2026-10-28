@@ -160,6 +160,24 @@ describe("identity sandbox deployment guard", () => {
       }),
     ).toEqual(["deployment_stage", "identity_provider"]);
   });
+  it("requires complete Vellum issuer configuration only when issuance is enabled", () => {
+    expect(
+      productionConfigurationIssues({
+        NODE_ENV: "development",
+        DEPLOYMENT_STAGE: "development",
+        IDENTITY_PROVIDER: "sandbox",
+        KLAVEROQ_VELLUM_ISSUER_ENABLED: "0",
+      }),
+    ).not.toContain("vellum_issuer");
+    expect(
+      productionConfigurationIssues({
+        NODE_ENV: "development",
+        DEPLOYMENT_STAGE: "development",
+        IDENTITY_PROVIDER: "sandbox",
+        KLAVEROQ_VELLUM_ISSUER_ENABLED: "1",
+      }),
+    ).toContain("vellum_issuer");
+  });
   it("allows an explicitly configured local sandbox", () => {
     expect(
       allowsIdentitySandbox({

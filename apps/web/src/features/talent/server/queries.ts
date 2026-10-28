@@ -2,7 +2,14 @@ import { cache } from "react";
 import { and, countDistinct, desc, eq, gte, ilike, inArray, lt, ne, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/server/db";
-import { jobs, marketplaceReviews, mediaFiles, portfolioItems, profiles } from "@/server/db/schema";
+import {
+  jobs,
+  marketplaceReviews,
+  mediaFiles,
+  portfolioItems,
+  profiles,
+  vellumIdentityBindings,
+} from "@/server/db/schema";
 import { getReputationSummaries, getReputationSummary } from "@/features/reputation/server/queries";
 import { canViewTalentProfile } from "./authorization";
 import { toPublicPortfolioItem, toPublicTalentProfile } from "./public-profile";
@@ -13,13 +20,21 @@ async function getTalentProfile(userId: string, actorUserId?: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) return null;
   const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1);
   if (!profile || !canViewTalentProfile(profile.isPublic, profile.userId, actorUserId)) return null;
-  const [portfolio, reputation] = await Promise.all([
+  const [portfolio, reputation, identityRows] = await Promise.all([
     db
       .select()
       .from(portfolioItems)
       .where(eq(portfolioItems.userId, userId))
       .orderBy(desc(portfolioItems.createdAt)),
     getReputationSummary(userId),
+    db
+      .select({
+        did: vellumIdentityBindings.did,
+        displayName: vellumIdentityBindings.displayName,
+      })
+      .from(vellumIdentityBindings)
+      .where(eq(vellumIdentityBindings.userId, userId))
+      .limit(1),
   ]);
   const mediaKeys = [profile.avatarKey, ...portfolio.map((item) => item.mediaKey)].filter(
     (key): key is string => Boolean(key),
@@ -40,6 +55,7 @@ async function getTalentProfile(userId: string, actorUserId?: string) {
       toPublicPortfolioItem(item, item.mediaKey ? mediaByKey.get(item.mediaKey) : undefined),
     ),
     reputation,
+    vellumIdentity: identityRows[0] ?? null,
   };
 }
 

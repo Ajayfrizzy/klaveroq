@@ -34,6 +34,11 @@ async function ready(page: Page, route: string) {
   );
   await expect(page.locator("h1").first()).toBeVisible();
   await expect(page.locator(".sidebar-user strong")).toHaveText("Beta Review");
+  if (route === "/wallet") {
+    const settingsLink = page.getByRole("link", { name: "Account settings and deletion" });
+    await expect(settingsLink).toBeVisible();
+    await expect(settingsLink).toHaveAttribute("href", "/account/settings");
+  }
   if (route === "/notifications")
     await expect(page.getByText("You are all caught up")).toBeVisible();
   if (route === "/support") await expect(page.getByText("No support cases yet.")).toBeVisible();

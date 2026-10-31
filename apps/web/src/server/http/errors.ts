@@ -1,3 +1,4 @@
+import { gatedRequest } from "../account/gate";
 import { ZodError } from "zod";
 import { getRequestId } from "../observability/request-context";
 import { log, reportException } from "../observability/logger";
@@ -56,7 +57,7 @@ export const withApi =
     const requestId = request ? getRequestId(request) : "unavailable";
     const startedAt = performance.now();
     try {
-      const original = await handler(...args);
+      const original = await gatedRequest(request, () => handler(...args));
       // Redirect and fetched responses can have immutable headers. Copy the
       // response without consuming its body before adding tracing metadata.
       const response = new Response(original.body, {

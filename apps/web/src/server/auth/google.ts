@@ -1,3 +1,4 @@
+import { accountCanAuthenticate } from "../account/state";
 export const GOOGLE_OAUTH_COOKIES = {
   state: "klaveroq_google_state",
   nonce: "klaveroq_google_nonce",
@@ -45,7 +46,7 @@ export function googleAccountAction(input: {
   linkedStatus?: string;
   emailOwnerExists: boolean;
 }) {
-  if (input.linked && ["SUSPENDED", "CLOSED"].includes(input.linkedStatus ?? ""))
+  if (input.linked && !accountCanAuthenticate(input.linkedStatus ?? "ACTIVE"))
     return "unavailable" as const;
   if (input.linked) return "login" as const;
   if (input.emailOwnerExists) return "conflict" as const;

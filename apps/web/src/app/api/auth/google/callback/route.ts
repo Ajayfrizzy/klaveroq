@@ -1,3 +1,4 @@
+import { accountMutationGate } from "@/server/account/gate";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { and, eq, sql } from "drizzle-orm";
@@ -225,7 +226,7 @@ export async function GET(request: Request) {
   let returnTo = "/";
   try {
     returnTo = safeReturnTo((await cookies()).get(GOOGLE_OAUTH_COOKIES.returnTo)?.value);
-    return await callback(request);
+    return await accountMutationGate(false, () => callback(request));
   } catch (error) {
     if (error instanceof ApiError) return errorRedirect(error.code, returnTo);
     console.error(error);

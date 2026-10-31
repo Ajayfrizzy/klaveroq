@@ -56,3 +56,5 @@ it("recovers a valid session after a temporary failure instead of caching a sign
   mocks.query.mockResolvedValueOnce([current]);
   expect(await getCurrentUser()).toEqual(current);
 });
+
+vi.mock("../account/service", () => ({ hasAccountHold: async () => false }));

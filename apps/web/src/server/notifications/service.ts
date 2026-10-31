@@ -39,11 +39,16 @@ export async function notifyUser(input: NotificationInput) {
   );
   const result = await db.transaction(async (tx) => {
     const [recipient] = await tx
-      .select({ email: users.email, preferences: notificationPreferences })
+      .select({ email: users.email, status: users.status, preferences: notificationPreferences })
       .from(users)
       .leftJoin(notificationPreferences, eq(notificationPreferences.userId, users.id))
       .where(eq(users.id, input.userId));
-    if (!recipient) return null;
+    if (
+      !recipient ||
+      ["CLOSED", "CLOSED_RETAINED", "ANONYMIZED"].includes(recipient.status) ||
+      (recipient.status === "PENDING_DELETION" && input.category !== "SECURITY")
+    )
+      return null;
     const [created] = await tx
       .insert(notifications)
       .values({

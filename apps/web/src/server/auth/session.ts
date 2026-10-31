@@ -1,3 +1,5 @@
+import { accountCanAuthenticate } from "../account/state";
+import { hasAccountHold } from "../account/service";
 import { getRenderRequestId } from "../observability/render-context";
 import { requiredOperation } from "../observability/operations";
 import { and, eq, gt, isNull } from "drizzle-orm";
@@ -10,6 +12,13 @@ import { clientIpHash, randomToken, sha256 } from "../http/security";
 export const SESSION_COOKIE = process.env.SESSION_COOKIE_NAME ?? "klaveroq_session";
 
 export async function createSession(userId: string, request: Request) {
+  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  if (!user || !accountCanAuthenticate(user.status) || (await hasAccountHold(userId)))
+    throw new ApiError(
+      403,
+      "ACCOUNT_UNAVAILABLE",
+      "This account cannot sign in. Use account recovery or contact privacy support.",
+    );
   const token = randomToken();
   const days = Number(process.env.SESSION_TTL_DAYS ?? 30);
   const expiresAt = new Date(Date.now() + days * 86_400_000);
@@ -62,7 +71,12 @@ export async function getCurrentUser() {
       )
       .limit(1),
   );
-  if (!record || ["SUSPENDED", "CLOSED"].includes(record.user.status)) return null;
+  if (
+    !record ||
+    !accountCanAuthenticate(record.user.status) ||
+    (await hasAccountHold(record.user.id))
+  )
+    return null;
   return record;
 }
 

@@ -1,3 +1,5 @@
+import { accountCanAuthenticate } from "@/server/account/state";
+import { hasAccountHold } from "@/server/account/service";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/server/db";
 import { notifications, sessions, users, verificationTokens } from "@/server/db/schema";
@@ -37,6 +39,17 @@ export const POST = withApi(async (request: Request) => {
         400,
         "RESET_TOKEN_INVALID",
         "The password reset link is invalid or expired.",
+      );
+    const [account] = await tx
+      .select()
+      .from(users)
+      .where(eq(users.id, consumed.userId))
+      .for("update");
+    if (!account || !accountCanAuthenticate(account.status) || (await hasAccountHold(account.id)))
+      throw new ApiError(
+        403,
+        "ACCOUNT_UNAVAILABLE",
+        "This account requires recovery or support review.",
       );
     await tx
       .update(users)

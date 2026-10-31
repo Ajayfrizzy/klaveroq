@@ -99,6 +99,9 @@ export default async function WalletPage({
 
   return (
     <AppShell>
+      <Link className="secondary-button" href="/account/settings">
+        Account settings and deletion
+      </Link>
       <PageHeader
         eyebrow="Account records"
         title="Wallet & security"

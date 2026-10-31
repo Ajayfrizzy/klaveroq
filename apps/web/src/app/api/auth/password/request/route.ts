@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { and, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { users } from "@/server/db/schema";
@@ -30,7 +30,12 @@ export const POST = withApi(async (request: Request) => {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(sql`lower(${users.email}) = ${email}`)
+    .where(
+      and(
+        sql`lower(${users.email}) = ${email}`,
+        inArray(users.status, ["ACTIVE", "PENDING_EMAIL_VERIFICATION"]),
+      ),
+    )
     .limit(1);
   let token: string | undefined;
   if (user) {

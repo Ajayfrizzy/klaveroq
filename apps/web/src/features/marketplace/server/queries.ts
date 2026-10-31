@@ -1,3 +1,4 @@
+import { publiclyAvailable } from "@/server/account/public";
 import { cache } from "react";
 import { and, asc, count, desc, eq, gt, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { db } from "@/server/db";
@@ -56,13 +57,13 @@ export async function listPublicListings(input: z.infer<typeof listingQuerySchem
     .select({
       listing: jobListings,
       client: {
-        displayName: sql<string>`case when ${profiles.isPublic} then ${profiles.displayName} else 'Klaveroq client' end`,
+        displayName: sql<string>`case when ${profiles.isPublic} and ${publiclyAvailable(sql`${profiles.userId}`)} then ${profiles.displayName} else 'Klaveroq client' end`,
         headline: sql<
           string | null
-        >`case when ${profiles.isPublic} then ${profiles.headline} else null end`,
+        >`case when ${profiles.isPublic} and ${publiclyAvailable(sql`${profiles.userId}`)} then ${profiles.headline} else null end`,
         countryCode: sql<
           string | null
-        >`case when ${profiles.isPublic} then ${profiles.countryCode} else null end`,
+        >`case when ${profiles.isPublic} and ${publiclyAvailable(sql`${profiles.userId}`)} then ${profiles.countryCode} else null end`,
       },
       proposalCount: sql<number>`coalesce(${proposalCounts.value}, 0)`,
     })
@@ -108,16 +109,18 @@ export const getPublicListing = cache(async (id: string, ownerUserId?: string) =
   const [record] = await db
     .select({
       listing: jobListings,
-      clientPublished: profiles.isPublic,
+      clientPublished: sql<boolean>`${profiles.isPublic} and ${publiclyAvailable(sql`${profiles.userId}`)}`,
       client: {
-        displayName: sql<string>`case when ${profiles.isPublic} then ${profiles.displayName} else 'Klaveroq client' end`,
+        displayName: sql<string>`case when ${profiles.isPublic} and ${publiclyAvailable(sql`${profiles.userId}`)} then ${profiles.displayName} else 'Klaveroq client' end`,
         headline: sql<
           string | null
-        >`case when ${profiles.isPublic} then ${profiles.headline} else null end`,
+        >`case when ${profiles.isPublic} and ${publiclyAvailable(sql`${profiles.userId}`)} then ${profiles.headline} else null end`,
         countryCode: sql<
           string | null
-        >`case when ${profiles.isPublic} then ${profiles.countryCode} else null end`,
-        bio: sql<string | null>`case when ${profiles.isPublic} then ${profiles.bio} else null end`,
+        >`case when ${profiles.isPublic} and ${publiclyAvailable(sql`${profiles.userId}`)} then ${profiles.countryCode} else null end`,
+        bio: sql<
+          string | null
+        >`case when ${profiles.isPublic} and ${publiclyAvailable(sql`${profiles.userId}`)} then ${profiles.bio} else null end`,
       },
       proposalCount: sql<number>`coalesce(${proposalCounts.value}, 0)`,
     })

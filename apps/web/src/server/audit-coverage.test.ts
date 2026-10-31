@@ -13,7 +13,19 @@ function routeFiles(directory: string): string[] {
 describe("audit coverage", () => {
   it("requires every state-changing API route to record an audit event", () => {
     const apiRoot = join(process.cwd(), "src/app/api");
+    // Lifecycle services commit their audit events in the SAME transaction as the
+    // transition. These explicit routes delegate to that audited service.
+    const delegated = new Set([
+      "account/closure/route.ts",
+      "account/recover/route.ts",
+      "account/confirmation/route.ts",
+      "admin/account-holds/route.ts",
+    ]);
+    expect(readFileSync(join(process.cwd(), "src/server/account/service.ts"), "utf8")).toContain(
+      ".insert(auditLogs)",
+    );
     const missing = routeFiles(apiRoot)
+      .filter((path) => !delegated.has(path.replace(`${apiRoot}/`, "")))
       .filter((path) => /export const (POST|PUT|PATCH|DELETE)\b/.test(readFileSync(path, "utf8")))
       .filter((path) => !/\baudit\(/.test(readFileSync(path, "utf8")))
       .map((path) => path.replace(`${process.cwd()}/`, ""));

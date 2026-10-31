@@ -254,6 +254,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           {mode === "login" ? (
             <>
               <Link href="/forgot-password">Forgot password?</Link>
+              <Link href="/account/recover">Recover account</Link>
               <span>
                 Need an account?{" "}
                 <Link href={`/register?returnTo=${encodeURIComponent(returnTo)}`}>Register</Link>

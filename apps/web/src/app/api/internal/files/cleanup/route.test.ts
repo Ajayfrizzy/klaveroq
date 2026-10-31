@@ -31,3 +31,7 @@ it("defaults authorized cleanup to dry run and passes the continuation cursor", 
     expect.objectContaining({ prefix: "clean/", cursor: "next", dryRun: true }),
   );
 });
+
+vi.mock("@/server/account/gate", () => ({
+  gatedRequest: (_request: unknown, run: () => Promise<unknown>) => run(),
+}));

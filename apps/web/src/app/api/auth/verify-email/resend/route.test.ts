@@ -69,3 +69,7 @@ it.each([null, { user: { id: "someone-else" } }])(
     expect(existing.data).toEqual({ accepted: true });
   },
 );
+
+vi.mock("@/server/account/gate", () => ({
+  gatedRequest: (_request: unknown, run: () => Promise<unknown>) => run(),
+}));

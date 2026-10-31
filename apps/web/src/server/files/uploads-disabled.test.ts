@@ -67,3 +67,7 @@ describe("disabled uploads reject before parsing, database or providers", () => 
     expect(mocks.user).toHaveBeenCalled();
   });
 });
+
+vi.mock("@/server/account/gate", () => ({
+  gatedRequest: (_request: unknown, run: () => Promise<unknown>) => run(),
+}));

@@ -1083,3 +1083,19 @@ summary {
   overflow-wrap: anywhere;
   font-weight: 750;
 }
+
+.account-lifecycle {
+  width: min(100%, 540px);
+}
+.account-lifecycle input,
+.account-reference {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.auth-status-panel textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+}

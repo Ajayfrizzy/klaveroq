@@ -44,3 +44,7 @@ describe("API response tracing", () => {
     expect((await response.json()).error.code).toBe("FORBIDDEN");
   });
 });
+
+vi.mock("@/server/account/gate", () => ({
+  gatedRequest: (_request: unknown, run: () => Promise<unknown>) => run(),
+}));

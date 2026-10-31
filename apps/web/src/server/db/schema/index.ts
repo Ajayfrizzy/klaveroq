@@ -84,6 +84,9 @@ export const accountStatusEnum = pgEnum("account_status", [
   "SECURITY_REVIEW",
   "SUSPENDED",
   "CLOSED",
+  "PENDING_DELETION",
+  "CLOSED_RETAINED",
+  "ANONYMIZED",
 ]);
 export const identityStatusEnum = pgEnum("identity_status", [
   "NOT_STARTED",
@@ -1187,3 +1190,56 @@ export const clientInvites = pgTable(
     ),
   ],
 );
+
+// Account anchors are retained; these records never cascade-delete users or evidence.
+export const accountClosures = pgTable(
+  "account_closures",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).defaultNow().notNull(),
+    processAfter: timestamp("process_after", { withTimezone: true }).notNull(),
+    recoveredAt: timestamp("recovered_at", { withTimezone: true }),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+    wasPublic: boolean("was_public").default(false).notNull(),
+    retentionReasons: jsonb("retention_reasons").$type<string[]>().default([]).notNull(),
+    reviewAfter: timestamp("review_after", { withTimezone: true }),
+    lastError: varchar("last_error", { length: 80 }),
+  },
+  (t) => [
+    uniqueIndex("account_closures_open_unique")
+      .on(t.userId)
+      .where(sql`${t.recoveredAt} is null and ${t.processedAt} is null`),
+    index("account_closures_due_idx").on(t.processAfter),
+  ],
+);
+
+export const accountHolds = pgTable(
+  "account_holds",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    reason: varchar("reason", { length: 500 }).notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    releasedBy: uuid("released_by").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    releasedAt: timestamp("released_at", { withTimezone: true }),
+    reviewAfter: timestamp("review_after", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("account_holds_user_idx").on(t.userId)],
+);
+
+export const accountPrivacyRequests = pgTable("account_privacy_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  message: varchar("message", { length: 2000 }).notNull(),
+  status: varchar("status", { length: 20 }).default("OPEN").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  reviewAfter: timestamp("review_after", { withTimezone: true }).defaultNow().notNull(),
+});

@@ -1,3 +1,4 @@
+import { accountCanAuthenticate } from "@/server/account/state";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { notifications, users } from "@/server/db/schema";
@@ -47,7 +48,13 @@ export const POST = withApi(async (request: Request) => {
       "ACCOUNT_TEMPORARILY_LOCKED",
       "Try again after the account lock expires.",
     );
-  if (["SUSPENDED", "CLOSED"].includes(user.status))
+  if (user.status === "PENDING_DELETION")
+    throw new ApiError(
+      403,
+      "ACCOUNT_PENDING_DELETION",
+      "Deletion is pending. Use Recover account to explicitly cancel it within 30 days.",
+    );
+  if (!accountCanAuthenticate(user.status))
     throw new ApiError(403, "ACCOUNT_UNAVAILABLE", "This account cannot sign in.");
   if (await activeMfaMethod(user.id)) {
     await db

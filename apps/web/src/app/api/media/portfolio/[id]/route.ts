@@ -1,4 +1,5 @@
-import { and, eq } from "drizzle-orm";
+import { publiclyAvailable } from "@/server/account/public";
+import { and, eq, sql } from "drizzle-orm";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { mediaFiles, portfolioItems, profiles } from "@/server/db/schema";
@@ -14,7 +15,13 @@ export const GET = withApi(
       .from(portfolioItems)
       .innerJoin(profiles, eq(profiles.userId, portfolioItems.userId))
       .innerJoin(mediaFiles, eq(mediaFiles.storageKey, portfolioItems.mediaKey))
-      .where(and(eq(portfolioItems.id, id), eq(mediaFiles.kind, "PORTFOLIO")))
+      .where(
+        and(
+          eq(portfolioItems.id, id),
+          publiclyAvailable(sql`${portfolioItems.userId}`),
+          eq(mediaFiles.kind, "PORTFOLIO"),
+        ),
+      )
       .limit(1);
     if (
       !record ||

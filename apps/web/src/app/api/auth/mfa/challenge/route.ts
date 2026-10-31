@@ -1,3 +1,4 @@
+import { accountCanAuthenticate } from "@/server/account/state";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { audit } from "@/server/audit";
@@ -34,7 +35,7 @@ export const POST = withApi(async (request: Request) => {
       ),
     )
     .limit(1);
-  if (!record?.method.verifiedAt)
+  if (!record?.method.verifiedAt || !accountCanAuthenticate(record.user.status))
     throw new ApiError(400, "MFA_CHALLENGE_INVALID", "The MFA challenge is invalid or expired.");
   const verified = await verifyMfaCode(record.method, code);
   if (!verified)

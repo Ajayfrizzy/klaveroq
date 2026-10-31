@@ -1,3 +1,4 @@
+import { publiclyAvailable } from "@/server/account/public";
 import { and, eq } from "drizzle-orm";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db";
@@ -13,7 +14,9 @@ export const GET = withApi(
       .select({ profile: profiles, media: mediaFiles })
       .from(profiles)
       .innerJoin(mediaFiles, eq(mediaFiles.storageKey, profiles.avatarKey))
-      .where(and(eq(profiles.userId, userId), eq(mediaFiles.kind, "AVATAR")))
+      .where(
+        and(eq(profiles.userId, userId), eq(mediaFiles.kind, "AVATAR"), publiclyAvailable(userId)),
+      )
       .limit(1);
     if (
       !record ||

@@ -1,4 +1,4 @@
-import { and, isNotNull, lt, or } from "drizzle-orm";
+import { and, isNotNull, lt, or, sql } from "drizzle-orm";
 import { db } from "../db";
 import {
   authRateLimits,
@@ -14,22 +14,36 @@ export const RETENTION_DAYS = {
   walletChallenges: 7,
   authRateLimits: 2,
   deliveredNotificationBodies: 90,
-  auditLogs: 2557,
-  financialAndAgreementRecords: 2557,
 } as const;
 
+// No universal duration is authorized for financial or audit evidence.
+export const REVIEW_REQUIRED_RECORDS = ["audit_logs", "agreements", "financial_records"] as const;
+
 const before = (days: number, now: Date) => new Date(now.getTime() - days * 86_400_000);
+
+const mayPurge = (
+  owner:
+    | typeof sessions.userId
+    | typeof verificationTokens.userId
+    | typeof walletChallenges.userId
+    | typeof notificationDeliveries.userId,
+) => sql`not exists(select 1 from account_holds where user_id=${owner} and released_at is null)
+ and not exists(select 1 from security_holds where user_id=${owner} and released_at is null and (expires_at is null or expires_at>now()))
+ and not exists(select 1 from users where id=${owner} and status in ('SUSPENDED','SECURITY_REVIEW'))`;
 
 export async function enforceShortLivedRetention(now = new Date()) {
   return db.transaction(async (tx) => {
     const deletedSessions = await tx
       .delete(sessions)
       .where(
-        or(
-          lt(sessions.expiresAt, before(RETENTION_DAYS.expiredSessions, now)),
-          and(
-            isNotNull(sessions.revokedAt),
-            lt(sessions.revokedAt, before(RETENTION_DAYS.expiredSessions, now)),
+        and(
+          mayPurge(sessions.userId),
+          or(
+            lt(sessions.expiresAt, before(RETENTION_DAYS.expiredSessions, now)),
+            and(
+              isNotNull(sessions.revokedAt),
+              lt(sessions.revokedAt, before(RETENTION_DAYS.expiredSessions, now)),
+            ),
           ),
         ),
       )
@@ -37,18 +51,29 @@ export async function enforceShortLivedRetention(now = new Date()) {
     const deletedTokens = await tx
       .delete(verificationTokens)
       .where(
-        or(
-          lt(verificationTokens.expiresAt, before(RETENTION_DAYS.consumedOrExpiredTokens, now)),
-          and(
-            isNotNull(verificationTokens.consumedAt),
-            lt(verificationTokens.consumedAt, before(RETENTION_DAYS.consumedOrExpiredTokens, now)),
+        and(
+          mayPurge(verificationTokens.userId),
+          or(
+            lt(verificationTokens.expiresAt, before(RETENTION_DAYS.consumedOrExpiredTokens, now)),
+            and(
+              isNotNull(verificationTokens.consumedAt),
+              lt(
+                verificationTokens.consumedAt,
+                before(RETENTION_DAYS.consumedOrExpiredTokens, now),
+              ),
+            ),
           ),
         ),
       )
       .returning({ id: verificationTokens.id });
     const deletedChallenges = await tx
       .delete(walletChallenges)
-      .where(lt(walletChallenges.expiresAt, before(RETENTION_DAYS.walletChallenges, now)))
+      .where(
+        and(
+          mayPurge(walletChallenges.userId),
+          lt(walletChallenges.expiresAt, before(RETENTION_DAYS.walletChallenges, now)),
+        ),
+      )
       .returning({ id: walletChallenges.id });
     const deletedRateLimits = await tx
       .delete(authRateLimits)
@@ -59,6 +84,7 @@ export async function enforceShortLivedRetention(now = new Date()) {
       .set({ textBody: "", htmlBody: "" })
       .where(
         and(
+          mayPurge(notificationDeliveries.userId),
           lt(
             notificationDeliveries.createdAt,
             before(RETENTION_DAYS.deliveredNotificationBodies, now),

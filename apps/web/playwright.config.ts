@@ -19,7 +19,7 @@ export default defineConfig({
   testDir: "./tests/e2e",
   // Beta-only journeys use port 3201 and disabled providers in playwright.beta.config.ts.
   testIgnore:
-    /(?:authenticated-workspace|identity-beta|uploads-beta|dashboard-smoke|dashboard-reliability)\.spec\.ts/,
+    /(?:account-lifecycle|authenticated-workspace|identity-beta|uploads-beta|dashboard-smoke|dashboard-reliability)\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -39,7 +39,7 @@ export default defineConfig({
       name: "chromium",
       dependencies: ["clean-database"],
       testIgnore:
-        /(?:clean-database-profile|responsive|authenticated-workspace|identity-beta|uploads-beta|dashboard-smoke|dashboard-reliability)\.spec\.ts/,
+        /(?:account-lifecycle|clean-database-profile|responsive|authenticated-workspace|identity-beta|uploads-beta|dashboard-smoke|dashboard-reliability)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {

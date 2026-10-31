@@ -124,3 +124,7 @@ describe("upload metadata and replacement lifecycle", () => {
     expect(mocks.store).not.toHaveBeenCalled();
   });
 });
+
+vi.mock("@/server/account/gate", () => ({
+  gatedRequest: (_request: unknown, run: () => Promise<unknown>) => run(),
+}));

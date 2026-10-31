@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const current = await getCurrentUser();
-  if (!current?.profile) redirect("/login?returnTo=/profile");
+  if (!current) redirect("/login?returnTo=/profile");
+  if (!current.profile) redirect("/account/settings?profileMissing=1");
   const [portfolio, reputation] = await Promise.all([
     db
       .select()

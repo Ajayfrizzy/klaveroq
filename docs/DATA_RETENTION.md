@@ -4,44 +4,39 @@
 
 `POST /api/internal/retention/purge`, authenticated by `CRON_SECRET`, enforces:
 
-| Data | Retention |
-| --- | --- |
-| Expired or revoked sessions | 30 days |
-| Consumed or expired verification/reset tokens | 30 days |
-| Expired wallet challenges | 7 days |
-| Authentication rate-limit windows | 2 days |
-| Notification email bodies | Scrub after 90 days; retain delivery/deduplication records and recipient identifiers under account retention policy |
-| Authentication email bodies | Scrub on acceptance/simulation or token expiry; pending links require restricted, encrypted database access |
+| Data                                          | Retention                                                                                                           |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Expired or revoked sessions                   | 30 days                                                                                                             |
+| Consumed or expired verification/reset tokens | 30 days                                                                                                             |
+| Expired wallet challenges                     | 7 days                                                                                                              |
+| Authentication rate-limit windows             | 2 days                                                                                                              |
+| Notification email bodies                     | Scrub after 90 days; retain delivery/deduplication records and recipient identifiers under account retention policy |
+| Authentication email bodies                   | Scrub on acceptance/simulation or token expiry; pending links require restricted, encrypted database access         |
 
 Run daily. The endpoint reports counts only and writes `internal.retention_enforced` to the audit
 trail. Failed/pending deliveries are retained so retries and incident diagnosis remain possible.
 
-## Long-lived and legal-hold records
+## Account lifecycle and reviewed retention
 
-- Audit logs and agreement/financial-operation records: seven years from agreement closure.
-- Jobs, milestones, proofs, reviews, disputes, decisions, and settlement intents: seven years.
-- Identity verification result and provider reference: seven years after account closure where
-  required for fraud/compliance; raw identity documents must remain with the provider and must not
-  be copied into Klaveroq.
-- Support messages/files: two years after ticket closure unless attached to an active dispute.
-- Proposal messages and files: two years after listing closure unless they became agreement or
-  dispute evidence.
-- Profile and portfolio media: until replacement/deletion or account closure, unless subject to a
-  legal hold.
+M2 adds a 30-day product recovery period, explicit fresh-authentication recovery,
+private account tombstones and bounded, opt-in cleanup. See
+[the lifecycle design and entity matrix](account-lifecycle/DESIGN.md) and
+[operations and activation checklist](account-lifecycle/OPERATIONS.md).
 
-Long-lived deletion is deliberately not automated until jurisdiction, legal-hold, and PactAgent
-requirements are configured. This prevents premature destruction of financial/dispute evidence.
+There is no universal seven-year retention rule in the application. Agreement,
+financial, audit, identity, dispute, support and shared records require classification
+by purpose, jurisdiction, applicable obligation and legal hold. Review dates are
+operational reminders, not legal erasure deadlines. No financial/audit evidence is
+automatically destroyed by M2.
 
-## Account closure procedure
+The short-lived sweeper excludes account/legal holds, active security holds and
+suspended/security-review accounts where records have a user association. Rate-limit
+keys remain hashed and follow the existing short-lived policy. A preservation request
+covering unattributed infrastructure logs needs separate operator handling.
 
-1. Verify the requester and reject closure while agreements, disputes, pending operations, security
-   holds, or support escalations remain active.
-2. Set the account to `CLOSED`, revoke all sessions, disable notification delivery, make the profile
-   private, and revoke wallets. Do not claim that on-chain data has been erased.
-3. Delete profile/portfolio media and non-evidentiary attachments from storage and database.
-4. Pseudonymize display name and email after the recovery/fraud window while retaining the minimum
-   immutable agreement, audit, dispute, and operation records required by policy.
-5. Record actor, legal basis, retained categories, storage deletions, and completion time in audit.
+Never manually delete user or profile rows to close an account. The audit FK remains
+unchanged. Removing a profile is not account deletion; the application offers explicit
+private-profile repair for an authenticated user whose profile was removed.
 
-No self-service closure control is enabled yet because steps 1-5 require the legal-hold and
-PactAgent checks that are not configured. Support must not manually delete database rows.
+Account cleanup stays disabled unless `ACCOUNT_CLEANUP_ENABLED=true` is explicitly
+configured after the separate activation review. No production schedule is added by M2.

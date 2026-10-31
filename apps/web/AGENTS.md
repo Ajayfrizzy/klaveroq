@@ -34,3 +34,25 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - The existing `/api/internal/notifications/retry` maintenance endpoint materializes invitation
   expiry and records system audit events; authorization always checks the deadline directly.
   Verification emails must preserve safe `returnTo` destinations, including verification resends.
+
+## Account lifecycle invariants
+
+- Never hard-delete users or cascade-delete audit/financial/shared records for account closure.
+  Read `docs/account-lifecycle/DESIGN.md` and `OPERATIONS.md` before changing retention.
+- Lifecycle transitions require fresh credentials, MFA when enabled, explicit confirmation,
+  database-clock deadlines and transactional audit/outbox records. Login never cancels deletion.
+- Ordinary authentication permits only ACTIVE/PENDING_EMAIL_VERIFICATION and no account hold.
+  Verification, password reset and OAuth must never reactivate unavailable users.
+- `withApi` gates mutations with the shared account advisory lock; lifecycle/hold/cleanup routes
+  take its exclusive side. New workers or GET handlers that mutate obligations must join this
+  gate. Do not call cleanup directly without the exclusive gate. The separate gate pool avoids
+  consuming the handler transaction pool. Keep cleanup bounded to ten accounts per request.
+- Recheck obligations/holds immediately before cleanup; preserve unknown retention classes for
+  authorized review. Review dates are not universal legal erasure deadlines. Storage metadata
+  remains private until separately approved object cleanup; never orphan evidence keys.
+- Cleanup is opt-in and disabled by default. Never activate it or migrate a hosted database as
+  part of tests. Lifecycle Playwright tests use only the loopback `_test` database and a dedicated
+  config. SQL failure-injection fixtures must clean up their test-only triggers.
+- M2 uses timestamp-prefixed Drizzle output because Vellum branches from the same migration
+  history. Regenerate the second feature's migration against merged history before integration;
+  never hand-edit generated journals/snapshots or change the open Vellum PR for this purpose.

@@ -127,6 +127,13 @@
       "when": 1792788405538,
       "tag": "0017_smooth_bucky",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793459710224,
+      "tag": "20261031151510_account_lifecycle",
+      "breakpoints": true
     }
   ]
 }

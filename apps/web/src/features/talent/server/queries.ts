@@ -1,3 +1,4 @@
+import { publiclyAvailable } from "@/server/account/public";
 import { cache } from "react";
 import { and, countDistinct, desc, eq, gte, ilike, inArray, lt, ne, or, sql } from "drizzle-orm";
 import type { z } from "zod";
@@ -11,7 +12,11 @@ import { decodeCursor, encodeCursor } from "@/server/pagination/cursor";
 
 async function getTalentProfile(userId: string, actorUserId?: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) return null;
-  const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1);
+  const [profile] = await db
+    .select()
+    .from(profiles)
+    .where(and(eq(profiles.userId, userId), publiclyAvailable(userId)))
+    .limit(1);
   if (!profile || !canViewTalentProfile(profile.isPublic, profile.userId, actorUserId)) return null;
   const [portfolio, reputation] = await Promise.all([
     db
@@ -85,7 +90,7 @@ export async function listTalent(input: z.infer<typeof talentQuerySchema>, viewe
     when ${profiles.headline} ilike ${`%${input.query}%`} or ${profiles.primaryRole} ilike ${`%${input.query}%`} then 2
     else 1 end`
     : sql<number>`0::integer`;
-  const conditions = [eq(profiles.isPublic, true)];
+  const conditions = [eq(profiles.isPublic, true), publiclyAvailable(sql`${profiles.userId}`)];
   if (viewerUserId) conditions.push(ne(profiles.userId, viewerUserId));
   if (input.query)
     conditions.push(

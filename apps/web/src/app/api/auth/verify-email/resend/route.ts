@@ -1,4 +1,4 @@
-import { and, isNull, sql } from "drizzle-orm";
+import { and, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { audit } from "@/server/audit";
 import { enforceAuthRateLimit } from "@/server/auth/rate-limit";
@@ -33,7 +33,13 @@ export const POST = withApi(async (request: Request) => {
   const [user] = await db
     .select({ id: users.id, email: users.email })
     .from(users)
-    .where(and(sql`lower(${users.email}) = ${email}`, isNull(users.emailVerifiedAt)))
+    .where(
+      and(
+        sql`lower(${users.email}) = ${email}`,
+        isNull(users.emailVerifiedAt),
+        inArray(users.status, ["ACTIVE", "PENDING_EMAIL_VERIFICATION"]),
+      ),
+    )
     .limit(1);
   const current = await getCurrentUser();
   let emailSent: boolean | undefined;

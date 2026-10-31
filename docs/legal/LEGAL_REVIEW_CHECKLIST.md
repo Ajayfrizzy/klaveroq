@@ -5,6 +5,8 @@ This checklist is not approval. All policy pages remain drafts. No deployment, n
 ## Identity and operational ownership
 
 - [ ] Verify the operator's legal identity, address and public contact details; do not use example email senders.
+- [ ] Public support/privacy contact email: **pending operator verification**. No dedicated address is finalised. Use the existing in-app support and public privacy routes until an address is verified.
+- [x] Operator confirmed Resend as the current transactional email provider. This confirms use, not contractual or compliance approval.
 - [ ] Appoint accountable policy, privacy and support owners; assess whether a DPO/representative is legally required without claiming one already exists.
 - [ ] Approve age/capacity rules, treatment of minors and organisations, and countries where the beta may operate.
 - [ ] Establish a working fallback contact, statutory response/escalation process and proportional identity-verification procedure. The current public form is an intake queue, not a complete rights-management service.
@@ -14,7 +16,7 @@ This checklist is not approval. All policy pages remain drafts. No deployment, n
 - [ ] Qualified counsel assesses the Nigeria Data Protection Act, applicable NDPC requirements and other laws relevant to actual users/processing.
 - [ ] Confirm purpose-specific legal bases and documented legitimate-interest assessments where relied on; identify actual legal obligations rather than generic indefinite retention.
 - [ ] Confirm rights, exceptions, request deadlines and complaint mechanisms for each relevant jurisdiction.
-- [ ] Verify processor/controller roles, contracts, regions, subprocessors and transfer safeguards for RumptyCloud, Supabase, Resend if active, Google if enabled and any additional service.
+- [ ] Verify processor/controller roles, contracts, regions, subprocessors and transfer safeguards for RumptyCloud, Supabase, Resend, Google if enabled and any additional service.
 - [ ] Inspect live network/cookie behaviour, configured session TTL, infrastructure logs and backup retention with separately authorised access; no production secrets should appear in documentation.
 - [ ] Approve security and incident-response statements against implemented organisational and deployment controls. No unverified certifications, residency or encryption guarantees.
 

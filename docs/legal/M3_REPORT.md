@@ -14,7 +14,7 @@ The commit SHA is supplied in the completion message and can be obtained with `g
 
 ## Product and policy findings
 
-The operator brief identifies RumptyCloud hosting and Supabase PostgreSQL. Resend is the implemented hosted email adapter; Google is an optional implemented sign-in integration. Neither configuration support nor a repository sample proves live enablement, contract terms, regions or provider retention. The requested provider/contact confirmation was not available when drafting; public pages use the existing working support/privacy routes and leave approval details outstanding. No invented company identity, business address, DPO, licence, forum, certification or fixed statutory retention duration appears in the policies.
+The operator brief identifies RumptyCloud hosting and Supabase PostgreSQL. The operator has confirmed Resend as the current transactional email provider; Google is an optional implemented sign-in integration whose live enablement still requires confirmation. Provider contracts, regions and retention are not established by this confirmation. The operator has not finalised a dedicated public support/privacy email and has instructed use of the existing in-app support/privacy routes. The checklist marks public contact email as pending operator verification. No invented company identity, business address, DPO, licence, forum, certification or fixed statutory retention duration appears in the policies.
 
 Code estimates reflect proposed client fees of 3% and worker fees of 2%, but formal approval was not established. The payment notice clearly says that real payments, escrow funding, refunds and settlement are not operational. It presents fees only as non-binding proposals and distinguishes PactAgent from live Klaveroq services.
 
@@ -57,7 +57,7 @@ All screenshots use public draft content. Visual review supplements automated ac
 ## Remaining decisions and limitations
 
 - All text requires operator and qualified legal review before formal publication/acceptance. No verified operator identity/address, public contact email, appointed reviewer, effective date or governing forum has been supplied.
-- Confirm the active email/OAuth providers, infrastructure regions/contracts/subprocessors, hosting-added cookies, backups/logs, international transfers and appropriate legal bases using separately authorised access. The source audit is not a production compliance attestation.
+- Confirm live OAuth enablement and review Resend and infrastructure regions/contracts/subprocessors, hosting-added cookies, backups/logs, international transfers and appropriate legal bases using separately authorised access. The source audit is not a production compliance attestation.
 - Approve eligibility/minors, content licence/ownership, moderation/appeals, liability, privacy-response staffing/deadlines, exceptions and retention categories. The existing privacy queue is intake plus a privileged latest-50 API; no new case-management dashboard or automatic data export is supplied.
 - Payment fees/provider roles/regulatory review/refunds are unresolved. Live payment, KYC, uploads and cleanup must trigger new policy review and separate technical/operational activation.
 - No live Google or email-provider test, physical-device test or legal approval was performed. Browser mobile widths and existing simulated auth/email flows were exercised.
@@ -106,3 +106,7 @@ All screenshots use public draft content. Visual review supplements automated ac
 - `docs/legal/screenshots/payments-1280.png`
 - `docs/legal/screenshots/payments-375.png`
 - `docs/legal/screenshots/payments-390.png`
+
+## Operator clarification follow-up
+
+Updated the Privacy Policy, product audit and review checklist after operator confirmation of Resend and the decision to retain in-app contact routes. This is a text-only clarification to the unapproved draft; no contact address, credential or configuration was added. Formatting and the focused legal unit tests were rerun; the full implementation validation above predates this clarification.

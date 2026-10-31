@@ -56,3 +56,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - M2 uses timestamp-prefixed Drizzle output because Vellum branches from the same migration
   history. Regenerate the second feature's migration against merged history before integration;
   never hand-edit generated journals/snapshots or change the open Vellum PR for this purpose.
+
+## Public policy conventions
+
+- Legal content lives in `features/legal/documents`, with public version/status metadata in
+  `features/legal/registry.ts`. Render structured text through the shared server layout; never
+  expose internal audit/checklist files or execute raw HTML/remote policy content.
+- Read `docs/legal/PRODUCT_POLICY_AUDIT.md` and `LEGAL_REVIEW_CHECKLIST.md` before changing claims.
+  Configuration support is not evidence a provider or feature is live. Keep draft status,
+  effective dates, payment limitations and account-retention explanations accurate.
+- Public legal routes must not require authentication or account database reads. Preserve their
+  server metadata, allowlisted slugs, accessible anchors and mobile layouts.
+- Policy publication does not activate acceptance, tracking consent, uploads, identity checks,
+  financial flows or account cleanup. Versioned assent needs separately approved exact text,
+  notice/rollout and persistence; never backfill existing users or reuse agreement consent.

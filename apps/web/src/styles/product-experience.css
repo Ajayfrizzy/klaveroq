@@ -1099,3 +1099,32 @@ summary {
   border-radius: 6px;
   padding: 12px;
 }
+
+.policy-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-block: 16px;
+  font-size: 0.875rem;
+}
+.policy-links a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.registration-policies {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.home-footer .footer-policies {
+  grid-column: 1 / -1;
+  gap: 12px 24px;
+}
+.home-footer .footer-policies a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}

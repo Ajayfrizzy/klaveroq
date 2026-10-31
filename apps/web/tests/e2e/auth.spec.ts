@@ -115,6 +115,9 @@ test("email verification and password recovery are complete single-use workflows
     data: { token: originalToken },
   });
   expect(invalidated.status()).toBe(400);
+  await page.goto(`/verify-email?token=${originalToken}`);
+  await expect(page.getByRole("status")).toHaveText("The verification link is invalid or expired.");
+  await expect(page.getByRole("button", { name: "Retry verification email" })).toBeEnabled();
 
   const sql = postgres(testDatabaseUrl, { max: 1 });
   await sql`update verification_tokens set expires_at = now() - interval '1 minute' where user_id = ${expiringUserId} and consumed_at is null`;
@@ -124,4 +127,7 @@ test("email verification and password recovery are complete single-use workflows
     data: { token: replacementToken },
   });
   expect(expired.status()).toBe(400);
+  await page.goto(`/verify-email?token=${replacementToken}`);
+  await expect(page.getByRole("status")).toHaveText("The verification link is invalid or expired.");
+  await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
 });

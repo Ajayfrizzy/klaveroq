@@ -2,6 +2,7 @@ import { and, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { audit } from "@/server/audit";
 import { enforceAuthRateLimit } from "@/server/auth/rate-limit";
+import { getCurrentUser } from "@/server/auth/session";
 import { issueAuthToken } from "@/server/auth/tokens";
 import { db } from "@/server/db";
 import { users } from "@/server/db/schema";
@@ -34,12 +35,18 @@ export const POST = withApi(async (request: Request) => {
     .from(users)
     .where(and(sql`lower(${users.email}) = ${email}`, isNull(users.emailVerifiedAt)))
     .limit(1);
+  const current = await getCurrentUser();
+  let emailSent: boolean | undefined;
   let token: string | undefined;
   if (user) {
     token = await issueAuthToken(user.id, "VERIFY_EMAIL");
     try {
-      await sendVerificationEmail(user.email, token, returnTo);
+      const delivery = await sendVerificationEmail(user.email, token, returnTo);
+      if (current?.user.id === user.id) {
+        emailSent = ["ACCEPTED", "DELIVERED"].includes(delivery.status);
+      }
     } catch {
+      if (current?.user.id === user.id) emailSent = false;
       console.error("Verification email could not be queued.");
     }
     await audit(request, {
@@ -52,6 +59,8 @@ export const POST = withApi(async (request: Request) => {
   return Response.json({
     data: {
       accepted: true,
+      // Delivery details are only disclosed to the owner of the signed-in account.
+      emailSent,
       verificationToken: allowsLocalAuthDelivery() ? token : undefined,
     },
   });

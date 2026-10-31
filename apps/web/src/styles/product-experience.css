@@ -1068,3 +1068,18 @@ summary {
     animation: none;
   }
 }
+
+.auth-password-guidance {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.auth-password-guidance [role="status"] {
+  display: block;
+  color: var(--brand);
+}
+
+.auth-recipient {
+  overflow-wrap: anywhere;
+  font-weight: 750;
+}

@@ -23,13 +23,18 @@ export function VerifyEmailForm() {
     return () => clearTimeout(timer);
   }, [searchParams]);
   const token = searchParams.get("token");
-  const localToken = searchParams.get("localToken");
+  const [localToken, setLocalToken] = useState(searchParams.get("localToken"));
+  const recipient = searchParams.get("email");
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
-  const [state, setState] = useState<State>(token ? "verifying" : "idle");
+  const [state, setState] = useState<State>(
+    token ? "verifying" : searchParams.get("sent") === "0" ? "error" : "idle",
+  );
   const [message, setMessage] = useState(
     searchParams.get("sent") === "0"
       ? "Your account was created, but the email could not be sent. Try again below."
-      : "Check your inbox for a verification link.",
+      : searchParams.get("sent") === "1"
+        ? "A verification link has been sent. Open the link in your email to verify your account."
+        : "Open the verification link in your email, or request a new link below.",
   );
   const [busy, setBusy] = useState(false);
 
@@ -72,7 +77,17 @@ export function VerifyEmailForm() {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message ?? "The email could not be sent.");
-      setMessage("If that address has an unverified account, a new link has been sent.");
+      setLocalToken(body.data?.verificationToken ?? null);
+      if (body.data?.emailSent === false) {
+        setState("error");
+        setMessage("The verification email could not be sent. Please try again.");
+      } else {
+        setMessage(
+          body.data?.emailSent === true
+            ? "A new verification link has been sent. Open the link in your email to verify your account."
+            : "Request received. If this address has an unverified account, check its inbox and spam folder for a verification link.",
+        );
+      }
     } catch (reason) {
       setState("error");
       setMessage(reason instanceof Error ? reason.message : "The email could not be sent.");
@@ -94,7 +109,13 @@ export function VerifyEmailForm() {
           {state === "verified" ? <CheckCircle2 size={24} /> : <Mail size={24} />}
         </span>
         <p className="eyebrow">Account verification</p>
-        <h1>{state === "verified" ? "Email verified" : "Verify your email"}</h1>
+        <h1>
+          {state === "verified"
+            ? "Email verified"
+            : !token && recipient
+              ? "Check your email"
+              : "Verify your email"}
+        </h1>
         <p className={state === "error" ? "form-feedback error" : "form-feedback"} role="status">
           {state === "verifying" ? "Verifying your link..." : message}
         </p>
@@ -112,19 +133,27 @@ export function VerifyEmailForm() {
                 Open local verification link
               </Link>
             )}
+            {recipient && <p className="auth-recipient">{recipient}</p>}
+            <p>Can’t find the email? Check your spam folder.</p>
             <form onSubmit={resend}>
-              <label>
-                Email
-                <input
-                  required
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              </label>
-              <button className="primary-button" disabled={busy}>
-                {busy ? "Sending..." : "Send a new link"}
+              {!recipient && (
+                <label>
+                  Email
+                  <input
+                    required
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                </label>
+              )}
+              <button className="secondary-button" disabled={busy || state === "verifying"}>
+                {busy
+                  ? "Sending..."
+                  : state === "error"
+                    ? "Retry verification email"
+                    : "Resend verification email"}
               </button>
             </form>
             <small>

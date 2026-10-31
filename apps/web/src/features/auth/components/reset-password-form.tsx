@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
+import { PasswordGuidance } from "./password-guidance";
+import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_PATTERN } from "../password-policy";
+
 export function ResetPasswordForm() {
   const token = useSearchParams().get("token") ?? "";
   const [password, setPassword] = useState("");
@@ -62,18 +65,23 @@ export function ResetPasswordForm() {
               New password
               <input
                 required
-                minLength={12}
+                minLength={PASSWORD_MIN_LENGTH}
+                maxLength={PASSWORD_MAX_LENGTH}
                 type="password"
                 autoComplete="new-password"
+                pattern={PASSWORD_PATTERN}
+                aria-describedby="password-guidance"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
             </label>
+            <PasswordGuidance password={password} id="password-guidance" />
             <label>
               Confirm new password
               <input
                 required
-                minLength={12}
+                minLength={PASSWORD_MIN_LENGTH}
+                maxLength={PASSWORD_MAX_LENGTH}
                 type="password"
                 autoComplete="new-password"
                 value={confirmation}

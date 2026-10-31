@@ -8,6 +8,9 @@ import { useEffect, useState } from "react";
 import { GOOGLE_OAUTH_MESSAGES, googleOAuthHref, safeReturnTo } from "@/server/auth/google";
 import { initialAuthCredentials } from "@/features/auth/defaults";
 
+import { PasswordGuidance } from "./password-guidance";
+import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_PATTERN } from "../password-policy";
+
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -216,7 +219,10 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               <input
                 required
                 type={showPassword ? "text" : "password"}
-                minLength={12}
+                minLength={PASSWORD_MIN_LENGTH}
+                maxLength={PASSWORD_MAX_LENGTH}
+                pattern={mode === "register" ? PASSWORD_PATTERN : undefined}
+                aria-describedby={mode === "register" ? "password-guidance" : undefined}
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -232,6 +238,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               </button>
             </span>
           </label>
+          {mode === "register" && <PasswordGuidance password={password} id="password-guidance" />}
           {(error || oauthError) && (
             <div className="form-errors" role="alert">
               {error ||

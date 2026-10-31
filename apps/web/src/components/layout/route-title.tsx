@@ -38,6 +38,8 @@ function pageTitle(pathname: string) {
 export function RouteTitle() {
   const pathname = usePathname();
   useEffect(() => {
+    // Legal routes own their server-rendered document title and draft metadata.
+    if (pathname === "/legal" || pathname.startsWith("/legal/")) return;
     if (
       !pathname.startsWith("/jobs/new") &&
       ["/", "/jobs", "/talent", "/discover"].some(

@@ -10,6 +10,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import Link from "next/link";
+import { PolicyLinks } from "@/features/legal/policy-links";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useWorkProtection } from "@/components/ui/use-work-protection";
 import { PageHeader } from "@/components/layout/page-header";
@@ -101,6 +102,10 @@ export function SupportHome() {
             <Plus size={16} /> New support case
           </a>
         }
+      />
+      <PolicyLinks
+        label="Support policy drafts"
+        slugs={["community-guidelines", "privacy", "payments"]}
       />
       <section className="support-categories">
         <a href="#new-case">

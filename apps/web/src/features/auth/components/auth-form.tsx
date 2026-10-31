@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { GOOGLE_OAUTH_MESSAGES, googleOAuthHref, safeReturnTo } from "@/server/auth/google";
 import { initialAuthCredentials } from "@/features/auth/defaults";
 
+import { PolicyLinks } from "@/features/legal/policy-links";
 import { PasswordGuidance } from "./password-guidance";
 import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_PATTERN } from "../password-policy";
 
@@ -250,6 +251,15 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             {busy ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}
           </button>
         </form>
+        {mode === "register" && (
+          <div className="registration-policies">
+            <p>
+              Read our policy drafts. They are for review; registration does not record acceptance
+              of these drafts.
+            </p>
+            <PolicyLinks slugs={["terms", "privacy", "cookies"]} />
+          </div>
+        )}
         <small className="auth-account-links">
           {mode === "login" ? (
             <>

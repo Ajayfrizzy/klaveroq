@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { PolicyLinks } from "@/features/legal/policy-links";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
@@ -92,6 +93,7 @@ export function LifecycleForm({
         <Link className="secondary-button" href={mode === "delete" ? "/account/recover" : "/login"}>
           {mode === "delete" ? "Recover account" : "Sign in"}
         </Link>
+        <PolicyLinks slugs={["account-deletion", "privacy"]} />
         <Link href="/account/privacy">Privacy or support request</Link>
       </section>
     );
@@ -117,9 +119,10 @@ export function LifecycleForm({
             days to explicitly recover your account. Logging in alone does not cancel deletion.
           </p>
           <p>
-            After 30 days, eligible personal data is removed. Necessary agreements, payment history,
-            shared records and security evidence may be retained for authorized review. Active
-            agreements, unsettled payments, disputes or holds must be resolved first.
+            After 30 days, eligible personal data may be processed for removal. Automatic final
+            cleanup is not active in the beta pending retention review. Necessary agreements,
+            payment history, shared records and security evidence may be retained for authorized
+            review. Active agreements, unsettled payments, disputes or holds must be resolved first.
           </p>
         </>
       ) : (
@@ -129,6 +132,7 @@ export function LifecycleForm({
           listings.
         </p>
       )}
+      <PolicyLinks slugs={["account-deletion", "privacy"]} />
       <form onSubmit={submit}>
         <label>
           Email

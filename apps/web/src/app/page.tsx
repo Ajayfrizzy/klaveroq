@@ -1,3 +1,4 @@
+import { PublicFooter } from "@/features/marketplace/components/public-footer";
 import { HeroScene, ReputationNotes } from "@/features/marketplace/components/landing-interactions";
 import { optionalOperation } from "@/server/observability/operations";
 import { getRenderRequestId } from "@/server/observability/render-context";
@@ -394,21 +395,7 @@ export default async function HomePage() {
           </div>
         </section>
       </main>
-      <footer className="home-footer public-container">
-        <div>
-          <Link className="brand" href="/">
-            Klaveroq<span className="footer-dot">.</span>
-          </Link>
-          <p>A clearer way to work together.</p>
-        </div>
-        <nav aria-label="Footer navigation">
-          <Link href="/jobs">Find work</Link>
-          <Link href="/talent">Find talent</Link>
-          <Link href="/#how-it-works">How it works</Link>
-          <Link href="/login">Sign in</Link>
-        </nav>
-        <small>© {new Date().getUTCFullYear()} Klaveroq · Community beta</small>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

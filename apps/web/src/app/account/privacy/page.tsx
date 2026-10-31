@@ -1,3 +1,4 @@
+import { PolicyLinks } from "@/features/legal/policy-links";
 import Link from "next/link";
 import { PrivacyForm } from "@/features/account/privacy-form";
 export const metadata = { title: "Privacy requests | Klaveroq" };
@@ -14,6 +15,7 @@ export default function Privacy() {
           Do not include passwords, recovery codes, identity documents or payment secrets. This form
           records a request for authorized review; it does not automatically change your account.
         </p>
+        <PolicyLinks slugs={["privacy", "account-deletion"]} />
         <PrivacyForm />
         <Link href="/account/recover">Recover account</Link>
         <Link href="/">Back to Klaveroq</Link>
